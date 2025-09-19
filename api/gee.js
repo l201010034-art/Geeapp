@@ -102,6 +102,9 @@ export default async function handler(req, res) {
     }
 
     try {
+        // SOLUCIÓN: Forzar el modo asíncrono para evitar escrituras en el sistema de archivos.
+        ee.data.setSync(false);
+
         await new Promise((resolve, reject) => {
             ee.data.authenticateViaPrivateKey(
                 {
