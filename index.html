@@ -4,652 +4,512 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Informe Climático de Campeche</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- LeafletJS for Map -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Leaflet CSS y JS para el mapa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- Leaflet Draw Plugin -->
+    <!-- Leaflet.draw para dibujar en el mapa -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-    <!-- Chart.js for Charts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <!-- Google Charts para los gráficos -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
         :root {
             --maroon-color: #800000;
-            --lighter-maroon: #a04040;
             --header-text-color: #FFFFFF;
             --control-text-color: #000000;
+            --lighter-maroon: #a04040;
+            --button-yellow: '#f0ad4e';
         }
         body { font-family: 'Inter', sans-serif; }
-        #map { height: 100vh; }
-        .control-panel { background-color: var(--maroon-color); color: var(--header-text-color); }
-        .control-section { background-color: var(--lighter-maroon); }
-        .control-label { font-weight: bold; color: var(--header-text-color); }
-        .custom-btn {
-            background-color: var(--lighter-maroon);
-            color: var(--control-text-color);
-            font-weight: bold;
-            border: 1px solid var(--control-text-color);
-            transition: background-color 0.3s;
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-left: -20px;
+            margin-top: -20px;
+            z-index: 1001; /* Encima del overlay */
         }
-        .custom-btn:hover { background-color: #b05050; }
-        .custom-btn-action { background-color: #f0ad4e; color: black; }
-        .custom-btn-fire { background-color: #c9302c; color: black; }
-        select, input[type="text"] { background-color: var(--lighter-maroon); color: var(--control-text-color); border-color: #502020 }
-        #loading-indicator {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background-color: rgba(0,0,0,0.7); color: white; padding: 20px 40px;
-            border-radius: 10px; z-index: 2000; display: none;
-            font-size: 1.2em; text-align: center;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
         }
     </style>
 </head>
-<body class="bg-gray-900">
+<body class="bg-gray-900 text-white">
 
-    <div id="loading-indicator">Cargando...</div>
+    <div id="loading-overlay" class="hidden overlay">
+        <div class="loader"></div>
+    </div>
 
-    <div class="flex flex-col md:flex-row">
-        <!-- Control Panel -->
-        <div class="control-panel w-full md:w-[400px] h-screen overflow-y-auto p-4 space-y-3">
+    <div class="flex flex-col md:flex-row h-screen">
+        <!-- Panel de Control -->
+        <div class="w-full md:w-[420px] bg-[#800000] p-4 overflow-y-auto flex flex-col space-y-3">
             <h1 class="text-2xl font-bold text-center">Informe Climático de Campeche</h1>
 
-            <!-- Date Range -->
+            <!-- Rango de Fechas -->
             <div>
-                <label class="control-label">1. Rango de Fechas</label>
+                <label class="font-bold">1. Rango de Fechas</label>
                 <div class="grid grid-cols-2 gap-2 mt-1">
-                    <input type="text" id="startDate" value="2023-01-01" class="w-full p-2 rounded">
-                    <input type="text" id="endDate" value="2023-12-31" class="w-full p-2 rounded">
+                    <input type="date" id="startDate" value="2023-01-01" class="p-2 rounded bg-[#a04040] text-white border-gray-500">
+                    <input type="date" id="endDate" value="2023-12-31" class="p-2 rounded bg-[#a04040] text-white border-gray-500">
                 </div>
             </div>
 
-            <!-- Zones -->
+            <!-- Zona de Interés -->
             <div>
-                <label class="control-label">2. Zona de Interés</label>
-                <div id="zonaSelectorPanel" class="control-section p-2 rounded mt-1">
-                    <!-- Checkboxes will be inserted here by JS -->
+                <label class="font-bold">2. Zona de Interés (o dibuja)</label>
+                <div id="zonaSelectorPanel" class="p-2 mt-1 rounded bg-[#a04040]">
+                    <!-- Checkboxes se generan aquí -->
                 </div>
-                 <p class="text-xs text-gray-300 mt-1">O dibuja un área en el mapa. El área dibujada tendrá prioridad.</p>
             </div>
 
-            <!-- Variable -->
+            <!-- Variable Climática -->
             <div>
-                <label class="control-label">3. Variable Climática</label>
-                <select id="variableSelector" class="w-full p-2 rounded mt-1">
-                    <!-- Options inserted by JS -->
-                </select>
+                <label for="variableSelector" class="font-bold">3. Variable Climática</label>
+                <select id="variableSelector" class="w-full p-2 mt-1 rounded bg-[#a04040] text-white border-gray-500"></select>
             </div>
             
-            <!-- Specific Analysis Panels -->
-            <div id="precipAnalysisPanel" class="hidden space-y-2 p-2 border border-yellow-400 rounded">
-                 <label class="control-label text-yellow-300">Análisis Específico de Precipitación</label>
-                 <select id="precipAnalysisSelector" class="w-full p-2 rounded">
-                     <option value="accumulated">Acumulado</option>
-                     <option value="intensity">Intensidad de Lluvia</option>
-                     <option value="frequency">Frecuencia de Lluvias Fuertes (>20mm)</option>
-                 </select>
-                 <select id="precipAggregationSelector" class="w-full p-2 rounded">
-                     <option value="day">Agregación Diaria</option>
-                     <option value="week">Agregación Semanal</option>
-                     <option value="month">Agregación Mensual</option>
-                     <option value="year">Agregación Anual</option>
-                 </select>
-                 <button id="precipAnalysisButton" class="w-full p-2 rounded custom-btn custom-btn-action">Ejecutar Análisis de Precipitación</button>
-            </div>
-            
-            <div id="tempAnalysisPanel" class="hidden space-y-2 p-2 border border-yellow-400 rounded">
-                <label class="control-label text-yellow-300">Análisis de Temperatura Extrema</label>
-                <select id="tempAnalysisSelector" class="w-full p-2 rounded">
-                    <option value="heatwave">Análisis de Olas de Calor</option>
-                    <option value="frost">Análisis de Heladas</option>
+            <!-- Paneles de Análisis Específicos -->
+            <div id="precipAnalysisPanel" class="hidden space-y-2 p-2 border border-gray-400 rounded">
+                <label class="font-bold">Análisis de Precipitación</label>
+                <select id="precipAnalysisSelector" class="w-full p-2 rounded bg-[#a04040] text-white">
+                    <option value="accumulated">Acumulado</option>
+                    <option value="intensity">Intensidad de Lluvia</option>
+                    <option value="frequency">Frecuencia de Lluvias Fuertes (>20mm)</option>
                 </select>
-                <button id="tempAnalysisButton" class="w-full p-2 rounded custom-btn custom-btn-action">Ejecutar Análisis de Temperatura</button>
+                <select id="precipAggregationSelector" class="w-full p-2 rounded bg-[#a04040] text-white">
+                     <option value="day">Diaria</option>
+                     <option value="week" selected>Semanal</option>
+                     <option value="month">Mensual</option>
+                     <option value="year">Anual</option>
+                </select>
+                <button id="precipAnalysisButton" class="w-full p-2 font-bold bg-[#f0ad4e] text-black rounded hover:bg-yellow-500">Ejecutar Análisis</button>
+            </div>
+            <div id="tempAnalysisPanel" class="hidden space-y-2 p-2 border border-gray-400 rounded">
+                <label class="font-bold">Análisis de Temperatura Extrema</label>
+                <select id="tempAnalysisSelector" class="w-full p-2 rounded bg-[#a04040] text-white">
+                    <option value="heatwave">Olas de Calor</option>
+                    <option value="frost">Heladas</option>
+                </select>
+                <button id="tempAnalysisButton" class="w-full p-2 font-bold bg-[#f0ad4e] text-black rounded hover:bg-yellow-500">Ejecutar Análisis</button>
             </div>
 
-            <!-- Chart Type -->
+            <!-- Tipo de Gráfico -->
             <div>
-                <label class="control-label">4. Tipo de Gráfico (variables generales)</label>
-                <select id="chartTypeSelector" class="w-full p-2 rounded mt-1">
-                    <option value="line">Línea</option>
-                    <option value="bar">Barras</option>
-                    <option value="scatter">Dispersión</option>
+                <label for="chartTypeSelector" class="font-bold">4. Tipo de Gráfico (vars. generales)</label>
+                <select id="chartTypeSelector" class="w-full p-2 mt-1 rounded bg-[#a04040] text-white border-gray-500">
+                    <option>LineChart</option>
+                    <option>ColumnChart</option>
+                    <option>ScatterChart</option>
+                    <option>AreaChart</option>
                 </select>
             </div>
 
-            <!-- Actions -->
+            <!-- Acciones Generales -->
             <div>
-                 <label class="control-label">5. Acciones Generales</label>
-                 <div class="grid grid-cols-2 gap-2 mt-1">
-                    <button id="loadDataButton" class="p-2 rounded custom-btn">Cargar Datos</button>
-                    <button id="compareButton" class="p-2 rounded custom-btn">📊 Comparar</button>
-                 </div>
+                <label class="font-bold">5. Acciones Generales</label>
+                <div class="grid grid-cols-2 gap-2 mt-1">
+                    <button id="loadDataButton" class="p-2 font-bold bg-[#a04040] rounded hover:bg-red-800">Cargar Datos</button>
+                    <button id="compareButton" class="p-2 font-bold bg-[#a04040] rounded hover:bg-red-800">📊 Comparar</button>
+                </div>
             </div>
 
-            <!-- Specific Products -->
+            <!-- Productos Específicos -->
             <div>
-                <label class="control-label">6. Productos Específicos</label>
-                <div class="space-y-2 mt-1">
-                    <select id="spiTimescaleSelector" class="w-full p-2 rounded">
-                        <option value="3">SPI 3 Meses (sequía a corto plazo)</option>
-                        <option value="6">SPI 6 Meses (sequía estacional)</option>
-                        <option value="12">SPI 12 Meses (sequía a largo plazo)</option>
-                    </select>
-                    <button id="calculateSpiButton" class="w-full p-2 rounded custom-btn custom-btn-action">Calcular SPI</button>
-                    <button id="fireRiskButton" class="w-full p-2 rounded custom-btn custom-btn-fire">🔥 Riesgo de Incendio</button>
+                <label class="font-bold">6. Productos Específicos</label>
+                 <select id="spiTimescaleSelector" class="w-full p-2 mt-1 rounded bg-[#a04040] text-white">
+                    <option value="3">SPI 3 Meses (sequía a corto plazo)</option>
+                    <option value="6">SPI 6 Meses (sequía estacional)</option>
+                    <option value="12">SPI 12 Meses (sequía a largo plazo)</option>
+                </select>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <button id="calculateSpiButton" class="p-2 font-bold bg-[#f0ad4e] text-black rounded hover:bg-yellow-500">Calcular SPI</button>
+                    <button id="fireRiskButton" class="p-2 font-bold bg-[#c9302c] text-white rounded hover:bg-red-700">🔥 Riesgo de Incendio</button>
                 </div>
             </div>
             
-            <!-- Tools -->
-             <div>
-                <label class="control-label">7. Herramientas</label>
-                 <div class="grid grid-cols-2 gap-2 mt-1">
-                    <button id="clearDrawingButton" class="p-2 rounded custom-btn">Limpiar Dibujo</button>
-                    <button id="resetButton" class="p-2 rounded custom-btn">Reiniciar App</button>
-                 </div>
-            </div>
-
-            <!-- Status -->
+            <!-- Herramientas -->
             <div>
-                <label class="control-label">Resumen Estadístico</label>
-                <div id="weatherStatusLabel" class="control-section p-2 rounded mt-1 text-sm h-24 whitespace-pre-wrap">Selecciona opciones y carga datos.</div>
+                <label class="font-bold">7. Herramientas</label>
+                <div class="grid grid-cols-2 gap-2 mt-1">
+                     <button id="clearDrawingButton" class="p-2 font-bold bg-[#a04040] rounded hover:bg-red-800">Limpiar Dibujo</button>
+                     <button id="resetButton" class="p-2 font-bold bg-[#a04040] rounded hover:bg-red-800">Reiniciar App</button>
+                </div>
             </div>
-
-            <!-- Chart -->
-            <div>
-                <label class="control-label">Gráfico de Serie Temporal</label>
-                <div class="control-section p-2 rounded mt-1 bg-white">
-                    <canvas id="timeSeriesChart"></canvas>
+            
+            <!-- Resumen y Gráfico -->
+            <div class="flex-grow flex flex-col space-y-3">
+                 <div>
+                    <label class="font-bold">Resumen Estadístico</label>
+                    <div id="stats-panel" class="p-3 mt-1 min-h-[100px] text-sm bg-[#a04040] rounded whitespace-pre-wrap">Selecciona opciones y carga datos.</div>
+                </div>
+                 <div class="flex-grow flex flex-col">
+                    <label class="font-bold">Gráfico de Serie Temporal</label>
+                    <div id="chart-panel" class="p-2 mt-1 flex-grow bg-[#a04040] rounded flex items-center justify-center">
+                        <span class="text-gray-300">El gráfico aparecerá aquí</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Map Panel -->
-        <div id="map" class="w-full h-[50vh] md:h-screen"></div>
+        <!-- Panel del Mapa -->
+        <div id="map" class="flex-grow h-1/2 md:h-full"></div>
     </div>
 
-<script>
-// =========================================================================================
-// === CONFIGURACIÓN Y ESTADO DE LA APLICACIÓN
-// =========================================================================================
-const campecheGeom = { "type": "Polygon", "coordinates": [[[-92.4,17.8],[-89.1,17.8],[-89.1,20.8],[-92.4,20.8],[-92.4,17.8]]] };
-const zonas = {
-    'Todo el Estado': { geom: { "type": "Polygon", "coordinates": [[[-92.44, 17.81], [-89.1, 17.81], [-89.1, 20.85], [-92.44, 20.85], [-92.44, 17.81]]] }, style: {color: 'white', fillColor: '#FFFFFF', fillOpacity: 0.1} },
-    'Zona 1, Ciudad Campeche': { geom: {"type":"Polygon","coordinates":[[[-90.4531,19.8993],[-90.489,19.8781],[-90.5211,19.8612],[-90.529,19.8671],[-90.5343,19.8631],[-90.5273,19.8578],[-90.5366,19.8549],[-90.5444,19.8461],[-90.5529,19.8386],[-90.5613,19.8334],[-90.5685,19.8282],[-90.5702,19.8273],[-90.5712,19.8277],[-90.5735,19.8269],[-90.5734,19.8253],[-90.5792,19.8218],[-90.5852,19.8187],[-90.59,19.8153],[-90.5929,19.8183],[-90.5997,19.8136],[-90.601,19.8085],[-90.6102,19.8018],[-90.6165,19.7991],[-90.6195,19.7967],[-90.6261,19.7939],[-90.6294,19.7909],[-90.6327,19.79],[-90.6333,19.7847],[-90.6389,19.779],[-90.639,19.7746],[-90.6349,19.7724],[-90.6277,19.778],[-90.6159,19.7809],[-90.5992,19.7835],[-90.5922,19.7947],[-90.5496,19.7942],[-90.5422,19.7914],[-90.5308,19.7932],[-90.5232,19.7891],[-90.5167,19.7923],[-90.5048,19.79],[-90.5055,19.7809],[-90.5039,19.7776],[-90.508,19.7714],[-90.5115,19.7638],[-90.5099,19.7598],[-90.5171,19.7573],[-90.5272,19.7512],[-90.5223,19.7435],[-90.5138,19.7338],[-90.4989,19.7403],[-90.4857,19.7552],[-90.4698,19.7498],[-90.4596,19.7476],[-90.4611,19.7558],[-90.4641,19.7628],[-90.475,19.7666],[-90.482,19.7835],[-90.4643,19.796],[-90.4585,19.8226],[-90.4556,19.8433],[-90.446,19.8818],[-90.4531,19.8993]]]}, style: {color: 'blue', fillColor: '#0000FF', fillOpacity: 0.1} },
-    'Zona 2, Lerma': { geom: {"type":"Polygon","coordinates":[[[-90.592,19.8193],[-90.5996,19.8133],[-90.6083,19.8036],[-90.6327,19.7897],[-90.6385,19.7802],[-90.6396,19.7744],[-90.6351,19.7716],[-90.6279,19.7779],[-90.5997,19.7824],[-90.5924,19.7946],[-90.5741,19.7954],[-90.5831,19.8203],[-90.592,19.8193]]]}, style: {color: 'green', fillColor: '#00FF00', fillOpacity: 0.1} },
-    'Zona 3, Chiná': { geom: {"type":"Polygon","coordinates":[[[-90.5045,19.7762],[-90.5187,19.7562],[-90.5211,19.742],[-90.5021,19.7384],[-90.4856,19.7542],[-90.4626,19.7483],[-90.4602,19.7518],[-90.4748,19.7647],[-90.4813,19.7833],[-90.5046,19.7901],[-90.5045,19.7762]]]}, style: {color: 'orange', fillColor: '#FFA500', fillOpacity: 0.1} },
-    'Zona 4, San Fco. Campeche': { geom: {"type":"Polygon","coordinates":[[[-90.5051,19.7895],[-90.4811,19.7838],[-90.4643,19.7964],[-90.4464,19.8814],[-90.4541,19.899],[-90.521,19.8621],[-90.5292,19.8663],[-90.5346,19.8625],[-90.5332,19.8567],[-90.5831,19.8203],[-90.5722,19.794],[-90.5495,19.7938],[-90.5261,19.7906],[-90.5051,19.7895]]]}, style: {color: 'purple', fillColor: '#800080', fillOpacity: 0.1} }
-};
-const varParams = {
-  'Temperatura del Aire (°C)': { id: 'TAM', unit: '°C' },
-  'Humedad Relativa (%)': { id: 'HR', unit: '%' },
-  'Radiación Solar (W/m²)': { id: 'Radiacion_Solar', unit: 'W/m²' },
-  'Velocidad del Viento (m/s)': { id: 'wind_speed', unit: 'm/s' },
-  'Temp. Superficial (LST °C)': { id: 'LST', unit: '°C' },
-  'Precipitación Acumulada (mm)': { id: 'Precipitacion', unit: 'mm' },
-  'Evapotranspiración (mm/8 días)': { id: 'ET', unit: 'mm/8d' },
-  'Evapotranspiración Potencial (mm/8 días)': { id: 'PET', unit: 'mm/8d' },
-  'Días Grado de Crecimiento (°C día)': { id: 'GDD', unit: '°C día' }
-};
+    <script type="module">
+        // --- Configuración Inicial ---
+        const varParams = {
+            'Temperatura del Aire (°C)': { min: 20, max: 40, palette: ['blue', 'cyan', 'yellow', 'red'], bandName: 'TAM', unit: '°C', dataset: 'ERA5' },
+            'Humedad Relativa (%)': { min: 50, max: 100, palette: ['lightyellow', 'green', 'darkblue'], bandName: 'HR', unit: '%', dataset: 'ERA5' },
+            'Radiación Solar (W/m²)': { min: 0, max: 1000, palette: ['lightgray', 'orange', 'red'], bandName: 'Radiacion_Solar', unit: 'W/m²', dataset: 'ERA5' },
+            'Velocidad del Viento (m/s)': { min: 0, max: 10, palette: ['white', 'lightblue', 'blue'], bandName: 'wind_speed', unit: 'm/s', dataset: 'ERA5' },
+            'Temp. Superficial (LST °C)': { min: 20, max: 50, palette: ['navy', 'blue', 'cyan', 'yellow', 'red'], bandName: 'LST', unit: '°C', dataset: 'MODIS' },
+            'Precipitación Acumulada (mm)': { min: 0, max: 200, palette: ['#ffffcc', '#a1dab4', '#41b6c4', '#225ea8'], bandName: 'Precipitacion', unit: 'mm', dataset: 'CHIRPS' },
+            'Evapotranspiración (mm/8 días)': { min: 0, max: 40, palette: ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'], bandName: 'ET', unit: 'mm/8d', dataset: 'MODIS_ET'},
+            'Evapotranspiración Potencial (mm/8 días)': { min: 0, max: 60, palette: ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'], bandName: 'PET', unit: 'mm/8d', dataset: 'MODIS_ET'},
+            'Días Grado de Crecimiento (°C día)': { min: 0, max: 20, palette: ['#edf8b1', '#7fcdbb', '#2c7fb8'], bandName: 'GDD', unit: '°C día', dataset: 'ERA5_DAILY'}
+        };
+        const zonas = {
+            'Todo el Estado': { geom: [[[-92.32,20.84],[-89.1,20.84],[-89.1,17.8],[-92.32,17.8]]], style: {color: 'white', fillColor: '#FFFFFF22', weight: 2} },
+            'Zona 1, Ciudad Campeche': { geom: [[[-90.4531, 19.8993],[-90.4890, 19.8781],[-90.5211, 19.8612],[-90.5290, 19.8671],[-90.5343, 19.8631],[-90.5273, 19.8578],[-90.5366, 19.8549],[-90.5444, 19.8461],[-90.5529, 19.8386],[-90.5613, 19.8334],[-90.5685, 19.8282],[-90.5702, 19.8273],[-90.5712, 19.8277],[-90.5735, 19.8269],[-90.5734, 19.8253],[-90.5792, 19.8218],[-90.5852, 19.8187],[-90.5900, 19.8153],[-90.5929, 19.8183],[-90.5997, 19.8136],[-90.6010, 19.8085],[-90.6102, 19.8018],[-90.6165, 19.7991],[-90.6195, 19.7967],[-90.6261, 19.7939],[-90.6294, 19.7909],[-90.6327, 19.7900],[-90.6333, 19.7847],[-90.6389, 19.7790],[-90.6390, 19.7746],[-90.6349, 19.7724],[-90.6277, 19.7780],[-90.6159, 19.7809],[-90.5992, 19.7835],[-90.5922, 19.7947],[-90.5496, 19.7942],[-90.5422, 19.7914],[-90.5308, 19.7932],[-90.5232, 19.7891],[-90.5167, 19.7923],[-90.5048, 19.7900],[-90.5055, 19.7809],[-90.5039, 19.7776],[-90.5080, 19.7714],[-90.5115, 19.7638],[-90.5099, 19.7598],[-90.5171, 19.7573],[-90.5272, 19.7512],[-90.5223, 19.7435],[-90.5138, 19.7338],[-90.4989, 19.7403],[-90.4857, 19.7552],[-90.4698, 19.7498],[-90.4596, 19.7476],[-90.4611, 19.7558],[-90.4641, 19.7628],[-90.4750, 19.7666],[-90.4820, 19.7835],[-90.4643, 19.7960],[-90.4585, 19.8226],[-90.4556, 19.8433],[-90.4460, 19.8818]]], style: {color: 'blue', fillColor: '#0000FF22', weight: 2} },
+            'Zona 2, Lerma': { geom: [[[-90.5920, 19.8193],[-90.5996, 19.8133],[-90.6083, 19.8036],[-90.6327, 19.7897],[-90.6385, 19.7802],[-90.6396, 19.7744],[-90.6351, 19.7716],[-90.6279, 19.7779],[-90.5997, 19.7824],[-90.5924, 19.7946],[-90.5741, 19.7954],[-90.5831, 19.8203]]], style: {color: 'green', fillColor: '#00FF0022', weight: 2} },
+            'Zona 3, Chiná': { geom: [[[-90.5045, 19.7762],[-90.5187, 19.7562],[-90.5211, 19.7420],[-90.5021, 19.7384],[-90.4856, 19.7542],[-90.4626, 19.7483],[-90.4602, 19.7518],[-90.4748, 19.7647],[-90.4813, 19.7833],[-90.5046, 19.7901]]], style: {color: 'orange', fillColor: '#FFA50022', weight: 2} },
+            'Zona 4, San Fco. Campeche': { geom: [[[-90.5051, 19.7895],[-90.4811, 19.7838],[-90.4643, 19.7964],[-90.4464, 19.8814],[-90.4541, 19.8990],[-90.5210, 19.8621],[-90.5292, 19.8663],[-90.5346, 19.8625],[-90.5332, 19.8567],[-90.5831, 19.8203],[-90.5722, 19.7940],[-90.5495, 19.7938],[-90.5261, 19.7906]]], style: {color: 'purple', fillColor: '#80008022', weight: 2} }
+        };
 
-let map;
-let drawnItems;
-let timeSeriesChart;
-let currentMapLayer = null;
-let zoneLayers = {};
+        let map, drawnItems, currentGEELayer;
+        const zonaLayers = {};
+        const zonaCheckboxes = {};
 
-// =========================================================================================
-// === INICIALIZACIÓN
-// =========================================================================================
-document.addEventListener('DOMContentLoaded', () => {
-    initMap();
-    populateSelectors();
-    initChart();
-    attachEventListeners();
-    // Activate the first zone by default
-    document.querySelector('#zonaSelectorPanel input[type="checkbox"]').click();
-});
+        // --- Inicialización de UI y Mapa ---
+        document.addEventListener('DOMContentLoaded', () => {
+            google.charts.load('current', {'packages':['corechart']});
+            initMap();
+            populateSelectors();
+            setupEventListeners();
+            zonaCheckboxes[Object.keys(zonas)[0]].click();
+        });
 
-function initMap() {
-    map = L.map('map').setView([19.83, -90.53], 9);
-    L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
-        maxZoom: 20,
-        subdomains:['mt0','mt1','mt2','mt3']
-    }).addTo(map);
+        function initMap() {
+            map = L.map('map').setView([19.84, -90.53], 9);
+            L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
+                maxZoom: 20,
+                subdomains:['mt0','mt1','mt2','mt3']
+            }).addTo(map);
 
-    drawnItems = new L.FeatureGroup();
-    map.addLayer(drawnItems);
+            drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
 
-    const drawControl = new L.Control.Draw({
-        edit: { featureGroup: drawnItems },
-        draw: {
-            polygon: true,
-            polyline: false,
-            rectangle: true,
-            circle: false,
-            marker: false,
-            circlemarker: false
-        }
-    });
-    map.addControl(drawControl);
-
-    map.on(L.Draw.Event.CREATED, (e) => {
-        drawnItems.clearLayers();
-        const layer = e.layer;
-        drawnItems.addLayer(layer);
-        clearZoneCheckboxes();
-    });
-     map.on(L.Draw.Event.EDITED, () => clearZoneCheckboxes());
-}
-
-function populateSelectors() {
-    const varSelector = document.getElementById('variableSelector');
-    Object.keys(varParams).forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        varSelector.appendChild(option);
-    });
-
-    const zonaPanel = document.getElementById('zonaSelectorPanel');
-    Object.keys(zonas).forEach(name => {
-        const div = document.createElement('div');
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = `check-${name}`;
-        checkbox.value = name;
-        checkbox.className = 'mr-2';
-        checkbox.addEventListener('change', handleZoneCheckboxChange);
-        
-        const label = document.createElement('label');
-        label.htmlFor = `check-${name}`;
-        label.textContent = name;
-        
-        div.appendChild(checkbox);
-        div.appendChild(label);
-        zonaPanel.appendChild(div);
-    });
-}
-
-function initChart() {
-    const ctx = document.getElementById('timeSeriesChart').getContext('2d');
-    timeSeriesChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            datasets: []
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: {
-                    type: 'time',
-                    time: { unit: 'month' },
-                    title: { display: true, text: 'Fecha' }
-                },
-                y: {
-                    title: { display: true, text: 'Valor' }
+            const drawControl = new L.Control.Draw({
+                edit: { featureGroup: drawnItems },
+                draw: {
+                    polygon: true,
+                    polyline: false,
+                    rectangle: true,
+                    circle: false,
+                    marker: false,
+                    circlemarker: false
                 }
-            },
-            plugins: {
-                legend: { position: 'top' },
-                title: { display: true, text: 'Serie Temporal' }
+            });
+            map.addControl(drawControl);
+
+            map.on(L.Draw.Event.CREATED, (e) => {
+                drawnItems.clearLayers();
+                drawnItems.addLayer(e.layer);
+                clearZoneCheckboxes();
+                updateStatsPanel('Área dibujada seleccionada. Carga datos para analizar.');
+            });
+            map.on(L.Draw.Event.EDITED, () => updateStatsPanel('Área editada. Vuelve a cargar los datos.'));
+        }
+
+        function populateSelectors() {
+            const varSelector = document.getElementById('variableSelector');
+            Object.keys(varParams).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                varSelector.appendChild(option);
+            });
+
+            const zonaPanel = document.getElementById('zonaSelectorPanel');
+            Object.keys(zonas).forEach(name => {
+                const id = `check-${name.replace(/\s/g, '')}`;
+                const div = document.createElement('div');
+                div.innerHTML = `<input type="checkbox" id="${id}" class="mr-2"><label for="${id}">${name}</label>`;
+                const checkbox = div.firstChild;
+                zonaCheckboxes[name] = checkbox;
+                checkbox.addEventListener('change', () => handleZoneSelection(name));
+                zonaPanel.appendChild(div);
+            });
+        }
+        
+        function handleZoneSelection(selectedName) {
+            drawnItems.clearLayers();
+            Object.keys(zonaCheckboxes).forEach(name => {
+                if (name !== selectedName) zonaCheckboxes[name].checked = false;
+                if (zonaLayers[name]) {
+                    map.removeLayer(zonaLayers[name]);
+                    delete zonaLayers[name];
+                }
+            });
+
+            if (zonaCheckboxes[selectedName].checked) {
+                const zona = zonas[selectedName];
+                const layer = L.polygon(L.GeoJSON.coordsToLatLngs(zona.geom[0]), zona.style);
+                map.addLayer(layer);
+                zonaLayers[selectedName] = layer;
+                map.fitBounds(layer.getBounds());
             }
         }
-    });
-}
 
-function attachEventListeners() {
-    document.getElementById('loadDataButton').addEventListener('click', handleLoadData);
-    document.getElementById('compareButton').addEventListener('click', handleCompareZones);
-    document.getElementById('precipAnalysisButton').addEventListener('click', handlePrecipitationAnalysis);
-    document.getElementById('tempAnalysisButton').addEventListener('click', handleTemperatureAnalysis);
-    document.getElementById('calculateSpiButton').addEventListener('click', handleSpiAnalysis);
-    document.getElementById('fireRiskButton').addEventListener('click', handleFireRiskAnalysis);
-    document.getElementById('clearDrawingButton').addEventListener('click', clearDrawing);
-    document.getElementById('resetButton').addEventListener('click', resetApp);
-    document.getElementById('variableSelector').addEventListener('change', toggleAnalysisPanels);
-}
-
-
-// =========================================================================================
-// === LÓGICA DE LA INTERFAZ
-// =========================================================================================
-function setLoading(isLoading, message = 'Cargando...') {
-    const indicator = document.getElementById('loading-indicator');
-    indicator.textContent = message;
-    indicator.style.display = isLoading ? 'block' : 'none';
-}
-
-function updateStatus(text) {
-    document.getElementById('weatherStatusLabel').textContent = text;
-}
-
-function handleZoneCheckboxChange(e) {
-    const zoneName = e.target.value;
-    const isChecked = e.target.checked;
-    
-    // Uncheck other boxes
-    if (isChecked) {
-        document.querySelectorAll('#zonaSelectorPanel input[type="checkbox"]').forEach(cb => {
-            if (cb.value !== zoneName) cb.checked = false;
-        });
-        Object.values(zoneLayers).forEach(layer => map.removeLayer(layer));
-        zoneLayers = {};
-    }
-    
-    drawnItems.clearLayers();
-    
-    if (isChecked) {
-        const zona = zonas[zoneName];
-        const layer = L.geoJSON(zona.geom, { style: zona.style }).addTo(map);
-        zoneLayers[zoneName] = layer;
-        map.fitBounds(layer.getBounds());
-    } else {
-        if (zoneLayers[zoneName]) {
-            map.removeLayer(zoneLayers[zoneName]);
-            delete zoneLayers[zoneName];
+        function clearZoneCheckboxes() {
+             Object.values(zonaCheckboxes).forEach(cb => cb.checked = false);
+             Object.values(zonaLayers).forEach(layer => map.removeLayer(layer));
         }
-    }
-}
 
-function clearZoneCheckboxes() {
-    document.querySelectorAll('#zonaSelectorPanel input[type="checkbox"]').forEach(cb => {
-        if (cb.checked) {
-            cb.checked = false;
-            if(zoneLayers[cb.value]) {
-                map.removeLayer(zoneLayers[cb.value]);
-                delete zoneLayers[cb.value];
+        function setupEventListeners() {
+            document.getElementById('loadDataButton').addEventListener('click', () => handleAnalysis('general'));
+            document.getElementById('compareButton').addEventListener('click', () => handleAnalysis('compare'));
+            document.getElementById('precipAnalysisButton').addEventListener('click', () => handleAnalysis('precipitation'));
+            document.getElementById('tempAnalysisButton').addEventListener('click', () => handleAnalysis('temperature'));
+            document.getElementById('calculateSpiButton').addEventListener('click', () => handleAnalysis('spi'));
+            document.getElementById('fireRiskButton').addEventListener('click', () => handleAnalysis('fireRisk'));
+            document.getElementById('clearDrawingButton').addEventListener('click', () => drawnItems.clearLayers());
+            document.getElementById('resetButton').addEventListener('click', resetApp);
+            document.getElementById('variableSelector').addEventListener('change', toggleAnalysisPanels);
+        }
+
+        function toggleAnalysisPanels() {
+            const selectedVar = document.getElementById('variableSelector').value;
+            document.getElementById('precipAnalysisPanel').classList.toggle('hidden', selectedVar !== 'Precipitación Acumulada (mm)');
+            document.getElementById('tempAnalysisPanel').classList.toggle('hidden', selectedVar !== 'Temperatura del Aire (°C)');
+        }
+
+        function resetApp() {
+            drawnItems.clearLayers();
+            clearZoneCheckboxes();
+            zonaCheckboxes[Object.keys(zonas)[0]].click();
+            if (currentGEELayer) map.removeLayer(currentGEELayer);
+            updateStatsPanel('Selecciona opciones y carga datos.');
+            clearChart();
+        }
+
+        // --- Lógica de Análisis ---
+
+        async function handleAnalysis(type) {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            if (!startDate || !endDate) {
+                updateStatsPanel('Error: Por favor, selecciona un rango de fechas.');
+                return;
+            }
+
+            const activeROIs = getActiveROIs();
+            if (activeROIs.length === 0) {
+                updateStatsPanel('Error: Selecciona al menos una zona o dibuja un área.');
+                return;
+            }
+            if (type === 'compare' && activeROIs.length < 2) {
+                updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas o dibuja múltiples polígonos.');
+                return;
+            }
+            
+            clearMapAndChart();
+            showLoading(true);
+
+            const baseParams = { startDate, endDate };
+            let action = '';
+            let params = {};
+            
+            const selectedVar = document.getElementById('variableSelector').value;
+            const varInfo = varParams[selectedVar];
+
+            switch(type) {
+                case 'general':
+                    action = 'getGeneralData';
+                    params = { ...baseParams, roi: activeROIs[0], varInfo };
+                    break;
+                case 'compare':
+                    action = 'getCompareData';
+                    params = { ...baseParams, rois: activeROIs, varInfo };
+                    break;
+                case 'precipitation':
+                    action = 'getPrecipitationData';
+                    params = {
+                        ...baseParams,
+                        roi: activeROIs[0],
+                        analysisType: document.getElementById('precipAnalysisSelector').value,
+                        aggregation: document.getElementById('precipAggregationSelector').value,
+                    };
+                    break;
+                case 'temperature':
+                     action = 'getTemperatureData';
+                     params = {
+                        ...baseParams,
+                        roi: activeROIs[0],
+                        analysisType: document.getElementById('tempAnalysisSelector').value,
+                     };
+                    break;
+                case 'spi':
+                    action = 'getSpiData';
+                    params = {
+                        ...baseParams,
+                        roi: activeROIs[0],
+                        timescale: parseInt(document.getElementById('spiTimescaleSelector').value)
+                    };
+                    break;
+                case 'fireRisk':
+                     action = 'getFireRiskData';
+                     params = { ...baseParams, roi: activeROIs[0] };
+                    break;
+            }
+            
+            try {
+                const response = await callGeeApi(action, params);
+                if (response.mapId) {
+                    addGeeLayer(response.mapId.urlFormat);
+                }
+                if (response.stats) {
+                    updateStatsPanel(response.stats);
+                }
+                if (response.chartData) {
+                    drawChart(response.chartData, response.chartOptions);
+                }
+            } catch (error) {
+                console.error("Error en el análisis:", error);
+                updateStatsPanel(`Error: ${error.message}`);
+            } finally {
+                showLoading(false);
             }
         }
-    });
-}
 
-function clearDrawing() {
-    drawnItems.clearLayers();
-    // Default to the first zone if no zone is selected
-    const anyChecked = Array.from(document.querySelectorAll('#zonaSelectorPanel input[type="checkbox"]')).some(cb => cb.checked);
-    if (!anyChecked) {
-        document.querySelector('#zonaSelectorPanel input[type="checkbox"]').click();
-    }
-}
+        function getActiveROIs() {
+            const rois = [];
+            // Primero, las áreas dibujadas
+            if (drawnItems.getLayers().length > 0) {
+                 drawnItems.getLayers().forEach((layer, i) => {
+                    rois.push({
+                        name: `Área Dibujada ${i + 1}`,
+                        geom: layer.toGeoJSON().geometry
+                    });
+                });
+                return rois;
+            }
 
-function toggleAnalysisPanels() {
-    const selectedVar = document.getElementById('variableSelector').value;
-    document.getElementById('precipAnalysisPanel').style.display = (selectedVar === 'Precipitación Acumulada (mm)') ? 'block' : 'none';
-    document.getElementById('tempAnalysisPanel').style.display = (selectedVar === 'Temperatura del Aire (°C)') ? 'block' : 'none';
-}
-
-function getActiveROIs() {
-    // Priority to drawn items
-    if (drawnItems.getLayers().length > 0) {
-        return drawnItems.getLayers().map((layer, index) => ({
-            name: `Área Dibujada ${index + 1}`,
-            geom: layer.toGeoJSON().geometry
-        }));
-    }
-    
-    // Fallback to selected zones
-    const selectedZones = Array.from(document.querySelectorAll('#zonaSelectorPanel input:checked')).map(cb => cb.value);
-    if (selectedZones.length > 0) {
-        return selectedZones.map(name => ({ name: name, geom: zonas[name].geom }));
-    }
-    
-    return [];
-}
-
-function resetApp() {
-    clearDrawing();
-    clearMapLayers();
-    updateStatus('Selecciona opciones y carga datos.');
-    timeSeriesChart.data.datasets = [];
-    timeSeriesChart.options.plugins.title.text = 'Serie Temporal';
-    timeSeriesChart.update();
-    
-    document.querySelectorAll('#zonaSelectorPanel input:checked').forEach(cb => cb.checked = false);
-    Object.values(zoneLayers).forEach(layer => map.removeLayer(layer));
-    zoneLayers = {};
-    
-    document.querySelector('#zonaSelectorPanel input[type="checkbox"]').click();
-}
-
-function clearMapLayers() {
-    if (currentMapLayer) {
-        map.removeLayer(currentMapLayer);
-        currentMapLayer = null;
-    }
-}
-
-// =========================================================================================
-// === LÓGICA DE DATOS Y GRÁFICOS
-// =========================================================================================
-
-async function callGeeApi(action, params) {
-    try {
-        setLoading(true, params.loadingMessage || 'Procesando en Google Earth Engine...');
-        const response = await fetch('/api/gee', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action, ...params })
-        });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Error en el servidor GEE.');
+            // Si no hay dibujos, las zonas seleccionadas
+            Object.keys(zonaCheckboxes).forEach(name => {
+                if (zonaCheckboxes[name].checked) {
+                    rois.push({
+                        name: name,
+                        geom: { type: 'Polygon', coordinates: zonas[name].geom }
+                    });
+                }
+            });
+            return rois;
         }
-        return await response.json();
-    } catch (error) {
-        console.error('API Call Error:', error);
-        updateStatus(`Error: ${error.message}`);
-        return null;
-    } finally {
-        setLoading(false);
-    }
-}
 
-function displayMapLayer(tileUrl) {
-    clearMapLayers();
-    if (tileUrl) {
-        currentMapLayer = L.tileLayer(tileUrl, { opacity: 0.7 }).addTo(map);
-    }
-}
+        // --- Comunicación con la API ---
+        
+        async function callGeeApi(action, params) {
+            const response = await fetch('/api/gee', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, params })
+            });
 
-function updateChart(chartData, title, yAxisLabel) {
-    timeSeriesChart.data.datasets = chartData.datasets;
-    timeSeriesChart.options.plugins.title.text = title;
-    timeSeriesChart.options.scales.y.title.text = yAxisLabel;
-    
-    const chartType = document.getElementById('chartTypeSelector').value;
-    timeSeriesChart.config.type = (chartType === 'scatter' || chartType === 'bar') ? chartType : 'line';
-    
-    timeSeriesChart.update();
-}
+            if (!response.ok) {
+                 const errorBody = await response.text();
+                 console.error("Respuesta del servidor con error:", errorBody);
+                 throw new Error(`El servidor respondió con un error ${response.status}.`);
+            }
+            
+            const responseText = await response.text();
+            try {
+                 return JSON.parse(responseText);
+            } catch (e) {
+                 console.error("Error al parsear JSON:", e);
+                 console.error("Texto recibido del servidor:", responseText);
+                 throw new Error(`Respuesta inválida del servidor.`);
+            }
+        }
 
-// =========================================================================================
-// === MANEJADORES DE EVENTOS (HANDLERS)
-// =========================================================================================
+        // --- Helpers de UI ---
 
-async function handleLoadData() {
-    const activeROIs = getActiveROIs();
-    if (activeROIs.length === 0) {
-        updateStatus('Error: Selecciona una zona o dibuja un área.');
-        return;
-    }
-    const roi = activeROIs[0];
-    const varName = document.getElementById('variableSelector').value;
-    const params = {
-        variable: varParams[varName].id,
-        startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('endDate').value,
-        region: roi.geom,
-        loadingMessage: 'Cargando datos generales...'
-    };
-    
-    const data = await callGeeApi('getGeneralData', params);
-    if (!data) return;
+        function showLoading(isLoading) {
+            document.getElementById('loading-overlay').classList.toggle('hidden', !isLoading);
+        }
 
-    displayMapLayer(data.tileUrl);
-    updateChart({
-        datasets: [{
-            label: `${varName} en ${roi.name}`,
-            data: data.chartData,
-            borderColor: '#f0ad4e',
-            tension: 0.1
-        }]
-    }, `Serie temporal para: ${roi.name}`, `${varName}`);
-    
-    updateStatus(`Estadísticas para ${roi.name} (promedio en el tiempo):\n` +
-                 `Promedio: ${data.stats.mean.toFixed(2)} ${varParams[varName].unit}\n` +
-                 `Mínimo: ${data.stats.min.toFixed(2)} ${varParams[varName].unit}\n` +
-                 `Máximo: ${data.stats.max.toFixed(2)} ${varParams[varName].unit}`);
-}
+        function updateStatsPanel(text) {
+            document.getElementById('stats-panel').textContent = text;
+        }
 
-async function handleCompareZones() {
-    const activeROIs = getActiveROIs();
-    if (activeROIs.length < 2) {
-        updateStatus('Error: Selecciona 2+ zonas o dibuja 2+ áreas para comparar.');
-        return;
-    }
-    const varName = document.getElementById('variableSelector').value;
-    const params = {
-        variable: varParams[varName].id,
-        startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('endDate').value,
-        regions: activeROIs,
-        loadingMessage: 'Comparando zonas...'
-    };
-    
-    const data = await callGeeApi('getComparisonData', params);
-    if (!data) return;
+        function clearMapAndChart() {
+            if (currentGEELayer) map.removeLayer(currentGEELayer);
+            clearChart();
+        }
+        
+        function clearChart() {
+            const chartPanel = document.getElementById('chart-panel');
+            chartPanel.innerHTML = '<span class="text-gray-300">El gráfico aparecerá aquí</span>';
+        }
 
-    clearMapLayers();
-    const colors = ['#00FFFF', '#00FF00', '#FFFF00', '#FF00FF', '#FF6347', '#DA70D6'];
-    const datasets = data.chartData.map((series, index) => ({
-        label: series.name,
-        data: series.data,
-        borderColor: colors[index % colors.length],
-        tension: 0.1,
-        fill: false
-    }));
+        function addGeeLayer(url) {
+            if (currentGEELayer) map.removeLayer(currentGEELayer);
+            currentGEELayer = L.tileLayer(url, {
+                attribution: 'Google Earth Engine'
+            }).addTo(map);
+        }
+        
+        function drawChart(data, options) {
+            const chartPanel = document.getElementById('chart-panel');
+            chartPanel.innerHTML = ''; // Limpiar panel
+            const dataTable = google.visualization.arrayToDataTable(data);
+            
+            const chartType = document.getElementById('chartTypeSelector').value;
+            
+            let chart;
+            switch(chartType) {
+                case 'ColumnChart':
+                    chart = new google.visualization.ColumnChart(chartPanel);
+                    break;
+                case 'ScatterChart':
+                     chart = new google.visualization.ScatterChart(chartPanel);
+                    break;
+                case 'AreaChart':
+                     chart = new google.visualization.AreaChart(chartPanel);
+                    break;
+                default:
+                     chart = new google.visualization.LineChart(chartPanel);
+            }
 
-    updateChart({ datasets }, `Comparación: ${varName}`, `${varName}`);
-    updateStatus(`Gráfico de comparación generado para ${activeROIs.length} zonas.`);
-}
+            const defaultOptions = {
+                backgroundColor: '#a04040',
+                titleTextStyle: { color: '#FFFFFF' },
+                legend: { textStyle: { color: '#FFFFFF' }, position: 'top' },
+                hAxis: { textStyle: { color: '#FFFFFF' }, titleTextStyle: { color: '#FFFFFF' } },
+                vAxis: { textStyle: { color: '#FFFFFF' }, titleTextStyle: { color: '#FFFFFF' } },
+                chartArea: { width: '85%', height: '75%' }
+            };
 
-async function handlePrecipitationAnalysis() {
-    const activeROIs = getActiveROIs();
-    if (activeROIs.length === 0) { return; }
-    const roi = activeROIs[0];
-
-    const params = {
-        analysisType: document.getElementById('precipAnalysisSelector').value,
-        aggregation: document.getElementById('precipAggregationSelector').value,
-        startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('endDate').value,
-        region: roi.geom,
-        loadingMessage: 'Analizando precipitación...'
-    };
-
-    const data = await callGeeApi('getPrecipitationAnalysis', params);
-    if (!data) return;
-
-    displayMapLayer(data.tileUrl);
-    timeSeriesChart.config.type = 'bar';
-    updateChart({
-        datasets: [{
-            label: `${data.title} en ${roi.name}`,
-            data: data.chartData,
-            backgroundColor: '#41b6c4'
-        }]
-    }, `${data.title} (${params.aggregation}) para ${roi.name}`, data.unit);
-    updateStatus(`Valor promedio para ${roi.name}:\n${data.stats.mean.toFixed(2)} ${data.unit}`);
-}
-
-async function handleTemperatureAnalysis() {
-    const activeROIs = getActiveROIs();
-    if (activeROIs.length === 0) { return; }
-    const roi = activeROIs[0];
-
-    const params = {
-        analysisType: document.getElementById('tempAnalysisSelector').value,
-        startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('endDate').value,
-        region: roi.geom,
-        loadingMessage: 'Analizando temperatura...'
-    };
-
-    const data = await callGeeApi('getTemperatureAnalysis', params);
-    if (!data) return;
-    
-    displayMapLayer(data.tileUrl);
-    timeSeriesChart.data.datasets = [];
-    timeSeriesChart.update();
-    updateStatus(`Resultado para ${roi.name} (${data.title}):\n` +
-                 `Valor promedio: ${data.stats.mean.toFixed(2)} ${data.unit}`);
-}
-
-async function handleSpiAnalysis() {
-    const activeROIs = getActiveROIs();
-    if (activeROIs.length === 0) { return; }
-    const roi = activeROIs[0];
-
-    const params = {
-        timescale: parseInt(document.getElementById('spiTimescaleSelector').value, 10),
-        startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('endDate').value,
-        region: roi.geom,
-        loadingMessage: 'Calculando SPI...'
-    };
-    
-    const data = await callGeeApi('getSpiAnalysis', params);
-    if (!data) return;
-
-    displayMapLayer(data.tileUrl);
-    
-    // Custom SPI chart with colors
-    const chartData = data.chartData;
-    const spiColors = chartData.map(d => {
-        const spi = d.y;
-        if (spi <= -2.0) return '#d73027';
-        if (spi <= -1.5) return '#f46d43';
-        if (spi <= -1.0) return '#fdae61';
-        if (spi >= 2.0) return '#4575b4';
-        if (spi >= 1.5) return '#74add1';
-        if (spi >= 1.0) return '#abd9e9';
-        return '#cccccc';
-    });
-
-    timeSeriesChart.config.type = 'bar';
-    updateChart({
-        datasets: [{
-            label: `SPI ${params.timescale}-Meses en ${roi.name}`,
-            data: chartData,
-            backgroundColor: spiColors,
-            borderColor: spiColors
-        }]
-    }, `SPI de ${params.timescale} Meses para ${roi.name}`, 'Valor SPI');
-    updateStatus(`Análisis SPI completado. Mostrando mapa para la fecha más reciente.`);
-}
-
-async function handleFireRiskAnalysis() {
-    const activeROIs = getActiveROIs();
-    if (activeROIs.length === 0) { return; }
-    const roi = activeROIs[0];
-
-    const params = {
-        endDate: document.getElementById('endDate').value,
-        region: roi.geom,
-        loadingMessage: 'Generando mapa de riesgo de incendio...'
-    };
-    
-    const data = await callGeeApi('getFireRiskAnalysis', params);
-    if (!data) return;
-
-    displayMapLayer(data.tileUrl);
-    timeSeriesChart.data.datasets = [];
-    timeSeriesChart.update();
-    updateStatus('Mapa de Riesgo de Incendio generado.\n' +
-                 'Riesgo calculado usando LST y SPI de 3 meses para la fecha más reciente.');
-}
-
-</script>
+            chart.draw(dataTable, {...defaultOptions, ...options});
+        }
+    </script>
 </body>
 </html>
+
