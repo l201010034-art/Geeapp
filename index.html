@@ -114,10 +114,10 @@
             <div>
                 <label for="chartTypeSelector" class="font-bold">4. Tipo de Gráfico (vars. generales)</label>
                 <select id="chartTypeSelector" class="w-full p-2 mt-1 rounded bg-[#a04040] text-white border-gray-500">
-                    <option>LineChart</option>
-                    <option>ColumnChart</option>
-                    <option>ScatterChart</option>
-                    <option>AreaChart</option>
+                    <option value="LineChart">Línea</option>
+                    <option value="ColumnChart">Barras</option>
+                    <option value="ScatterChart">Dispersión</option>
+                    <option value="AreaChart">Área</option>
                 </select>
             </div>
 
@@ -290,7 +290,10 @@
             document.getElementById('tempAnalysisButton').addEventListener('click', () => handleAnalysis('temperature'));
             document.getElementById('calculateSpiButton').addEventListener('click', () => handleAnalysis('spi'));
             document.getElementById('fireRiskButton').addEventListener('click', () => handleAnalysis('fireRisk'));
-            document.getElementById('clearDrawingButton').addEventListener('click', () => drawnItems.clearLayers());
+            document.getElementById('clearDrawingButton').addEventListener('click', () => {
+                drawnItems.clearLayers();
+                updateStatsPanel('Dibujos limpiados.');
+            });
             document.getElementById('resetButton').addEventListener('click', resetApp);
             document.getElementById('variableSelector').addEventListener('change', toggleAnalysisPanels);
         }
@@ -326,33 +329,31 @@
                 return;
             }
             if (type === 'compare' && activeROIs.length < 2) {
-                updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas o dibuja múltiples polígonos.');
+                updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas.');
                 return;
             }
             
             clearMapAndChart();
             showLoading(true);
 
-            const baseParams = { startDate, endDate };
             let action = '';
             let params = {};
-            
             const selectedVar = document.getElementById('variableSelector').value;
             const varInfo = varParams[selectedVar];
 
             switch(type) {
                 case 'general':
                     action = 'getGeneralData';
-                    params = { ...baseParams, roi: activeROIs[0], varInfo };
+                    params = { startDate, endDate, roi: activeROIs[0], varInfo };
                     break;
                 case 'compare':
                     action = 'getCompareData';
-                    params = { ...baseParams, rois: activeROIs, varInfo };
+                    params = { startDate, endDate, rois: activeROIs, varInfo };
                     break;
                 case 'precipitation':
                     action = 'getPrecipitationData';
                     params = {
-                        ...baseParams,
+                        startDate, endDate,
                         roi: activeROIs[0],
                         analysisType: document.getElementById('precipAnalysisSelector').value,
                         aggregation: document.getElementById('precipAggregationSelector').value,
@@ -361,7 +362,7 @@
                 case 'temperature':
                      action = 'getTemperatureData';
                      params = {
-                        ...baseParams,
+                        startDate, endDate,
                         roi: activeROIs[0],
                         analysisType: document.getElementById('tempAnalysisSelector').value,
                      };
@@ -369,14 +370,14 @@
                 case 'spi':
                     action = 'getSpiData';
                     params = {
-                        ...baseParams,
+                        startDate, endDate,
                         roi: activeROIs[0],
                         timescale: parseInt(document.getElementById('spiTimescaleSelector').value)
                     };
                     break;
                 case 'fireRisk':
                      action = 'getFireRiskData';
-                     params = { ...baseParams, roi: activeROIs[0] };
+                     params = { endDate, roi: activeROIs[0] };
                     break;
             }
             
@@ -433,13 +434,17 @@
                 body: JSON.stringify({ action, params })
             });
 
+            const responseText = await response.text();
             if (!response.ok) {
-                 const errorBody = await response.text();
-                 console.error("Respuesta del servidor con error:", errorBody);
-                 throw new Error(`El servidor respondió con un error ${response.status}.`);
+                 console.error("Respuesta del servidor con error:", responseText);
+                 try {
+                     const errorJson = JSON.parse(responseText);
+                     throw new Error(errorJson.details || `El servidor respondió con un error ${response.status}.`);
+                 } catch (e) {
+                     throw new Error(`El servidor respondió con un error ${response.status}.`);
+                 }
             }
             
-            const responseText = await response.text();
             try {
                  return JSON.parse(responseText);
             } catch (e) {
@@ -478,6 +483,12 @@
         
         function drawChart(data, options) {
             const chartPanel = document.getElementById('chart-panel');
+            if (!data || data.length < 2) {
+                clearChart();
+                updateStatsPanel(prev => prev + '\nNo hay datos suficientes para generar el gráfico.');
+                return;
+            }
+
             chartPanel.innerHTML = ''; // Limpiar panel
             const dataTable = google.visualization.arrayToDataTable(data);
             
