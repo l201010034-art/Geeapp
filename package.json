@@ -3,7 +3,7 @@
     "@google/earthengine": "^0.1.391"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   }
 }
 
