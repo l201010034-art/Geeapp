@@ -102,9 +102,6 @@ export default async function handler(req, res) {
     }
 
     try {
-        // SOLUCIÓN: Forzar el modo asíncrono para evitar escrituras en el sistema de archivos.
-        ee.data.setSync(false);
-
         await new Promise((resolve, reject) => {
             ee.data.authenticateViaPrivateKey(
                 {
@@ -194,37 +191,44 @@ async function handlePrecipitationData({ roi, analysisType, aggregation, startDa
     const precipCollection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
         .filterDate(startDate, endDate).filterBounds(eeRoi).map(processChirps);
 
-    let metricCollection, reducerForAggregation, title, visParams, unit, chartTitle;
+    let metricCollection, reducer, title, visParams, unit, chartTitle, bandName, chartBandName;
 
     if (analysisType === 'accumulated') {
+        bandName = 'Precipitacion';
         metricCollection = precipCollection;
-        reducerForAggregation = ee.Reducer.sum();
+        reducer = ee.Reducer.sum();
         title = 'Precipitación Total Acumulada';
         chartTitle = 'Precipitación Acumulada';
         visParams = { min: 0, max: 200, palette: ['#ffffcc', '#a1dab4', '#41b6c4', '#225ea8'] };
         unit = 'mm';
+        chartBandName = 'metric';
     } else if (analysisType === 'intensity') {
+        bandName = 'Precipitacion';
         metricCollection = precipCollection.map(img => img.updateMask(img.gt(1.0)));
-        reducerForAggregation = ee.Reducer.mean();
+        reducer = ee.Reducer.mean();
         title = 'Intensidad Promedio (días > 1mm)';
         chartTitle = 'Intensidad de Lluvia';
         visParams = { min: 2, max: 20, palette: ['yellow', 'orange', 'red', 'purple'] };
         unit = 'mm/día de lluvia';
+        chartBandName = 'metric';
     } else { // frequency
-        metricCollection = precipCollection.map(img => img.gt(20));
-        reducerForAggregation = ee.Reducer.sum();
+        bandName = 'strong_rain_day';
+        metricCollection = precipCollection.select('Precipitacion').map(img => img.gt(20).rename(bandName));
+        reducer = ee.Reducer.sum();
         title = 'Total de Días con Lluvia Fuerte (>20mm)';
         chartTitle = 'Días con Lluvia Fuerte (>20mm)';
         visParams = { min: 0, max: 10, palette: ['lightblue', 'blue', 'navy'] };
         unit = 'días';
+        chartBandName = 'chart_metric';
     }
     
-    const collectionForChart = aggregateCollection(metricCollection, aggregation, reducerForAggregation, startDate, endDate);
+    const collectionForChart = aggregateCollection(metricCollection, aggregation, reducer)
+      .map(img => img.rename(chartBandName));
 
-    const imageForMap = metricCollection.reduce(reducerForAggregation);
+    const imageForMap = metricCollection.reduce(reducer).rename('map_result');
     const mapId = await getMapId(imageForMap.clip(eeRoi), visParams);
-    const stats = await getStats(imageForMap, eeRoi, imageForMap.bandNames().get(0), unit, roi.name, "Valor total/promedio");
-    const chartData = await getChartData(collectionForChart, eeRoi, collectionForChart.first().bandNames().get(0));
+    const stats = await getStats(imageForMap, eeRoi, 'map_result', unit, roi.name, "Valor total/promedio");
+    const chartData = await getChartData(collectionForChart, eeRoi, chartBandName);
 
     return { mapId, stats, chartData, chartOptions: { title: `${chartTitle} (${aggregation}) para ${roi.name}` } };
 }
@@ -235,29 +239,27 @@ async function handleTemperatureData({ roi, analysisType, startDate, endDate }) 
     const dailyCollection = ee.ImageCollection("ECMWF/ERA5/DAILY")
         .filterDate(startDate, endDate).filterBounds(eeRoi);
 
-    let resultImage, title, visParams, unit;
+    let resultImage, title, visParams, unit, bandName;
 
     if (analysisType === 'frost') {
+        bandName = 'frost_days';
         title = 'Número de Días de Helada (Tmin <= 0°C)';
         unit = 'días';
         const tMin = dailyCollection.select('minimum_2m_air_temperature').map(img => img.subtract(273.15));
-        resultImage = tMin.map(img => img.lte(0)).sum();
+        resultImage = tMin.map(img => img.lte(0)).sum().rename(bandName);
         visParams = { min: 0, max: 5, palette: ['#cae1ff', '#acb6e5', '#7474bf'] };
     } else { // heatwave
-        title = 'Número de Olas de Calor (>=3 días >38°C)';
-        unit = 'eventos';
-        const tMax = dailyCollection.select('maximum_2m_air_temperature').map(img => img.subtract(273.15));
-        const hotDays = tMax.map(img => img.gt(38).rename('hot_day').copyProperties(img, ['system:time_start']));
-        
-        // This is a complex operation (finding consecutive days) and is simplified here for performance.
-        // A full implementation requires more advanced GEE techniques. We'll sum hot days as an indicator.
-        resultImage = hotDays.sum(); 
-        visParams = { min: 0, max: 30, palette: ['#fdd49e', '#fdbb84', '#fc8d59', '#d7301f'] };
+        bandName = 'hot_day_count';
         title = 'Número de Días con Tmax > 38°C';
+        unit = 'días';
+        const tMax = dailyCollection.select('maximum_2m_air_temperature').map(img => img.subtract(273.15));
+        const hotDays = tMax.map(img => img.gt(38));
+        resultImage = hotDays.sum().rename(bandName);
+        visParams = { min: 0, max: 30, palette: ['#fdd49e', '#fdbb84', '#fc8d59', '#d7301f'] };
     }
     
     const mapId = await getMapId(resultImage.clip(eeRoi), visParams);
-    const stats = await getStats(resultImage, eeRoi, resultImage.bandNames().get(0), unit, roi.name, `Total de ${unit}`);
+    const stats = await getStats(resultImage, eeRoi, bandName, unit, roi.name, `Total de ${unit}`);
 
     return { mapId, stats, chartData: null };
 }
@@ -314,28 +316,30 @@ function getMapId(image, visParams) {
 
 async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio") {
     return new Promise((resolve, reject) => {
-        const band = ee.String(bandName);
         const reducer = ee.Reducer.mean().combine({ reducer2: ee.Reducer.minMax(), sharedInputs: true });
         const dict = image.reduceRegion({ reducer, geometry: roi, scale: 1000, bestEffort: true });
         
-        const meanKey = band.cat('_mean');
-        const minKey = band.cat('_min');
-        const maxKey = band.cat('_max');
-
         dict.evaluate((stats, error) => {
-            if (error) reject(new Error('Error calculando estadísticas: ' + error));
-            else if (!stats || stats[meanKey.getInfo()] == null) {
-                resolve(`No se pudieron calcular estadísticas para ${zoneName}.`);
+            if (error) {
+                reject(new Error('Error calculando estadísticas: ' + error));
             } else {
-                const mean = stats[meanKey.getInfo()].toFixed(2);
-                const min = stats[minKey.getInfo()].toFixed(2);
-                const max = stats[maxKey.getInfo()].toFixed(2);
-                resolve(
-                    `Estadísticas para ${zoneName}:\n` +
-                    `${prefix}: ${mean} ${unit}\n` +
-                    `Mínimo: ${min} ${unit}\n` +
-                    `Máximo: ${max} ${unit}`
-                );
+                const meanKey = `${bandName}_mean`;
+                const minKey = `${bandName}_min`;
+                const maxKey = `${bandName}_max`;
+                
+                if (!stats || stats[meanKey] == null) {
+                    resolve(`No se pudieron calcular estadísticas para ${zoneName}.`);
+                } else {
+                    const mean = stats[meanKey].toFixed(2);
+                    const min = stats[minKey].toFixed(2);
+                    const max = stats[maxKey].toFixed(2);
+                    resolve(
+                        `Estadísticas para ${zoneName}:\n` +
+                        `${prefix}: ${mean} ${unit}\n` +
+                        `Mínimo: ${min} ${unit}\n` +
+                        `Máximo: ${max} ${unit}`
+                    );
+                }
             }
         });
     });
@@ -368,31 +372,34 @@ async function getChartData(collection, roi, bandName) {
 
 async function getChartDataByRegion(collection, fc, bandName) {
     return new Promise((resolve, reject) => {
-        const labels = fc.aggregate_array('label').getInfo();
-        const header = [['Fecha', ...labels]];
+        fc.aggregate_array('label').evaluate((labels, error) => {
+             if (error) reject(new Error('Error obteniendo etiquetas de región: ' + error));
+             else {
+                const header = [['Fecha', ...labels]];
         
-        const timeSeries = collection.map(image => {
-            const time = image.get('system:time_start');
-            const means = image.reduceRegions({
-                collection: fc,
-                reducer: ee.Reducer.mean(),
-                scale: 1000
-            });
-            // Map over the means to get a list of values in the same order as labels
-            const values = labels.map(label => {
-                const feature = means.filter(ee.Filter.eq('label', label)).first();
-                return ee.Feature(feature).get(bandName);
-            });
-            return ee.Feature(null, {'system:time_start': time}).set('means', values);
-        });
-        
-        timeSeries.evaluate((fc, error) => {
-            if (error) reject(new Error('Error evaluando datos de comparación: ' + error));
-            else {
-                const rows = fc.features.map(f => {
-                    return [new Date(f.properties['system:time_start']), ...f.properties.means];
-                }).sort((a,b) => a[0] - b[0]);
-                resolve(header.concat(rows));
+                const timeSeries = collection.map(image => {
+                    const time = image.get('system:time_start');
+                    const means = image.reduceRegions({
+                        collection: fc,
+                        reducer: ee.Reducer.mean(),
+                        scale: 1000
+                    });
+                    const values = labels.map(label => {
+                        const feature = means.filter(ee.Filter.eq('label', label)).first();
+                        return ee.Feature(feature).get(bandName);
+                    });
+                    return ee.Feature(null, {'system:time_start': time}).set('means', values);
+                });
+                
+                timeSeries.evaluate((fc, error) => {
+                    if (error) reject(new Error('Error evaluando datos de comparación: ' + error));
+                    else {
+                        const rows = fc.features.map(f => {
+                            return [new Date(f.properties['system:time_start']), ...f.properties.means];
+                        }).sort((a,b) => a[0] - b[0]);
+                        resolve(header.concat(rows));
+                    }
+                });
             }
         });
     });
