@@ -165,24 +165,29 @@ async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate
 
     // Si el rango es largo, pre-agregamos a promedios diarios para evitar timeouts.
     const dateList = ee.List.sequence(0, dateDiffDays - 1);
+    
+    // FIX: Primero se crea la lista con posibles nulos.
+    const dailyImagesOrNulls = dateList.map(offset => {
+        const start = eeStartDate.advance(ee.Number(offset), 'day');
+        const end = start.advance(1, 'day');
+        
+        const hourlyImages = ee.ImageCollection(datasetName)
+                            .filterDate(start, end)
+                            .filterBounds(eeRoi);
+        
+        // Usamos un If para manejar días sin imágenes y evitar errores.
+        return ee.Algorithms.If(
+            hourlyImages.size().gt(0),
+            // Si hay imágenes, promediamos y procesamos.
+            processEra5(hourlyImages.mean()).set('system:time_start', start.millis()),
+            null // Si no hay imágenes, no devolvemos nada para este día.
+        );
+    });
+
+    // FIX: Se limpian los nulos de la LISTA y LUEGO se crea la ImageCollection.
     const dailyCollection = ee.ImageCollection.fromImages(
-        dateList.map(offset => {
-            const start = eeStartDate.advance(ee.Number(offset), 'day');
-            const end = start.advance(1, 'day');
-            
-            const hourlyImages = ee.ImageCollection(datasetName)
-                                .filterDate(start, end)
-                                .filterBounds(eeRoi);
-            
-            // Usamos un If para manejar días sin imágenes y evitar errores.
-            return ee.Algorithms.If(
-                hourlyImages.size().gt(0),
-                // Si hay imágenes, promediamos y procesamos.
-                processEra5(hourlyImages.mean()).set('system:time_start', start.millis()),
-                null // Si no hay imágenes, no devolvemos nada para este día.
-            );
-        })
-    ).removeAll([null]); // Quitamos los nulos de los días sin datos.
+        dailyImagesOrNulls.removeAll([null])
+    );
 
     return dailyCollection;
 }
