@@ -594,7 +594,7 @@
             const chartPanel = document.getElementById('chart-panel');
             if (!data || data.length < 2) {
                 clearChart();
-                updateStatsPanel(prev => prev + '\nNo hay datos suficientes para generar el gráfico.');
+                updateStatsPanel('No hay datos suficientes para generar el gráfico.');
                 return;
             }
 
