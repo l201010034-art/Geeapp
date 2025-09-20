@@ -318,13 +318,14 @@ async function handleSpiData({ roi, timescale, startDate, endDate }) {
     return { mapId, stats: `Mostrando el mapa SPI más reciente para el periodo.`, chartData, chartOptions: { title: `SPI de ${timescale} meses para ${roi.name}` }};
 }
 
-async function handleFireRiskData({ roi, endDate }) {
+async function handleFireRiskData({ roi,startDate ,endDate }) {
     const eeRoi = ee.Geometry(roi.geom);
     const eeEndDate = ee.Date(endDate);
+    const eeStartDate = eeEndDate.advance(startDate);
 
     // MEJORA: Buscar en una ventana más amplia (90 días) para encontrar la imagen más reciente
     const lstCollection = ee.ImageCollection('MODIS/061/MOD11A1')
-        .filterDate(eeEndDate.advance(-90, 'day'), eeEndDate)
+        .filterDate(eeEndDate.advance(-startDate), eeEndDate)
         .filterBounds(eeRoi)
         .map(processModis);
 
