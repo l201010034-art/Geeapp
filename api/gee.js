@@ -318,25 +318,26 @@ async function handleSpiData({ roi, timescale, startDate, endDate }) {
     return { mapId, stats: `Mostrando el mapa SPI más reciente para el periodo.`, chartData, chartOptions: { title: `SPI de ${timescale} meses para ${roi.name}` }};
 }
 
-async function handleFireRiskData({ roi,startDate ,endDate }) {
+async function handleFireRiskData({ roi, startDate, endDate }) { // <--- Se añade startDate
     const eeRoi = ee.Geometry(roi.geom);
+    const eeStartDate = ee.Date(startDate); // <--- Se usa startDate
     const eeEndDate = ee.Date(endDate);
-    const eeStartDate = eeDate(startDate);
 
-    // MEJORA: Buscar en una ventana más amplia (90 días) para encontrar la imagen más reciente
+    // Se usan ambas fechas para filtrar las colecciones
     const lstCollection = ee.ImageCollection('MODIS/061/MOD11A1')
-        .filterDate(eeEndDate.advance(-eeStartDate,'day'), eeEndDate)
+        .filterDate(eeStartDate, eeEndDate)
         .filterBounds(eeRoi)
         .map(processModis);
 
     const spiCollection = getSpiCollection(eeRoi, 3)
-        .filterDate(eeEndDate.advance(-eeStartDate, 'day'), eeEndDate);
+        .filterDate(eeStartDate, eeEndDate);
 
-    const latestLST = ee.Image(lstCollection.sort('system:time_start', false).first());
-    const latestSPI = ee.Image(spiCollection.sort('system:time_start', false).first());
+    // Se calcula la media del periodo en lugar de solo tomar la última imagen
+    const meanLST = lstCollection.mean(); 
+    const meanSPI = spiCollection.mean();
 
     const inputsPresent = await new Promise((resolve, reject) => {
-        ee.Dictionary.fromLists(['lst', 'spi'], [latestLST, latestSPI]).evaluate((dict, err) => {
+        ee.Dictionary.fromLists(['lst', 'spi'], [meanLST, meanSPI]).evaluate((dict, err) => {
             if (err) return reject(err);
             resolve(dict.lst != null && dict.spi != null);
         });
@@ -346,8 +347,8 @@ async function handleFireRiskData({ roi,startDate ,endDate }) {
         throw new Error("No hay suficientes datos de LST o SPI en el periodo seleccionado para calcular el riesgo de incendio.");
     }
 
-    const lstRisk = latestLST.select('LST').unitScale(30, 45).clamp(0, 1);
-    const spiRisk = latestSPI.select('SPI').multiply(-1).unitScale(0, 1.5).clamp(0, 1);
+    const lstRisk = meanLST.select('LST').unitScale(30, 45).clamp(0, 1);
+    const spiRisk = meanSPI.select('SPI').multiply(-1).unitScale(0, 1.5).clamp(0, 1);
     const totalRisk = lstRisk.multiply(0.6).add(spiRisk.multiply(0.4));
     
     const classifiedRisk = ee.Image(0).where(totalRisk.gt(0.25), 1).where(totalRisk.gt(0.50), 2).where(totalRisk.gt(0.75), 3);
@@ -355,7 +356,8 @@ async function handleFireRiskData({ roi,startDate ,endDate }) {
 
     const mapId = await getMapId(classifiedRisk.clip(eeRoi), fireVisParams);
     
-    return { mapId, stats: 'Riesgo calculado usando los datos más recientes de LST y SPI encontrados hasta 90 días antes de la fecha final.' };
+    // Mensaje actualizado
+    return { mapId, stats: `Riesgo de incendio promedio calculado para el periodo seleccionado.` };
 }
 
 
