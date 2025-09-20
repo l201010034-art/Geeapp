@@ -161,8 +161,7 @@ async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate
             .filterBounds(eeRoi)
             .map(processEra5);
     }
-
-    // CORRECCIÓN: Usar 'dateDiffDays - 1' en lugar de 'dateDiffDays.subtract(1)'
+    
     const dateList = ee.List.sequence(0, dateDiffDays - 1);
     const dailyImagesList = dateList.map(offset => {
         const start = eeStartDate.advance(ee.Number(offset), 'day');
@@ -420,7 +419,8 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
             const filtered = collection.filterDate(start, end);
             return ee.Algorithms.If(
                 filtered.size().gt(0),
-                filtered.mean().set('system:time_start', start.millis()),
+                // CORRECCIÓN: Renombrar la banda después de la media
+                filtered.mean().rename(bandName).set('system:time_start', start.millis()),
                 null
             );
         });
@@ -493,5 +493,4 @@ async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
         });
     });
 }
-
 
