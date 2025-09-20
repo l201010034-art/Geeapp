@@ -375,7 +375,8 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
             const start = eeStartDate.advance(ee.Number(offset), aggregateUnit);
             const end = start.advance(1, aggregateUnit);
             const filtered = collection.filterDate(start, end);
-            return filtered.mean().set('system:time_start', start.millis());
+            // FIX: Rename the band after calculating the mean to preserve its original name
+            return filtered.mean().rename(bandName).set('system:time_start', start.millis());
         })
     );
     
