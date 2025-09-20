@@ -8,23 +8,42 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Cargar la librería de Google Charts -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .hero-bg {
-            background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/thumbnails/57a701a547b746da2413aabc2c510134-84577265215161d7a31a5496924b2d5a:getPixels');
-            background-size: cover;
-            background-position: center;
-        }
         .tab-button.active {
             background-color: #f0ad4e;
             color: #800000;
+        }
+        /* Estilos para el video de fondo */
+        .hero-video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+        #hero-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        /* Estilo para los contenedores de los gráficos */
+        .chart-container {
+            width: 100%;
+            height: 300px; /* Altura fija para los gráficos de ejemplo */
+            border-radius: 0.5rem;
+            margin-top: auto;
         }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
 
     <!-- Navegación -->
-    <nav class="bg-black bg-opacity-50 p-4 fixed w-full z-10">
+    <nav class="bg-black bg-opacity-50 p-4 fixed w-full z-20">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold">Clima Campeche</h1>
             <a href="plataforma.html" class="bg-[#800000] hover:bg-[#a04040] text-white font-bold py-2 px-4 rounded transition duration-300">
@@ -33,9 +52,19 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <header class="hero-bg h-screen flex items-center justify-center text-center">
-        <div class="p-8">
+    <!-- Hero Section con Video -->
+    <header class="h-screen flex items-center justify-center text-center relative">
+        <div class="hero-video-container">
+            <video autoplay loop muted playsinline id="hero-video">
+                <!-- Video de vista satelital de la Tierra -->
+                <source src="https://www.pexels.com/es-es/download/video/33858393/" type="video/mp4">
+                Tu navegador no soporta videos HTML5.
+            </video>
+        </div>
+        <!-- Capa oscura sobre el video -->
+        <div class="absolute top-0 left-0 w-full h-full bg-black opacity-60"></div>
+        
+        <div class="p-8 z-10 relative">
             <h2 class="text-4xl md:text-6xl font-bold mb-4">Inteligencia Climática para la Toma de Decisiones en Campeche</h2>
             <p class="text-lg md:text-xl mb-8 max-w-3xl mx-auto">Traduciendo datos satelitales en acciones estratégicas para la agricultura, el medio ambiente y la protección civil.</p>
             <div>
@@ -69,12 +98,82 @@
         </div>
     </section>
 
-    <!-- Sección de Casos de Uso -->
-    <section id="casos-de-uso" class="py-20 bg-gray-900">
+    <!-- SECCIÓN: VARIABLES Y SU IMPACTO ESTRATÉGICO -->
+    <section id="variables-impacto" class="py-20 bg-gray-900">
         <div class="container mx-auto px-6">
-            <h3 class="text-3xl font-bold text-center mb-12">Aplicaciones Estratégicas</h3>
+            <h3 class="text-3xl font-bold text-center mb-12">Variables Clave y su Impacto Estratégico</h3>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-700">
+                    <div class="text-3xl mb-3">🌡️</div>
+                    <h4 class="text-xl font-bold mb-2">Temperatura del Aire (°C)</h4>
+                    <p class="text-gray-400 mb-4">Factor crucial para la salud pública, la agricultura y el riesgo de incendios.</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SEPROCI</span>
+                        <span class="bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SDA</span>
+                        <span class="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SEMABICCE</span>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-700">
+                    <div class="text-3xl mb-3">💧</div>
+                    <h4 class="text-xl font-bold mb-2">Precipitación</h4>
+                    <p class="text-gray-400 mb-4">Mide la cantidad de lluvia, esencial para monitorear sequías, gestionar recursos hídricos y planificar ciclos agrícolas.</p>
+                     <div class="flex flex-wrap gap-2">
+                        <span class="bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SDA</span>
+                        <span class="bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SEPROCI</span>
+                        <span class="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SEMABICCE</span>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-700">
+                    <div class="text-3xl mb-3">🔥</div>
+                    <h4 class="text-xl font-bold mb-2">Temp. Superficial (LST)</h4>
+                    <p class="text-gray-400 mb-4">Indica el calor "piel" de la superficie, un componente clave para detectar estrés térmico y riesgo de incendios.</p>
+                     <div class="flex flex-wrap gap-2">
+                        <span class="bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SEPROCI</span>
+                        <span class="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SEMABICCE</span>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-700">
+                    <div class="text-3xl mb-3">💨</div>
+                    <h4 class="text-xl font-bold mb-2">Evapotranspiración (ET)</h4>
+                    <p class="text-gray-400 mb-4">Representa la pérdida de agua del suelo a la atmósfera, vital para entender la demanda hídrica de los cultivos y ecosistemas.</p>
+                     <div class="flex flex-wrap gap-2">
+                        <span class="bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SDA</span>
+                        <span class="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SEMABICCE</span>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-700">
+                    <div class="text-3xl mb-3">💧</div>
+                    <h4 class="text-xl font-bold mb-2">Humedad Relativa (%)</h4>
+                    <p class="text-gray-400 mb-4">Afecta directamente la tasa de evaporación y la sequedad del combustible vegetal, un factor importante en el riesgo de incendios.</p>
+                     <div class="flex flex-wrap gap-2">
+                        <span class="bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SEPROCI</span>
+                        <span class="bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SDA</span>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-700">
+                    <div class="text-3xl mb-3">🌽</div>
+                    <h4 class="text-xl font-bold mb-2">Días Grado de Crecimiento</h4>
+                    <p class="text-gray-400 mb-4">Modelo específico para predecir las etapas de desarrollo de los cultivos, optimizando siembra, cosecha y uso de insumos.</p>
+                     <div class="flex flex-wrap gap-2">
+                        <span class="bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full">SDA</span>
+                        <span class="bg-yellow-500 text-black text-xs font-semibold px-2 py-1 rounded-full">Empresas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- SECCIÓN: APLICACIONES ESTRATÉGICAS -->
+    <section id="casos-de-uso" class="py-20 bg-gray-800">
+        <div class="container mx-auto px-6">
+            <h3 class="text-3xl font-bold text-center mb-12">Aplicaciones Estratégicas por Sector</h3>
             <div class="max-w-4xl mx-auto">
-                <!-- Pestañas de Navegación -->
                 <div class="flex border-b border-gray-700 mb-8">
                     <button class="tab-button flex-1 py-2 px-4 font-semibold text-gray-300 transition duration-300 active" data-target="semabicce">SEMABICCE</button>
                     <button class="tab-button flex-1 py-2 px-4 font-semibold text-gray-300 transition duration-300" data-target="sda">SDA</button>
@@ -82,14 +181,13 @@
                     <button class="tab-button flex-1 py-2 px-4 font-semibold text-gray-300 transition duration-300" data-target="empresas">Empresas</button>
                 </div>
 
-                <!-- Contenido de las Pestañas -->
                 <div id="tab-content">
                     <div class="tab-pane active" id="semabicce">
                         <div class="grid md:grid-cols-2 gap-8 items-center">
                             <div>
                                 <h4 class="text-2xl font-bold mb-4 text-[#f0ad4e]">Medio Ambiente y Cambio Climático</h4>
-                                <p class="mb-2"><strong>Problema:</strong> Monitorear el estrés hídrico en ecosistemas vulnerables y priorizar acciones de mitigación del cambio climático.</p>
-                                <p><strong>Nuestra Solución:</strong> La plataforma ofrece análisis de sequía a largo plazo (SPI) y mapas de anomalías de temperatura (LST) para identificar áreas bajo estrés, proveyendo la base científica para el Programa Estatal ante el Cambio Climático.</p>
+                                <p class="mb-2"><strong>Problema:</strong> Monitorear el estrés hídrico en ecosistemas vulnerables y priorizar acciones de mitigación.</p>
+                                <p><strong>Nuestra Solución:</strong> La plataforma ofrece análisis de sequía (SPI) y mapas de temperatura (LST) para identificar áreas bajo estrés, proveyendo la base científica para el Programa Estatal ante el Cambio Climático.</p>
                             </div>
                             <img src="https://i.imgur.com/wDhrN44.jpeg" alt="Mapa de sequía SPI" class="rounded-lg shadow-lg">
                         </div>
@@ -98,8 +196,8 @@
                          <div class="grid md:grid-cols-2 gap-8 items-center">
                             <div>
                                 <h4 class="text-2xl font-bold mb-4 text-[#f0ad4e]">Desarrollo Agropecuario</h4>
-                                <p class="mb-2"><strong>Problema:</strong> Optimizar los ciclos de cultivo y gestionar los riesgos de sequía que afectan la productividad agrícola.</p>
-                                <p><strong>Nuestra Solución:</strong> Los Grados Día de Crecimiento (GDD) ayudan a predecir fechas óptimas de siembra y cosecha, mientras que los índices de sequía permiten activar alertas tempranas y focalizar apoyos de programas de contingencia.</p>
+                                <p class="mb-2"><strong>Problema:</strong> Optimizar ciclos de cultivo y gestionar riesgos de sequía.</p>
+                                <p><strong>Nuestra Solución:</strong> Los Grados Día de Crecimiento (GDD) ayudan a predecir fechas óptimas de siembra y cosecha, mientras que los índices de sequía permiten activar alertas tempranas y focalizar apoyos.</p>
                             </div>
                             <img src="https://i.imgur.com/9DOgZYY.png" alt="Gráfico de GDD" class="rounded-lg shadow-lg">
                         </div>
@@ -108,8 +206,8 @@
                          <div class="grid md:grid-cols-2 gap-8 items-center">
                             <div>
                                 <h4 class="text-2xl font-bold mb-4 text-[#f0ad4e]">Protección Civil</h4>
-                                <p class="mb-2"><strong>Problema:</strong> Anticipar y responder eficientemente a amenazas como olas de calor e incendios forestales.</p>
-                                <p><strong>Nuestra Solución:</strong> El mapa dinámico de Riesgo de Incendio, que combina sequía y estrés térmico, permite pre-posicionar recursos. Las anomalías de LST sirven para emitir alertas de salud pública.</p>
+                                <p class="mb-2"><strong>Problema:</strong> Anticipar y responder eficientemente a amenazas como incendios forestales.</p>
+                                <p><strong>Nuestra Solución:</strong> El mapa dinámico de Riesgo de Incendio, que combina sequía y estrés térmico, permite pre-posicionar recursos y emitir alertas tempranas para proteger a la población y los ecosistemas.</p>
                             </div>
                             <img src="https://i.imgur.com/gk6fJZz.png" alt="Mapa de Riesgo de Incendio" class="rounded-lg shadow-lg">
                         </div>
@@ -118,8 +216,8 @@
                          <div class="grid md:grid-cols-2 gap-8 items-center">
                             <div>
                                 <h4 class="text-2xl font-bold mb-4 text-[#f0ad4e]">Sector Privado</h4>
-                                <p class="mb-2"><strong>Problema:</strong> Cuantificar el riesgo climático para optimizar operaciones, desarrollar nuevos productos (seguros paramétricos) y realizar estudios de impacto ambiental.</p>
-                                <p><strong>Nuestra Solución:</strong> La capacidad de descargar datos en formato CSV permite integrar nuestra inteligencia climática en modelos de negocio y análisis de riesgo propietarios.</p>
+                                <p class="mb-2"><strong>Problema:</strong> Cuantificar el riesgo climático para optimizar operaciones y desarrollar nuevos productos.</p>
+                                <p><strong>Nuestra Solución:</strong> La capacidad de descargar datos en formato CSV permite integrar nuestra inteligencia climática en modelos de negocio, análisis de riesgo y desarrollo de seguros paramétricos.</p>
                             </div>
                             <img src="https://i.imgur.com/6hu6qVm.png" alt="Descarga de datos CSV" class="rounded-lg shadow-lg">
                         </div>
@@ -128,6 +226,34 @@
             </div>
         </div>
     </section>
+    
+    <!-- SECCIÓN: DEL DATO A LA DECISIÓN -->
+    <section id="analisis-avanzado" class="py-20 bg-gray-900">
+        <div class="container mx-auto px-6">
+            <h3 class="text-3xl font-bold text-center mb-12">Del Dato a la Decisión: Ejemplos de Análisis Avanzado</h3>
+            <div class="grid md:grid-cols-1 lg:grid-cols-3 gap-10">
+                <!-- Ejemplo 1: Correlación -->
+                <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 flex flex-col">
+                    <h4 class="text-xl font-bold mb-2 text-[#f0ad4e]">Análisis de Correlación</h4>
+                    <p class="text-gray-400 mb-4 flex-grow">Un analista puede usar los datos de Temperatura y Evapotranspiración para crear un gráfico de dispersión y cuantificar cómo el aumento de calor incrementa el estrés hídrico, afectando directamente a los cultivos.</p>
+                    <div id="correlation-chart" class="chart-container"></div>
+                </div>
+                <!-- Ejemplo 2: Detección de Anomalías -->
+                <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 flex flex-col">
+                    <h4 class="text-xl font-bold mb-2 text-[#f0ad4e]">Detección de Anomalías</h4>
+                    <p class="text-gray-400 mb-4 flex-grow">Al graficar la serie temporal de precipitación, es posible identificar y resaltar periodos que se desvían significativamente del promedio histórico, permitiendo activar protocolos de sequía o inundación.</p>
+                    <div id="anomaly-chart" class="chart-container"></div>
+                </div>
+                <!-- Ejemplo 3: Análisis de Frecuencia -->
+                <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 flex flex-col">
+                    <h4 class="text-xl font-bold mb-2 text-[#f0ad4e]">Análisis de Frecuencia</h4>
+                    <p class="text-gray-400 mb-4 flex-grow">Los datos de temperatura máxima diaria permiten crear histogramas para visualizar la frecuencia de días con calor extremo (ej. > 38°C), un indicador clave para la salud pública y la gestión de riesgos.</p>
+                    <div id="frequency-chart" class="chart-container"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
 
     <!-- Sección de Tecnología -->
     <section class="py-20 bg-gray-800">
@@ -159,27 +285,106 @@
     </footer>
 
     <script>
+        // --- Manejador de Pestañas ---
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabPanes = document.querySelectorAll('.tab-pane');
 
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const targetId = button.dataset.target;
-
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-
                 tabPanes.forEach(pane => {
-                    if (pane.id === targetId) {
-                        pane.classList.remove('hidden');
-                        pane.classList.add('active');
-                    } else {
-                        pane.classList.add('hidden');
-                        pane.classList.remove('active');
-                    }
+                    pane.classList.toggle('hidden', pane.id !== targetId);
+                    pane.classList.toggle('active', pane.id === targetId);
                 });
             });
         });
+
+        // --- Lógica para Gráficos Dinámicos ---
+        google.charts.load('current', {'packages':['corechart']});
+        
+        // Datos y funciones para dibujar los gráficos de ejemplo
+        function drawCorrelationChart() {
+            const data = new google.visualization.DataTable();
+            data.addColumn('number', 'Temperatura Media (°C)');
+            data.addColumn('number', 'Evapotranspiración (mm/día)');
+            data.addRows([
+                [25, 3.5], [26, 3.8], [27, 4.1], [28, 4.0], [29, 4.5], [30, 4.9],
+                [31, 5.2], [32, 5.5], [33, 5.8], [34, 6.1], [35, 6.0], [36, 6.4]
+            ]);
+            const options = {
+                title: 'Correlación Temperatura vs. Evapotranspiración',
+                hAxis: {title: 'Temperatura Media (°C)', textStyle: {color: '#ccc'}, titleTextStyle: {color: '#ccc'}},
+                vAxis: {title: 'Evapotranspiración (mm/día)', textStyle: {color: '#ccc'}, titleTextStyle: {color: '#ccc'}},
+                legend: 'none',
+                backgroundColor: '#1f2937',
+                chartArea: {backgroundColor: '#1f2937'},
+                colors: ['#f0ad4e'],
+                trendlines: { 0: { type: 'linear', color: '#38bdf8', lineWidth: 3, opacity: 0.8 } }
+            };
+            const chart = new google.visualization.ScatterChart(document.getElementById('correlation-chart'));
+            chart.draw(data, options);
+        }
+
+        function drawAnomalyChart() {
+            const data = google.visualization.arrayToDataTable([
+                ['Mes', 'Precipitación', 'Promedio Histórico'],
+                ['Ene',  15, 20], ['Feb',  12, 18], ['Mar',  8, 15], ['Abr',  5, 25],
+                ['May',  60, 80], ['Jun',  150, 160], ['Jul',  140, 170], ['Ago', 180, 180]
+            ]);
+            const options = {
+                title: 'Detección de Anomalía de Sequía (Ene-Abr)',
+                vAxis: {title: 'Precipitación (mm)', textStyle: {color: '#ccc'}, titleTextStyle: {color: '#ccc'}},
+                hAxis: {textStyle: {color: '#ccc'}},
+                seriesType: 'area',
+                series: {1: {type: 'line', color: '#38bdf8', lineDashStyle: [4, 4]}},
+                legend: {position: 'top', textStyle: {color: '#fff'}},
+                backgroundColor: '#1f2937',
+                chartArea: {backgroundColor: '#1f2937'},
+                colors: ['#c9302c']
+            };
+            const chart = new google.visualization.ComboChart(document.getElementById('anomaly-chart'));
+            chart.draw(data, options);
+        }
+
+        function drawFrequencyChart() {
+            const data = google.visualization.arrayToDataTable([
+                ['Temperatura', 'Número de Días'],
+                ['30-32°C', 45], ['32-34°C', 60], ['34-36°C', 75],
+                ['36-38°C', 50], ['>38°C', 25]
+            ]);
+            const options = {
+                title: 'Frecuencia de Días de Calor (Temporada)',
+                legend: { position: 'none' },
+                hAxis: {title: 'Rango de Temperatura Máxima', textStyle: {color: '#ccc'}, titleTextStyle: {color: '#ccc'}},
+                vAxis: {title: 'Número de Días', textStyle: {color: '#ccc'}, titleTextStyle: {color: '#ccc'}},
+                backgroundColor: '#1f2937',
+                chartArea: {backgroundColor: '#1f2937'},
+                colors: ['#38bdf8'],
+                bar: { groupWidth: '80%' }
+            };
+            const chart = new google.visualization.ColumnChart(document.getElementById('frequency-chart'));
+            chart.draw(data, options);
+        }
+
+        // --- Observador para animar gráficos al hacer scroll ---
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    google.charts.setOnLoadCallback(drawCorrelationChart);
+                    google.charts.setOnLoadCallback(drawAnomalyChart);
+                    google.charts.setOnLoadCallback(drawFrequencyChart);
+                    observer.unobserve(entry.target); // Dejar de observar después de la primera vez
+                }
+            });
+        }, {
+            threshold: 0.5 // Dibuja los gráficos cuando el 50% de la sección es visible
+        });
+
+        const chartSection = document.getElementById('analisis-avanzado');
+        observer.observe(chartSection);
+
     </script>
 </body>
 </html>
