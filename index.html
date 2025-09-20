@@ -335,7 +335,7 @@
 
             if (layersToZoom.length > 0) {
                 const featureGroup = L.featureGroup(layersToZoom);
-                map.fitBounds(featureGroup.getBounds()).pad(0.1); // pad(0.1) añade un pequeño margen
+                map.fitBounds(featureGroup.getBounds(), { padding: [50, 50] }); // CORRECCIÓN: Usar padding en las opciones
             }
         }
 
