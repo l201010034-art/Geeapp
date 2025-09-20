@@ -600,13 +600,29 @@
 
             chartPanel.innerHTML = '';
 
-            // Corrección: Asegurarse que la primera columna sea un objeto Date
-            const dataWithDates = data.map((row, index) => {
-                if (index === 0) return row; // Mantener el encabezado
-                return [new Date(row[0]), ...row.slice(1)];
-            });
+            // CORRECCIÓN FINAL: Usar dataTable.addColumn para definir tipos explícitamente
+            const dataTable = new google.visualization.DataTable();
+            const headers = data[0];
+            dataTable.addColumn('date', headers[0]); // La primera columna es siempre una fecha.
 
-            const dataTable = google.visualization.arrayToDataTable(dataWithDates);
+            for (let i = 1; i < headers.length; i++) {
+                dataTable.addColumn('number', headers[i]); // Las siguientes son siempre números.
+            }
+
+            const rows = data.slice(1).map(row => {
+                const date = new Date(row[0]);
+                // Si la fecha es inválida, no agregamos la fila.
+                if (isNaN(date.getTime())) return null;
+                const values = row.slice(1);
+                return [date, ...values];
+            }).filter(Boolean); // Filtra cualquier fila nula
+
+            if (rows.length > 0) {
+                 dataTable.addRows(rows);
+            } else {
+                clearChart();
+                return;
+            }
             
             const chartType = document.getElementById('chartTypeSelector').value;
             let chart;

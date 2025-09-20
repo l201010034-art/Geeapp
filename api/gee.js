@@ -34,41 +34,6 @@ function processGDD(image) {
     return gdd.copyProperties(image, ['system:time_start']);
 }
 
-// *** NUEVA FUNCIÓN PARA CREAR VECTORES DE VIENTO ***
-function getWindVectors(collection, roi) {
-    const meanWind = collection.select(['u_component_of_wind_10m', 'v_component_of_wind_10m'])
-        .mean()
-        .clip(roi);
-
-    // Creamos puntos de muestra en la región. Aumentamos la escala para no tener demasiados vectores.
-    const points = ee.Image.pixelLonLat().sample({ region: roi, scale: 25000, factor: 0.5 });
-    
-    const styledFeatures = points.map(function(point) {
-        const windVal = meanWind.reduceRegion({
-            reducer: ee.Reducer.first(),
-            geometry: point.geometry(),
-            scale: 1000,
-            bestEffort: true
-        });
-        
-        const u = ee.Number(windVal.get('u_component_of_wind_10m'));
-        const v = ee.Number(windVal.get('v_component_of_wind_10m'));
-        
-        // Calculamos la rotación y la magnitud para usarlas en el frontend.
-        const rotation = v.atan2(u).multiply(180 / Math.PI).add(90);
-        const magnitude = u.hypot(v);
-
-        return point
-            .set('rotation', rotation)
-            .set('magnitude', magnitude)
-            .set(windVal);
-    });
-
-    // Filtramos puntos que no tengan datos de viento.
-    return styledFeatures.filter(ee.Filter.notNull(['u_component_of_wind_10m']));
-}
-
-
 function getSpiCollection(roi, timescale) {
     const referenceStart = ee.Date('1994-01-01');
     const referenceEnd = ee.Date('2025-07-01'); // A future date to ensure we have current data
@@ -123,7 +88,8 @@ function aggregateCollection(collection, unit, reducer, startDate, endDate) {
             null
         );
     });
-    return ee.ImageCollection.fromImages(imageListWithNulls.removeAll([null]));
+    const imageList = imageListWithNulls.removeAll([null]);
+    return ee.ImageCollection.fromImages(imageList);
 }
 
 
@@ -196,9 +162,8 @@ async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate
             .map(processEra5);
     }
 
-    const dateList = ee.List.sequence(0, dateDiffDays - 1);
-    
-    const dailyImagesOrNulls = dateList.map(offset => {
+    const dateList = ee.List.sequence(0, dateDiffDays.subtract(1));
+    const dailyImagesList = dateList.map(offset => {
         const start = eeStartDate.advance(ee.Number(offset), 'day');
         const end = start.advance(1, 'day');
         
@@ -212,12 +177,8 @@ async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate
             null
         );
     });
-
-    const dailyCollection = ee.ImageCollection.fromImages(
-        dailyImagesOrNulls.removeAll([null])
-    );
-
-    return dailyCollection;
+    
+    return ee.ImageCollection.fromImages(dailyImagesList.removeAll([null]));
 }
 
 
@@ -240,19 +201,7 @@ async function handleGeneralData({ roi, varInfo, startDate, endDate }) {
     const stats = await getStats(imageForMap, eeRoi, varInfo.bandName, varInfo.unit, roi.name);
     const chartData = await getOptimizedChartData(collection.select(varInfo.bandName), [roi], varInfo.bandName, startDate, endDate);
 
-    // *** MODIFICACIÓN PARA VIENTO ***
-    // Si la variable es velocidad del viento, también calculamos y enviamos los vectores.
-    let windVectors = null;
-    if (varInfo.bandName === 'wind_speed') {
-        windVectors = await new Promise((resolve, reject) => {
-            getWindVectors(collection, eeRoi).evaluate((vectors, error) => {
-                if (error) reject(new Error('Error al generar vectores de viento: ' + error));
-                else resolve(vectors);
-            });
-        });
-    }
-
-    return { mapId, stats, chartData, chartOptions: { title: `Serie Temporal para ${roi.name}` }, windVectors };
+    return { mapId, stats, chartData, chartOptions: { title: `Serie Temporal para ${roi.name}` } };
 }
 
 async function handleCompareData({ rois, varInfo, startDate, endDate }) {
@@ -281,49 +230,46 @@ async function handleCompareData({ rois, varInfo, startDate, endDate }) {
 
 
 async function handlePrecipitationData({ roi, analysisType, aggregation, startDate, endDate }) {
+    // CORRECCIÓN: Validar fechas
+    if (!startDate || !endDate) {
+        throw new Error("Fechas de inicio y fin son requeridas para el análisis de precipitación.");
+    }
+
     const eeRoi = ee.Geometry(roi.geom);
-    
     const precipCollection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
         .filterDate(startDate, endDate).filterBounds(eeRoi).map(processChirps);
 
-    let metricCollection, reducer, title, visParams, unit, chartTitle, bandName, chartBandName;
+    let metricCollection, reducer, title, visParams, unit, chartTitle;
 
     if (analysisType === 'accumulated') {
-        bandName = 'Precipitacion';
         metricCollection = precipCollection;
         reducer = ee.Reducer.sum();
         title = 'Precipitación Total Acumulada';
         chartTitle = 'Precipitación Acumulada';
         visParams = { min: 0, max: 200, palette: ['#ffffcc', '#a1dab4', '#41b6c4', '#225ea8'] };
         unit = 'mm';
-        chartBandName = 'metric';
     } else if (analysisType === 'intensity') {
-        bandName = 'Precipitacion';
         metricCollection = precipCollection.map(img => img.updateMask(img.gt(1.0)));
         reducer = ee.Reducer.mean();
         title = 'Intensidad Promedio (días > 1mm)';
         chartTitle = 'Intensidad de Lluvia';
         visParams = { min: 2, max: 20, palette: ['yellow', 'orange', 'red', 'purple'] };
         unit = 'mm/día de lluvia';
-        chartBandName = 'metric';
     } else { // frequency
-        bandName = 'strong_rain_day';
-        metricCollection = precipCollection.select('Precipitacion').map(img => img.gt(20).rename(bandName));
+        metricCollection = precipCollection.select('Precipitacion').map(img => img.gt(20).rename('strong_rain_day'));
         reducer = ee.Reducer.sum();
         title = 'Total de Días con Lluvia Fuerte (>20mm)';
         chartTitle = 'Días con Lluvia Fuerte (>20mm)';
         visParams = { min: 0, max: 10, palette: ['lightblue', 'blue', 'navy'] };
         unit = 'días';
-        chartBandName = 'chart_metric';
     }
     
-    const collectionForChart = aggregateCollection(metricCollection, aggregation, reducer)
-      .map(img => img.rename(chartBandName));
+    const collectionForChart = aggregateCollection(metricCollection, aggregation, reducer, startDate, endDate).map(img => img.rename('metric'));
 
     const imageForMap = metricCollection.reduce(reducer).rename('map_result');
     const mapId = await getMapId(imageForMap.clip(eeRoi), visParams);
     const stats = await getStats(imageForMap, eeRoi, 'map_result', unit, roi.name, "Valor total/promedio");
-    const chartData = await getChartData(collectionForChart, eeRoi, chartBandName);
+    const chartData = await getChartData(collectionForChart, eeRoi, 'metric');
 
     return { mapId, stats, chartData, chartOptions: { title: `${chartTitle} (${aggregation}) para ${roi.name}` } };
 }
@@ -383,6 +329,18 @@ async function handleFireRiskData({ roi, endDate }) {
     const latestLST = ee.Image(lstCollection.sort('system:time_start', false).first());
     const latestSPI = ee.Image(spiCollection.sort('system:time_start', false).first());
 
+    // CORRECCIÓN: Validar que existan imágenes
+    const inputsPresent = await new Promise((resolve, reject) => {
+        ee.Dictionary.fromLists(['lst', 'spi'], [latestLST, latestSPI]).evaluate((dict, err) => {
+            if (err) return reject(err);
+            resolve(dict.lst != null && dict.spi != null);
+        });
+    });
+
+    if (!inputsPresent) {
+        throw new Error("No hay suficientes datos de LST o SPI en el periodo seleccionado para calcular el riesgo de incendio.");
+    }
+
     const lstRisk = latestLST.select('LST').unitScale(30, 45).clamp(0, 1);
     const spiRisk = latestSPI.select('SPI').multiply(-1).unitScale(0, 1.5).clamp(0, 1);
     const totalRisk = lstRisk.multiply(0.6).add(spiRisk.multiply(0.4));
@@ -412,7 +370,6 @@ function getMapId(image, visParams) {
 async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio") {
     return new Promise((resolve, reject) => {
         const reducer = ee.Reducer.mean().combine({ reducer2: ee.Reducer.minMax(), sharedInputs: true });
-        // OPTIMIZACIÓN: Usar una escala mayor para estadísticas regionales.
         const dict = image.reduceRegion({ reducer, geometry: roi, scale: 5000, bestEffort: true });
         
         dict.evaluate((stats, error) => {
@@ -441,7 +398,6 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
     });
 }
 
-// *** FUNCIÓN OPTIMIZADA PARA GRÁFICOS (DEJA DE SER NECESARIA PARA LA PRE-AGREGACIÓN) ***
 async function getOptimizedChartData(collection, rois, bandName, startDate, endDate) {
     const eeStartDate = ee.Date(startDate);
     const eeEndDate = ee.Date(endDate);
@@ -450,11 +406,9 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
         eeEndDate.difference(eeStartDate, 'day').evaluate((val, err) => err ? reject(err) : resolve(val));
     });
 
-    // Para datasets ya pre-agregados o diarios, podemos necesitar una agregación más para el gráfico.
-    // Si el periodo es muy largo, agregamos a semanas o meses para el gráfico.
     if (dateDiffDays > 120) {
         let aggregateUnit = 'week';
-        if (dateDiffDays > 730) { // > 2 años
+        if (dateDiffDays > 730) { 
             aggregateUnit = 'month';
         }
         
@@ -467,7 +421,7 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
             const filtered = collection.filterDate(start, end);
             return ee.Algorithms.If(
                 filtered.size().gt(0),
-                filtered.mean().rename(bandName).set('system:time_start', start.millis()),
+                filtered.mean().set('system:time_start', start.millis()),
                 null
             );
         });
@@ -480,7 +434,6 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
     return rois.length > 1 ? getChartDataByRegion(collection, fc, bandName, scale) : getChartData(collection, ee.Geometry(rois[0].geom), bandName, scale);
 }
 
-// Función original modificada para aceptar una escala.
 async function getChartData(collection, roi, bandName, scale = 2000) {
     return new Promise((resolve, reject) => {
         const series = collection.map(image => {
@@ -498,16 +451,15 @@ async function getChartData(collection, roi, bandName, scale = 2000) {
             else {
                 const header = [['Fecha', bandName]];
                 const rows = fc.features
-                    .filter(f => f.properties.value !== null) // Filtrar nulos
-                    .map(f => [new Date(f.properties['system:time_start']), f.properties.value])
-                    .sort((a,b) => a[0] - b[0]);
+                    .filter(f => f.properties.value !== null)
+                    .map(f => [new Date(f.properties['system:time_start']).toISOString(), f.properties.value])
+                    .sort((a,b) => new Date(a[0]) - new Date(b[0]));
                 resolve(header.concat(rows));
             }
         });
     });
 }
 
-// Función original modificada para aceptar una escala.
 async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
     return new Promise((resolve, reject) => {
         fc.aggregate_array('label').evaluate((labels, error) => {
@@ -533,8 +485,8 @@ async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
                     if (error) reject(new Error('Error evaluando datos de comparación: ' + error));
                     else {
                         const rows = fc.features.map(f => {
-                            return [new Date(f.properties['system:time_start']), ...f.properties.means];
-                        }).sort((a,b) => a[0] - b[0]);
+                            return [new Date(f.properties['system:time_start']).toISOString(), ...f.properties.means];
+                        }).sort((a,b) => new Date(a[0]) - new Date(b[0]));
                         resolve(header.concat(rows));
                     }
                 });
