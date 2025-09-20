@@ -143,18 +143,64 @@ export default async function handler(req, res) {
 }
 
 // =========================================================================================
-// === MANEJADORES DE ACCIONES ESPECÍFICAS ================================================
+// === LÓGICA DE OPTIMIZACIÓN Y MANEJADORES DE ACCIONES ====================================
 // =========================================================================================
+
+// *** NUEVA FUNCIÓN DE OPTIMIZACIÓN PARA COLECCIONES DE ALTA FRECUENCIA ***
+async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate, endDate) {
+    const eeStartDate = ee.Date(startDate);
+    const eeEndDate = ee.Date(endDate);
+
+    const dateDiffDays = await new Promise((resolve, reject) => {
+        eeEndDate.difference(eeStartDate, 'day').evaluate((val, err) => err ? reject(err) : resolve(val));
+    });
+
+    // Si el rango es corto (ej. < 90 días), usamos los datos horarios originales.
+    if (dateDiffDays <= 90) {
+        return ee.ImageCollection(datasetName)
+            .filterDate(startDate, endDate)
+            .filterBounds(eeRoi)
+            .map(processEra5);
+    }
+
+    // Si el rango es largo, pre-agregamos a promedios diarios para evitar timeouts.
+    const dateList = ee.List.sequence(0, dateDiffDays - 1);
+    const dailyCollection = ee.ImageCollection.fromImages(
+        dateList.map(offset => {
+            const start = eeStartDate.advance(ee.Number(offset), 'day');
+            const end = start.advance(1, 'day');
+            
+            const hourlyImages = ee.ImageCollection(datasetName)
+                                .filterDate(start, end)
+                                .filterBounds(eeRoi);
+            
+            // Usamos un If para manejar días sin imágenes y evitar errores.
+            return ee.Algorithms.If(
+                hourlyImages.size().gt(0),
+                // Si hay imágenes, promediamos y procesamos.
+                processEra5(hourlyImages.mean()).set('system:time_start', start.millis()),
+                null // Si no hay imágenes, no devolvemos nada para este día.
+            );
+        })
+    ).removeAll([null]); // Quitamos los nulos de los días sin datos.
+
+    return dailyCollection;
+}
+
 
 async function handleGeneralData({ roi, varInfo, startDate, endDate }) {
     const eeRoi = ee.Geometry(roi.geom);
     let collection;
-    if (varInfo.dataset === 'ERA5') collection = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY').filterDate(startDate, endDate).filterBounds(eeRoi).map(processEra5);
-    else if (varInfo.dataset === 'MODIS') collection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(startDate, endDate).filterBounds(eeRoi).map(processModis);
-    else if (varInfo.dataset === 'MODIS_ET') collection = ee.ImageCollection("MODIS/006/MOD16A2").filterDate(startDate, endDate).filterBounds(eeRoi).map(processET);
-    else if (varInfo.dataset === 'ERA5_DAILY') collection = ee.ImageCollection("ECMWF/ERA5/DAILY").filterDate(startDate, endDate).filterBounds(eeRoi).map(processGDD);
-    else if (varInfo.dataset === 'CHIRPS') collection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(startDate,endDate).filterBounds(eeRoi).map(processChirps);
 
+    if (varInfo.dataset === 'ERA5') {
+        collection = await getOptimizedHighFrequencyCollection('ECMWF/ERA5_LAND/HOURLY', eeRoi, startDate, endDate);
+    } else {
+        if (varInfo.dataset === 'MODIS') collection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(startDate, endDate).filterBounds(eeRoi).map(processModis);
+        else if (varInfo.dataset === 'MODIS_ET') collection = ee.ImageCollection("MODIS/006/MOD16A2").filterDate(startDate, endDate).filterBounds(eeRoi).map(processET);
+        else if (varInfo.dataset === 'ERA5_DAILY') collection = ee.ImageCollection("ECMWF/ERA5/DAILY").filterDate(startDate, endDate).filterBounds(eeRoi).map(processGDD);
+        else if (varInfo.dataset === 'CHIRPS') collection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(startDate,endDate).filterBounds(eeRoi).map(processChirps);
+    }
+    
     const imageForMap = collection.select(varInfo.bandName).mean();
     const mapId = await getMapId(imageForMap.clip(eeRoi), { min: varInfo.min, max: varInfo.max, palette: varInfo.palette });
     
@@ -167,13 +213,17 @@ async function handleGeneralData({ roi, varInfo, startDate, endDate }) {
 async function handleCompareData({ rois, varInfo, startDate, endDate }) {
     const features = rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name }));
     const fc = ee.FeatureCollection(features);
-
+    const eeRoi = fc.geometry();
     let collection;
-    if (varInfo.dataset === 'ERA5') collection = ee.ImageCollection('ECMWF/ERA5_LAND/HOURLY').filterDate(startDate, endDate).filterBounds(fc.geometry()).map(processEra5);
-    else if (varInfo.dataset === 'MODIS') collection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(startDate, endDate).filterBounds(fc.geometry()).map(processModis);
-    else if (varInfo.dataset === 'MODIS_ET') collection = ee.ImageCollection("MODIS/006/MOD16A2").filterDate(startDate, endDate).filterBounds(fc.geometry()).map(processET);
-    else if (varInfo.dataset === 'ERA5_DAILY') collection = ee.ImageCollection("ECMWF/ERA5/DAILY").filterDate(startDate, endDate).filterBounds(fc.geometry()).map(processGDD);
-    else if (varInfo.dataset === 'CHIRPS') collection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(startDate,endDate).filterBounds(fc.geometry()).map(processChirps);
+
+    if (varInfo.dataset === 'ERA5') {
+        collection = await getOptimizedHighFrequencyCollection('ECMWF/ERA5_LAND/HOURLY', eeRoi, startDate, endDate);
+    } else {
+        if (varInfo.dataset === 'MODIS') collection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(startDate, endDate).filterBounds(eeRoi).map(processModis);
+        else if (varInfo.dataset === 'MODIS_ET') collection = ee.ImageCollection("MODIS/006/MOD16A2").filterDate(startDate, endDate).filterBounds(eeRoi).map(processET);
+        else if (varInfo.dataset === 'ERA5_DAILY') collection = ee.ImageCollection("ECMWF/ERA5/DAILY").filterDate(startDate, endDate).filterBounds(eeRoi).map(processGDD);
+        else if (varInfo.dataset === 'CHIRPS') collection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(startDate,endDate).filterBounds(eeRoi).map(processChirps);
+    }
 
     const chartData = await getOptimizedChartData(collection.select(varInfo.bandName), rois, varInfo.bandName, startDate, endDate);
     
@@ -346,7 +396,7 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
     });
 }
 
-// *** NUEVA FUNCIÓN OPTIMIZADA PARA GRÁFICOS ***
+// *** FUNCIÓN OPTIMIZADA PARA GRÁFICOS (DEJA DE SER NECESARIA PARA LA PRE-AGREGACIÓN) ***
 async function getOptimizedChartData(collection, rois, bandName, startDate, endDate) {
     const eeStartDate = ee.Date(startDate);
     const eeEndDate = ee.Date(endDate);
@@ -355,40 +405,34 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
         eeEndDate.difference(eeStartDate, 'day').evaluate((val, err) => err ? reject(err) : resolve(val));
     });
 
-    // Si el periodo es corto (<= 4 meses), usamos la alta resolución original.
-    if (dateDiffDays <= 120) {
-        const fc = ee.FeatureCollection(rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name })));
-        return rois.length > 1 ? getChartDataByRegion(collection, fc, bandName) : getChartData(collection, ee.Geometry(rois[0].geom), bandName);
+    // Para datasets ya pre-agregados o diarios, podemos necesitar una agregación más para el gráfico.
+    // Si el periodo es muy largo, agregamos a semanas o meses para el gráfico.
+    if (dateDiffDays > 120) {
+        let aggregateUnit = 'week';
+        if (dateDiffDays > 730) { // > 2 años
+            aggregateUnit = 'month';
+        }
+        
+        const dateDiff = eeEndDate.difference(eeStartDate, aggregateUnit);
+        const dateList = ee.List.sequence(0, dateDiff.subtract(1));
+        
+        const imageListWithNulls = dateList.map(offset => {
+            const start = eeStartDate.advance(ee.Number(offset), aggregateUnit);
+            const end = start.advance(1, aggregateUnit);
+            const filtered = collection.filterDate(start, end);
+            return ee.Algorithms.If(
+                filtered.size().gt(0),
+                filtered.mean().rename(bandName).set('system:time_start', start.millis()),
+                null
+            );
+        });
+        
+        collection = ee.ImageCollection.fromImages(imageListWithNulls.removeAll([null]));
     }
     
-    // Si el periodo es largo, agregamos los datos para optimizar.
-    let aggregateUnit = 'week';
-    if (dateDiffDays > 730) { // > 2 años
-        aggregateUnit = 'month';
-    }
-
-    const dateDiff = eeEndDate.difference(eeStartDate, aggregateUnit);
-    const dateList = ee.List.sequence(0, dateDiff.subtract(1));
-    
-    const imageListWithNulls = dateList.map(offset => {
-        const start = eeStartDate.advance(ee.Number(offset), aggregateUnit);
-        const end = start.advance(1, aggregateUnit);
-        const filtered = collection.filterDate(start, end);
-        // SAFETY CHECK: Solo procesa si existen imágenes en el intervalo de tiempo.
-        return ee.Algorithms.If(
-            filtered.size().gt(0),
-            // Si hay imágenes, calcula la media y renombra la banda.
-            filtered.mean().rename(bandName).set('system:time_start', start.millis()),
-            null // Devuelve nulo si no se encuentran imágenes
-        );
-    });
-    
-    const aggregatedCollection = ee.ImageCollection.fromImages(imageListWithNulls.removeAll([null]));
-    
-    // Llamamos a las funciones de gráfico con la colección agregada y una escala mayor.
     const scale = 5000;
     const fc = ee.FeatureCollection(rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name })));
-    return rois.length > 1 ? getChartDataByRegion(aggregatedCollection, fc, bandName, scale) : getChartData(aggregatedCollection, ee.Geometry(rois[0].geom), bandName, scale);
+    return rois.length > 1 ? getChartDataByRegion(collection, fc, bandName, scale) : getChartData(collection, ee.Geometry(rois[0].geom), bandName, scale);
 }
 
 // Función original modificada para aceptar una escala.
