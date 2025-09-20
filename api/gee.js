@@ -318,7 +318,7 @@ async function handleSpiData({ roi, timescale, startDate, endDate }) {
     return { mapId, stats: `Mostrando el mapa SPI más reciente para el periodo.`, chartData, chartOptions: { title: `SPI de ${timescale} meses para ${roi.name}` }};
 }
 
-async function handleFireRiskData({ roi, endDate }) {
+async function handleFireRiskData({ roi, startDate,endDate }) {
     const eeRoi = ee.Geometry(roi.geom);
     const eeEndDate = ee.Date(endDate);
 
