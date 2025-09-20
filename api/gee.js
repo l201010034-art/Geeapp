@@ -370,15 +370,20 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
     const dateDiff = eeEndDate.difference(eeStartDate, aggregateUnit);
     const dateList = ee.List.sequence(0, dateDiff.subtract(1));
     
-    const aggregatedCollection = ee.ImageCollection.fromImages(
-        dateList.map(offset => {
-            const start = eeStartDate.advance(ee.Number(offset), aggregateUnit);
-            const end = start.advance(1, aggregateUnit);
-            const filtered = collection.filterDate(start, end);
-            // FIX: Rename the band after calculating the mean to preserve its original name
-            return filtered.mean().rename(bandName).set('system:time_start', start.millis());
-        })
-    );
+    const imageListWithNulls = dateList.map(offset => {
+        const start = eeStartDate.advance(ee.Number(offset), aggregateUnit);
+        const end = start.advance(1, aggregateUnit);
+        const filtered = collection.filterDate(start, end);
+        // SAFETY CHECK: Solo procesa si existen imágenes en el intervalo de tiempo.
+        return ee.Algorithms.If(
+            filtered.size().gt(0),
+            // Si hay imágenes, calcula la media y renombra la banda.
+            filtered.mean().rename(bandName).set('system:time_start', start.millis()),
+            null // Devuelve nulo si no se encuentran imágenes
+        );
+    });
+    
+    const aggregatedCollection = ee.ImageCollection.fromImages(imageListWithNulls.removeAll([null]));
     
     // Llamamos a las funciones de gráfico con la colección agregada y una escala mayor.
     const scale = 5000;
