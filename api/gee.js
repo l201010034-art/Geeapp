@@ -318,12 +318,18 @@ async function handleSpiData({ roi, timescale, startDate, endDate }) {
     return { mapId, stats: `Mostrando el mapa SPI más reciente para el periodo.`, chartData, chartOptions: { title: `SPI de ${timescale} meses para ${roi.name}` }};
 }
 
-async function handleFireRiskData({ roi, startDate,endDate }) {
+async function handleFireRiskData({ roi, endDate }) {
     const eeRoi = ee.Geometry(roi.geom);
     const eeEndDate = ee.Date(endDate);
 
-    const lstCollection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(eeEndDate.advance(startDate), eeEndDate).filterBounds(eeRoi).map(processModis);
-    const spiCollection = getSpiCollection(eeRoi, 3).filterDate(eeEndDate.advance(startDate, "day"), eeEndDate);
+    // MEJORA: Buscar en una ventana más amplia (90 días) para encontrar la imagen más reciente
+    const lstCollection = ee.ImageCollection('MODIS/061/MOD11A1')
+        .filterDate(eeEndDate.advance(-90, 'day'), eeEndDate)
+        .filterBounds(eeRoi)
+        .map(processModis);
+
+    const spiCollection = getSpiCollection(eeRoi, 3)
+        .filterDate(eeEndDate.advance(-180, 'day'), eeEndDate);
 
     const latestLST = ee.Image(lstCollection.sort('system:time_start', false).first());
     const latestSPI = ee.Image(spiCollection.sort('system:time_start', false).first());
@@ -348,7 +354,7 @@ async function handleFireRiskData({ roi, startDate,endDate }) {
 
     const mapId = await getMapId(classifiedRisk.clip(eeRoi), fireVisParams);
     
-    return { mapId, stats: 'Riesgo calculado para la fecha más reciente usando LST (últimos 30 días) y SPI (3 meses).' };
+    return { mapId, stats: 'Riesgo calculado usando los datos más recientes de LST y SPI encontrados hasta 90 días antes de la fecha final.' };
 }
 
 
