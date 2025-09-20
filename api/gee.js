@@ -321,16 +321,16 @@ async function handleSpiData({ roi, timescale, startDate, endDate }) {
 async function handleFireRiskData({ roi,startDate ,endDate }) {
     const eeRoi = ee.Geometry(roi.geom);
     const eeEndDate = ee.Date(endDate);
-    const eeStartDate = eeEndDate.advance(startDate);
+    const eeStartDate = eeDate(startDate);
 
     // MEJORA: Buscar en una ventana más amplia (90 días) para encontrar la imagen más reciente
     const lstCollection = ee.ImageCollection('MODIS/061/MOD11A1')
-        .filterDate(eeEndDate.advance(-startDate), eeEndDate)
+        .filterDate(eeEndDate.advance(-eeStartDate,'day'), eeEndDate)
         .filterBounds(eeRoi)
         .map(processModis);
 
     const spiCollection = getSpiCollection(eeRoi, 3)
-        .filterDate(eeEndDate.advance(-180, 'day'), eeEndDate);
+        .filterDate(eeEndDate.advance(-eeStartDate, 'day'), eeEndDate);
 
     const latestLST = ee.Image(lstCollection.sort('system:time_start', false).first());
     const latestSPI = ee.Image(spiCollection.sort('system:time_start', false).first());
