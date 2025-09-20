@@ -34,6 +34,41 @@ function processGDD(image) {
     return gdd.copyProperties(image, ['system:time_start']);
 }
 
+// *** NUEVA FUNCIÓN PARA CREAR VECTORES DE VIENTO ***
+function getWindVectors(collection, roi) {
+    const meanWind = collection.select(['u_component_of_wind_10m', 'v_component_of_wind_10m'])
+        .mean()
+        .clip(roi);
+
+    // Creamos puntos de muestra en la región. Aumentamos la escala para no tener demasiados vectores.
+    const points = ee.Image.pixelLonLat().sample({ region: roi, scale: 25000, factor: 0.5 });
+    
+    const styledFeatures = points.map(function(point) {
+        const windVal = meanWind.reduceRegion({
+            reducer: ee.Reducer.first(),
+            geometry: point.geometry(),
+            scale: 1000,
+            bestEffort: true
+        });
+        
+        const u = ee.Number(windVal.get('u_component_of_wind_10m'));
+        const v = ee.Number(windVal.get('v_component_of_wind_10m'));
+        
+        // Calculamos la rotación y la magnitud para usarlas en el frontend.
+        const rotation = v.atan2(u).multiply(180 / Math.PI).add(90);
+        const magnitude = u.hypot(v);
+
+        return point
+            .set('rotation', rotation)
+            .set('magnitude', magnitude)
+            .set(windVal);
+    });
+
+    // Filtramos puntos que no tengan datos de viento.
+    return styledFeatures.filter(ee.Filter.notNull(['u_component_of_wind_10m']));
+}
+
+
 function getSpiCollection(roi, timescale) {
     const referenceStart = ee.Date('1994-01-01');
     const referenceEnd = ee.Date('2025-07-01'); // A future date to ensure we have current data
@@ -146,7 +181,6 @@ export default async function handler(req, res) {
 // === LÓGICA DE OPTIMIZACIÓN Y MANEJADORES DE ACCIONES ====================================
 // =========================================================================================
 
-// *** NUEVA FUNCIÓN DE OPTIMIZACIÓN PARA COLECCIONES DE ALTA FRECUENCIA ***
 async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate, endDate) {
     const eeStartDate = ee.Date(startDate);
     const eeEndDate = ee.Date(endDate);
@@ -155,7 +189,6 @@ async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate
         eeEndDate.difference(eeStartDate, 'day').evaluate((val, err) => err ? reject(err) : resolve(val));
     });
 
-    // Si el rango es corto (ej. < 90 días), usamos los datos horarios originales.
     if (dateDiffDays <= 90) {
         return ee.ImageCollection(datasetName)
             .filterDate(startDate, endDate)
@@ -163,10 +196,8 @@ async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate
             .map(processEra5);
     }
 
-    // Si el rango es largo, pre-agregamos a promedios diarios para evitar timeouts.
     const dateList = ee.List.sequence(0, dateDiffDays - 1);
     
-    // FIX: Primero se crea la lista con posibles nulos.
     const dailyImagesOrNulls = dateList.map(offset => {
         const start = eeStartDate.advance(ee.Number(offset), 'day');
         const end = start.advance(1, 'day');
@@ -175,16 +206,13 @@ async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate
                             .filterDate(start, end)
                             .filterBounds(eeRoi);
         
-        // Usamos un If para manejar días sin imágenes y evitar errores.
         return ee.Algorithms.If(
             hourlyImages.size().gt(0),
-            // Si hay imágenes, promediamos y procesamos.
             processEra5(hourlyImages.mean()).set('system:time_start', start.millis()),
-            null // Si no hay imágenes, no devolvemos nada para este día.
+            null
         );
     });
 
-    // FIX: Se limpian los nulos de la LISTA y LUEGO se crea la ImageCollection.
     const dailyCollection = ee.ImageCollection.fromImages(
         dailyImagesOrNulls.removeAll([null])
     );
@@ -212,7 +240,19 @@ async function handleGeneralData({ roi, varInfo, startDate, endDate }) {
     const stats = await getStats(imageForMap, eeRoi, varInfo.bandName, varInfo.unit, roi.name);
     const chartData = await getOptimizedChartData(collection.select(varInfo.bandName), [roi], varInfo.bandName, startDate, endDate);
 
-    return { mapId, stats, chartData, chartOptions: { title: `Serie Temporal para ${roi.name}` } };
+    // *** MODIFICACIÓN PARA VIENTO ***
+    // Si la variable es velocidad del viento, también calculamos y enviamos los vectores.
+    let windVectors = null;
+    if (varInfo.bandName === 'wind_speed') {
+        windVectors = await new Promise((resolve, reject) => {
+            getWindVectors(collection, eeRoi).evaluate((vectors, error) => {
+                if (error) reject(new Error('Error al generar vectores de viento: ' + error));
+                else resolve(vectors);
+            });
+        });
+    }
+
+    return { mapId, stats, chartData, chartOptions: { title: `Serie Temporal para ${roi.name}` }, windVectors };
 }
 
 async function handleCompareData({ rois, varInfo, startDate, endDate }) {
