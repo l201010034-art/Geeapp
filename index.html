@@ -227,7 +227,10 @@
             initMap();
             populateSelectors();
             setupEventListeners();
-            zonaCheckboxes[Object.keys(zonas)[0]].click(); // Seleccionar "Todo el Estado" por defecto
+            // Seleccionar y mostrar "Todo el Estado" por defecto
+            const defaultCheckbox = zonaCheckboxes[Object.keys(zonas)[0]];
+            defaultCheckbox.checked = true;
+            handleZoneSelection(Object.keys(zonas)[0]);
         });
 
         function initMap() {
@@ -254,10 +257,11 @@
             map.addControl(drawControl);
 
             map.on(L.Draw.Event.CREATED, (e) => {
-                drawnItems.clearLayers();
+                // Modificado: Permite múltiples dibujos para comparación
                 drawnItems.addLayer(e.layer);
-                clearZoneCheckboxes(false); // No remover la capa de dibujo
-                updateStatsPanel('Área dibujada seleccionada. Carga datos para analizar.');
+                clearZoneCheckboxes(false); // Desmarcar zonas predefinidas
+                updateStatsPanel(`${drawnItems.getLayers().length} área(s) dibujada(s). Carga datos para analizar.`);
+                zoomToActiveLayers(); // Zoom a todas las formas dibujadas
             });
             map.on(L.Draw.Event.EDITED, () => updateStatsPanel('Área editada. Vuelve a cargar los datos.'));
             
@@ -307,7 +311,9 @@
         }
         
         function handleZoneSelection(selectedName) {
-            drawnItems.clearLayers(); // Limpiar dibujos si se selecciona una zona
+            // Permitir selección múltiple, pero si se dibuja algo, se desmarcan las zonas.
+            drawnItems.clearLayers(); 
+
             if (zonaCheckboxes[selectedName].checked) {
                 const zona = zonas[selectedName];
                 const layer = L.polygon(L.GeoJSON.coordsToLatLngs(zona.geom[0]), zona.style);
@@ -319,18 +325,39 @@
                     delete zonaLayers[selectedName];
                 }
             }
+            zoomToActiveLayers(); // Hacer zoom a las zonas seleccionadas
         }
+        
+        function zoomToActiveLayers() {
+            const layersToZoom = [];
+            Object.values(zonaLayers).forEach(layer => layersToZoom.push(layer));
+            drawnItems.getLayers().forEach(layer => layersToZoom.push(layer));
+
+            if (layersToZoom.length > 0) {
+                const featureGroup = L.featureGroup(layersToZoom);
+                map.fitBounds(featureGroup.getBounds()).pad(0.1); // pad(0.1) añade un pequeño margen
+            }
+        }
+
 
         function clearZoneCheckboxes(removeLayers = true) {
              Object.values(zonaCheckboxes).forEach(cb => cb.checked = false);
              if (removeLayers) {
-                Object.values(zonaLayers).forEach(layer => map.removeLayer(layer));
+                Object.keys(zonaLayers).forEach(name => {
+                    if (zonaLayers[name]) {
+                        map.removeLayer(zonaLayers[name]);
+                        delete zonaLayers[name];
+                    }
+                });
              }
         }
 
         function setupEventListeners() {
             document.getElementById('loadDataButton').addEventListener('click', () => handleAnalysis('general'));
-            document.getElementById('compareButton').addEventListener('click', () => handleAnalysis('compare'));
+            document.getElementById('compareButton').addEventListener('click', () => {
+                zoomToActiveLayers(); // Zoom al comparar
+                handleAnalysis('compare');
+            });
             document.getElementById('precipAnalysisButton').addEventListener('click', () => handleAnalysis('precipitation'));
             document.getElementById('tempAnalysisButton').addEventListener('click', () => handleAnalysis('temperature'));
             document.getElementById('calculateSpiButton').addEventListener('click', () => handleAnalysis('spi'));
@@ -353,7 +380,10 @@
         function resetApp() {
             drawnItems.clearLayers();
             clearZoneCheckboxes();
-            zonaCheckboxes[Object.keys(zonas)[0]].click();
+            const defaultCheckbox = zonaCheckboxes[Object.keys(zonas)[0]];
+            defaultCheckbox.checked = true;
+            handleZoneSelection(Object.keys(zonas)[0]);
+            
             if (currentGEELayer) map.removeLayer(currentGEELayer);
             legendControl.update(null);
             updateStatsPanel('Selecciona opciones y carga datos.');
@@ -363,6 +393,12 @@
         // --- Lógica de Análisis ---
 
         async function handleAnalysis(type) {
+            // Para 'general', solo permitimos una zona.
+            if (type === 'general' && getActiveROIs().length > 1) {
+                 updateStatsPanel('Error: Para "Cargar Datos", selecciona solo una zona o dibuja una sola área.');
+                 return;
+            }
+
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
             if (!startDate || !endDate) {
@@ -376,7 +412,7 @@
                 return;
             }
             if (type === 'compare' && activeROIs.length < 2) {
-                updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas.');
+                updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
                 return;
             }
             
@@ -417,7 +453,7 @@
             
             try {
                 const response = await callGeeApi(action, params);
-                legendControl.update(varInfo); // Actualizar leyenda
+                legendControl.update(varInfo); 
                 if (response.mapId) {
                     addGeeLayer(response.mapId.urlFormat);
                 }
@@ -425,7 +461,7 @@
                     updateStatsPanel(response.stats);
                 }
                 if (response.chartData) {
-                    currentChartData = response.chartData; // Guardar datos para descarga
+                    currentChartData = response.chartData; 
                     document.getElementById('downloadCsvButton').disabled = false;
                     drawChart(response.chartData, response.chartOptions);
                 }
@@ -440,7 +476,7 @@
 
         function getActiveROIs() {
             const rois = [];
-            // Primero, las áreas dibujadas
+            // Si hay dibujos, ellos tienen prioridad.
             if (drawnItems.getLayers().length > 0) {
                  drawnItems.getLayers().forEach((layer, i) => {
                     rois.push({
@@ -451,7 +487,7 @@
                 return rois;
             }
 
-            // Si no hay dibujos, las zonas seleccionadas
+            // Si no, las zonas seleccionadas.
             Object.keys(zonaCheckboxes).forEach(name => {
                 if (zonaCheckboxes[name].checked) {
                     rois.push({
@@ -500,13 +536,10 @@
 
             let csvContent = "data:text/csv;charset=utf-8,";
             
-            // Función para escapar comas y comillas en los datos
             const escapeCSV = (field) => {
                 if (field === null || field === undefined) return '';
                 let fieldStr = String(field);
-                // Si el campo contiene comillas, comas o saltos de línea, lo encerramos entre comillas dobles
                 if (fieldStr.includes('"') || fieldStr.includes(',') || fieldStr.includes('\n')) {
-                    // Escapamos las comillas dobles existentes duplicándolas
                     fieldStr = fieldStr.replace(/"/g, '""');
                     return `"${fieldStr}"`;
                 }
@@ -566,7 +599,14 @@
             }
 
             chartPanel.innerHTML = '';
-            const dataTable = google.visualization.arrayToDataTable(data);
+
+            // Corrección: Asegurarse que la primera columna sea un objeto Date
+            const dataWithDates = data.map((row, index) => {
+                if (index === 0) return row; // Mantener el encabezado
+                return [new Date(row[0]), ...row.slice(1)];
+            });
+
+            const dataTable = google.visualization.arrayToDataTable(dataWithDates);
             
             const chartType = document.getElementById('chartTypeSelector').value;
             let chart;
