@@ -159,7 +159,7 @@ async function handleGeneralData({ roi, varInfo, startDate, endDate }) {
     const mapId = await getMapId(imageForMap.clip(eeRoi), { min: varInfo.min, max: varInfo.max, palette: varInfo.palette });
     
     const stats = await getStats(imageForMap, eeRoi, varInfo.bandName, varInfo.unit, roi.name);
-    const chartData = await getChartData(collection.select(varInfo.bandName), eeRoi, varInfo.bandName);
+    const chartData = await getOptimizedChartData(collection.select(varInfo.bandName), [roi], varInfo.bandName, startDate, endDate);
 
     return { mapId, stats, chartData, chartOptions: { title: `Serie Temporal para ${roi.name}` } };
 }
@@ -175,7 +175,7 @@ async function handleCompareData({ rois, varInfo, startDate, endDate }) {
     else if (varInfo.dataset === 'ERA5_DAILY') collection = ee.ImageCollection("ECMWF/ERA5/DAILY").filterDate(startDate, endDate).filterBounds(fc.geometry()).map(processGDD);
     else if (varInfo.dataset === 'CHIRPS') collection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(startDate,endDate).filterBounds(fc.geometry()).map(processChirps);
 
-    const chartData = await getChartDataByRegion(collection.select(varInfo.bandName), fc, varInfo.bandName);
+    const chartData = await getOptimizedChartData(collection.select(varInfo.bandName), rois, varInfo.bandName, startDate, endDate);
     
     return { 
         stats: `Comparando ${rois.length} zonas. Ver el gráfico para los resultados.`,
@@ -273,7 +273,7 @@ async function handleSpiData({ roi, timescale, startDate, endDate }) {
     const visParams = { min: -2.5, max: 2.5, palette: ['#d73027', '#f46d43', '#fdae61', '#cccccc', '#abd9e9', '#74add1', '#4575b4'] };
     const mapId = await getMapId(spiLatestImage.clip(eeRoi), visParams);
     
-    const chartData = await getChartData(spiForPeriod, eeRoi, 'SPI');
+    const chartData = await getOptimizedChartData(spiForPeriod, [roi], 'SPI', startDate, endDate);
 
     return { mapId, stats: `Mostrando el mapa SPI más reciente para el periodo.`, chartData, chartOptions: { title: `SPI de ${timescale} meses para ${roi.name}` }};
 }
@@ -317,7 +317,8 @@ function getMapId(image, visParams) {
 async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio") {
     return new Promise((resolve, reject) => {
         const reducer = ee.Reducer.mean().combine({ reducer2: ee.Reducer.minMax(), sharedInputs: true });
-        const dict = image.reduceRegion({ reducer, geometry: roi, scale: 1000, bestEffort: true });
+        // OPTIMIZACIÓN: Usar una escala mayor para estadísticas regionales.
+        const dict = image.reduceRegion({ reducer, geometry: roi, scale: 5000, bestEffort: true });
         
         dict.evaluate((stats, error) => {
             if (error) {
@@ -345,13 +346,53 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
     });
 }
 
-async function getChartData(collection, roi, bandName) {
+// *** NUEVA FUNCIÓN OPTIMIZADA PARA GRÁFICOS ***
+async function getOptimizedChartData(collection, rois, bandName, startDate, endDate) {
+    const eeStartDate = ee.Date(startDate);
+    const eeEndDate = ee.Date(endDate);
+    
+    const dateDiffDays = await new Promise((resolve, reject) => {
+        eeEndDate.difference(eeStartDate, 'day').evaluate((val, err) => err ? reject(err) : resolve(val));
+    });
+
+    // Si el periodo es corto (<= 4 meses), usamos la alta resolución original.
+    if (dateDiffDays <= 120) {
+        const fc = ee.FeatureCollection(rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name })));
+        return rois.length > 1 ? getChartDataByRegion(collection, fc, bandName) : getChartData(collection, ee.Geometry(rois[0].geom), bandName);
+    }
+    
+    // Si el periodo es largo, agregamos los datos para optimizar.
+    let aggregateUnit = 'week';
+    if (dateDiffDays > 730) { // > 2 años
+        aggregateUnit = 'month';
+    }
+
+    const dateDiff = eeEndDate.difference(eeStartDate, aggregateUnit);
+    const dateList = ee.List.sequence(0, dateDiff.subtract(1));
+    
+    const aggregatedCollection = ee.ImageCollection.fromImages(
+        dateList.map(offset => {
+            const start = eeStartDate.advance(ee.Number(offset), aggregateUnit);
+            const end = start.advance(1, aggregateUnit);
+            const filtered = collection.filterDate(start, end);
+            return filtered.mean().set('system:time_start', start.millis());
+        })
+    );
+    
+    // Llamamos a las funciones de gráfico con la colección agregada y una escala mayor.
+    const scale = 5000;
+    const fc = ee.FeatureCollection(rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name })));
+    return rois.length > 1 ? getChartDataByRegion(aggregatedCollection, fc, bandName, scale) : getChartData(aggregatedCollection, ee.Geometry(rois[0].geom), bandName, scale);
+}
+
+// Función original modificada para aceptar una escala.
+async function getChartData(collection, roi, bandName, scale = 2000) {
     return new Promise((resolve, reject) => {
         const series = collection.map(image => {
             const value = image.reduceRegion({
                 reducer: ee.Reducer.mean(),
                 geometry: roi,
-                scale: 1000,
+                scale: scale,
                 bestEffort: true
             }).get(bandName);
             return ee.Feature(null, { 'system:time_start': image.get('system:time_start'), 'value': value });
@@ -362,6 +403,7 @@ async function getChartData(collection, roi, bandName) {
             else {
                 const header = [['Fecha', bandName]];
                 const rows = fc.features
+                    .filter(f => f.properties.value !== null) // Filtrar nulos
                     .map(f => [new Date(f.properties['system:time_start']), f.properties.value])
                     .sort((a,b) => a[0] - b[0]);
                 resolve(header.concat(rows));
@@ -370,7 +412,8 @@ async function getChartData(collection, roi, bandName) {
     });
 }
 
-async function getChartDataByRegion(collection, fc, bandName) {
+// Función original modificada para aceptar una escala.
+async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
     return new Promise((resolve, reject) => {
         fc.aggregate_array('label').evaluate((labels, error) => {
              if (error) reject(new Error('Error obteniendo etiquetas de región: ' + error));
@@ -382,7 +425,7 @@ async function getChartDataByRegion(collection, fc, bandName) {
                     const means = image.reduceRegions({
                         collection: fc,
                         reducer: ee.Reducer.mean(),
-                        scale: 1000
+                        scale: scale
                     });
                     const values = labels.map(label => {
                         const feature = means.filter(ee.Filter.eq('label', label)).first();
