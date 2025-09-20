@@ -322,8 +322,8 @@ async function handleFireRiskData({ roi, endDate }) {
     const eeRoi = ee.Geometry(roi.geom);
     const eeEndDate = ee.Date(endDate);
 
-    const lstCollection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(eeEndDate.advance(-30, 'day'), eeEndDate).filterBounds(eeRoi).map(processModis);
-    const spiCollection = getSpiCollection(eeRoi, 3).filterDate(eeEndDate.advance(-45, 'day'), eeEndDate);
+    const lstCollection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(eeEndDate.advance(startDate), eeEndDate).filterBounds(eeRoi).map(processModis);
+    const spiCollection = getSpiCollection(eeRoi, 3).filterDate(eeEndDate.advance(startDate), eeEndDate);
 
     const latestLST = ee.Image(lstCollection.sort('system:time_start', false).first());
     const latestSPI = ee.Image(spiCollection.sort('system:time_start', false).first());
