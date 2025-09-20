@@ -318,12 +318,11 @@ async function handleSpiData({ roi, timescale, startDate, endDate }) {
     return { mapId, stats: `Mostrando el mapa SPI más reciente para el periodo.`, chartData, chartOptions: { title: `SPI de ${timescale} meses para ${roi.name}` }};
 }
 
-async function handleFireRiskData({ roi, startDate, endDate }) { // <--- Se añade startDate
+async function handleFireRiskData({ roi, startDate, endDate }) {
     const eeRoi = ee.Geometry(roi.geom);
-    const eeStartDate = ee.Date(startDate); // <--- Se usa startDate
+    const eeStartDate = ee.Date(startDate);
     const eeEndDate = ee.Date(endDate);
 
-    // Se usan ambas fechas para filtrar las colecciones
     const lstCollection = ee.ImageCollection('MODIS/061/MOD11A1')
         .filterDate(eeStartDate, eeEndDate)
         .filterBounds(eeRoi)
@@ -332,31 +331,35 @@ async function handleFireRiskData({ roi, startDate, endDate }) { // <--- Se aña
     const spiCollection = getSpiCollection(eeRoi, 3)
         .filterDate(eeStartDate, eeEndDate);
 
-    // Se calcula la media del periodo en lugar de solo tomar la última imagen
     const meanLST = lstCollection.mean(); 
     const meanSPI = spiCollection.mean();
 
     const inputsPresent = await new Promise((resolve, reject) => {
-        ee.Dictionary.fromLists(['lst', 'spi'], [meanLST, meanSPI]).evaluate((dict, err) => {
-            if (err) return reject(err);
-            resolve(dict.lst != null && dict.spi != null);
+        ee.Dictionary.fromLists(['lst', 'spi'], [meanLST, meanSPI]).evaluate((dict, error) => {
+            if (error) return reject(error);
+            resolve(dict && dict.lst != null && dict.spi != null);
         });
     });
 
     if (!inputsPresent) {
         throw new Error("No hay suficientes datos de LST o SPI en el periodo seleccionado para calcular el riesgo de incendio.");
     }
-
-    const lstRisk = meanLST.select('LST').unitScale(30, 45).clamp(0, 1);
+    
+    // AJUSTE 1: Umbrales de temperatura más sensibles (ej. 28°C a 42°C)
+    const lstRisk = meanLST.select('LST').unitScale(28, 42).clamp(0, 1);
     const spiRisk = meanSPI.select('SPI').multiply(-1).unitScale(0, 1.5).clamp(0, 1);
     const totalRisk = lstRisk.multiply(0.6).add(spiRisk.multiply(0.4));
     
-    const classifiedRisk = ee.Image(0).where(totalRisk.gt(0.25), 1).where(totalRisk.gt(0.50), 2).where(totalRisk.gt(0.75), 3);
+    // AJUSTE 2: Clasificación de riesgo más sensible para mostrar más variaciones
+    const classifiedRisk = ee.Image(0) // Nivel 0: Bajo
+        .where(totalRisk.gt(0.20), 1) // Nivel 1: Moderado
+        .where(totalRisk.gt(0.45), 2) // Nivel 2: Alto
+        .where(totalRisk.gt(0.70), 3); // Nivel 3: Extremo
+
     const fireVisParams = { min: 0, max: 3, palette: ['#2ca25f', '#fee08b', '#fdae61', '#d73027'] };
 
     const mapId = await getMapId(classifiedRisk.clip(eeRoi), fireVisParams);
     
-    // Mensaje actualizado
     return { mapId, stats: `Riesgo de incendio promedio calculado para el periodo seleccionado.` };
 }
 
