@@ -162,7 +162,8 @@ async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate
             .map(processEra5);
     }
 
-    const dateList = ee.List.sequence(0, dateDiffDays.subtract(1));
+    // CORRECCIÓN: Usar 'dateDiffDays - 1' en lugar de 'dateDiffDays.subtract(1)'
+    const dateList = ee.List.sequence(0, dateDiffDays - 1);
     const dailyImagesList = dateList.map(offset => {
         const start = eeStartDate.advance(ee.Number(offset), 'day');
         const end = start.advance(1, 'day');
@@ -230,7 +231,6 @@ async function handleCompareData({ rois, varInfo, startDate, endDate }) {
 
 
 async function handlePrecipitationData({ roi, analysisType, aggregation, startDate, endDate }) {
-    // CORRECCIÓN: Validar fechas
     if (!startDate || !endDate) {
         throw new Error("Fechas de inicio y fin son requeridas para el análisis de precipitación.");
     }
@@ -329,7 +329,6 @@ async function handleFireRiskData({ roi, endDate }) {
     const latestLST = ee.Image(lstCollection.sort('system:time_start', false).first());
     const latestSPI = ee.Image(spiCollection.sort('system:time_start', false).first());
 
-    // CORRECCIÓN: Validar que existan imágenes
     const inputsPresent = await new Promise((resolve, reject) => {
         ee.Dictionary.fromLists(['lst', 'spi'], [latestLST, latestSPI]).evaluate((dict, err) => {
             if (err) return reject(err);
@@ -494,4 +493,5 @@ async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
         });
     });
 }
+
 
