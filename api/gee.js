@@ -475,7 +475,8 @@ async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
                     });
                     const values = labels.map(label => {
                         const feature = means.filter(ee.Filter.eq('label', label)).first();
-                        return ee.Feature(feature).get(bandName);
+                        // CORRECCIÓN FINAL: Obtener la propiedad 'mean' que añade reduceRegions
+                        return ee.Feature(feature).get('mean');
                     });
                     return ee.Feature(null, {'system:time_start': time}).set('means', values);
                 });
