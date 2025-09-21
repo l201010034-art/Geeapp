@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Informe Climático de Campeche</title>
+    <title>Plataforma - Informe Climático de Campeche</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS y JS para el mapa -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Leaflet.draw para dibujar en el mapa -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
@@ -16,183 +16,124 @@
     <style>
         :root {
             --maroon-color: #800000;
-            --header-text-color: #FFFFFF;
-            --control-text-color: #000000;
             --lighter-maroon: #a04040;
-            --button-yellow: '#f0ad4e';
+            --accent-color: #f0ad4e;
         }
         body { font-family: 'Inter', sans-serif; }
         .loader {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            border: 5px solid #f3f3f3; border-top: 5px solid var(--accent-color);
+            border-radius: 50%; width: 40px; height: 40px;
             animation: spin 1s linear infinite;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            margin-left: -20px;
-            margin-top: -20px;
-            z-index: 1001; /* Encima del overlay */
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-        .legend {
-            padding: 6px 8px;
-            background: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
-            border-radius: 5px;
-            color: #333;
-        }
-        .legend-title {
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-        .legend-scale-bar {
-            height: 10px;
-            border-radius: 5px;
-        }
-        .legend-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .legend { background: rgba(255, 255, 255, 0.85); border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); padding: 6px 10px; color: #333; }
+        .legend-title { font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        .legend-scale-bar { height: 10px; border-radius: 5px; }
+        .legend-labels { display: flex; justify-content: space-between; font-size: 12px; }
+        
+        /* Estilos para el panel de control y acordeón */
+        #control-panel { transition: transform 0.3s ease-in-out; }
+        .control-panel-hidden { transform: translateX(-100%); }
+        summary { cursor: pointer; font-weight: 600; padding: 0.75rem; background-color: rgba(0,0,0,0.1); border-radius: 5px; }
+        details > div { padding: 0.75rem; background-color: rgba(0,0,0,0.2); border-radius: 0 0 5px 5px; }
     </style>
 </head>
-<body class="bg-gray-900 text-white">
+<body class="bg-gray-800 text-white h-screen overflow-hidden flex flex-col">
 
-    <div id="loading-overlay" class="hidden overlay">
+    <!-- Overlay de Carga -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]">
         <div class="loader"></div>
     </div>
 
-    <div class="flex flex-col md:flex-row h-screen">
-        <!-- Panel de Control -->
-        <div class="w-full md:w-[420px] bg-[#800000] p-4 overflow-y-auto flex flex-col space-y-3">
-            <h1 class="text-2xl font-bold text-center">Informe Climático de Campeche</h1>
-
-            <!-- Rango de Fechas -->
-            <div>
-                <label class="font-bold">1. Rango de Fechas</label>
-                <div class="grid grid-cols-2 gap-2 mt-1">
-                    <input type="date" id="startDate" value="2023-01-01" class="p-2 rounded bg-[#a04040] text-white border-gray-500">
-                    <input type="date" id="endDate" value="2023-12-31" class="p-2 rounded bg-[#a04040] text-white border-gray-500">
-                </div>
-            </div>
-
-            <!-- Zona de Interés -->
-            <div>
-                <label class="font-bold">2. Zona de Interés (o dibuja)</label>
-                <div id="zonaSelectorPanel" class="p-2 mt-1 rounded bg-[#a04040]">
-                    <!-- Checkboxes se generan aquí -->
-                </div>
-            </div>
-
-            <!-- Variable Climática -->
-            <div>
-                <label for="variableSelector" class="font-bold">3. Variable Climática</label>
-                <select id="variableSelector" class="w-full p-2 mt-1 rounded bg-[#a04040] text-white border-gray-500"></select>
-            </div>
+    <!-- Barra de Navegación Superior -->
+    <nav class="bg-black bg-opacity-70 text-white p-3 flex justify-between items-center z-[1100] w-full">
+        <div class="flex items-center space-x-4">
+            <button id="menu-toggle" class="md:hidden p-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+            </button>
+            <h1 class="text-lg font-bold">Plataforma de Monitoreo Climático</h1>
+        </div>
+        <a href="index.html" class="bg-transparent border border-white hover:bg-white hover:text-black py-2 px-4 rounded transition text-sm">Página Principal</a>
+    </nav>
+    
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Panel de Control Deslizable -->
+        <aside id="control-panel" class="absolute md:relative z-[1050] md:z-auto h-full w-80 md:w-96 bg-[var(--maroon-color)] p-4 overflow-y-auto flex-col space-y-4 control-panel-hidden md:transform-none">
             
-            <!-- Paneles de Análisis Específicos -->
-            <div id="precipAnalysisPanel" class="hidden space-y-2 p-2 border border-gray-400 rounded">
-                <label class="font-bold">Análisis de Precipitación</label>
-                <select id="precipAnalysisSelector" class="w-full p-2 rounded bg-[#a04040] text-white">
-                    <option value="accumulated">Acumulado</option>
-                    <option value="intensity">Intensidad de Lluvia</option>
-                    <option value="frequency">Frecuencia de Lluvias Fuertes (>20mm)</option>
-                </select>
-                <select id="precipAggregationSelector" class="w-full p-2 rounded bg-[#a04040] text-white">
-                     <option value="day">Diaria</option>
-                     <option value="week" selected>Semanal</option>
-                     <option value="month">Mensual</option>
-                     <option value="year">Anual</option>
-                </select>
-                <button id="precipAnalysisButton" class="w-full p-2 font-bold bg-[#f0ad4e] text-black rounded hover:bg-yellow-500">Ejecutar Análisis</button>
-            </div>
-            <div id="tempAnalysisPanel" class="hidden space-y-2 p-2 border border-gray-400 rounded">
-                <label class="font-bold">Análisis de Temperatura Extrema</label>
-                <select id="tempAnalysisSelector" class="w-full p-2 rounded bg-[#a04040] text-white">
-                    <option value="heatwave">Olas de Calor</option>
-                    <option value="frost">Heladas</option>
-                </select>
-                <button id="tempAnalysisButton" class="w-full p-2 font-bold bg-[#f0ad4e] text-black rounded hover:bg-yellow-500">Ejecutar Análisis</button>
-            </div>
-
-            <!-- Tipo de Gráfico -->
-            <div>
-                <label for="chartTypeSelector" class="font-bold">4. Tipo de Gráfico (vars. generales)</label>
-                <select id="chartTypeSelector" class="w-full p-2 mt-1 rounded bg-[#a04040] text-white border-gray-500">
-                    <option value="LineChart">Línea</option>
-                    <option value="ColumnChart">Barras</option>
-                    <option value="ScatterChart">Dispersión</option>
-                    <option value="AreaChart">Área</option>
-                </select>
-            </div>
-
-            <!-- Acciones Generales -->
-            <div>
-                <label class="font-bold">5. Acciones Generales</label>
-                <div class="grid grid-cols-2 gap-2 mt-1">
-                    <button id="loadDataButton" class="p-2 font-bold bg-[#a04040] rounded hover:bg-red-800">Cargar Datos</button>
-                    <button id="compareButton" class="p-2 font-bold bg-[#a04040] rounded hover:bg-red-800">📊 Comparar</button>
+            <details open>
+                <summary>1. Rango de Fechas</summary>
+                <div>
+                    <input type="date" id="startDate" value="2023-01-01" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500">
+                    <input type="date" id="endDate" value="2023-12-31" class="w-full mt-2 p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500">
                 </div>
-            </div>
-
-            <!-- Productos Específicos -->
-            <div>
-                <label class="font-bold">6. Productos Específicos</label>
-                 <select id="spiTimescaleSelector" class="w-full p-2 mt-1 rounded bg-[#a04040] text-white">
-                    <option value="3">SPI 3 Meses (sequía a corto plazo)</option>
-                    <option value="6">SPI 6 Meses (sequía estacional)</option>
-                    <option value="12">SPI 12 Meses (sequía a largo plazo)</option>
-                </select>
-                <div class="grid grid-cols-2 gap-2 mt-2">
-                    <button id="calculateSpiButton" class="p-2 font-bold bg-[#f0ad4e] text-black rounded hover:bg-yellow-500">Calcular SPI</button>
-                    <button id="fireRiskButton" class="p-2 font-bold bg-[#c9302c] text-white rounded hover:bg-red-700">🔥 Riesgo de Incendio</button>
-                </div>
-            </div>
+            </details>
             
-            <!-- Herramientas -->
-            <div>
-                <label class="font-bold">7. Herramientas</label>
-                <div class="grid grid-cols-2 gap-2 mt-1">
-                     <button id="clearDrawingButton" class="p-2 font-bold bg-[#a04040] rounded hover:bg-red-800">Limpiar Dibujo</button>
-                     <button id="resetButton" class="p-2 font-bold bg-[#a04040] rounded hover:bg-red-800">Reiniciar App</button>
-                </div>
-                 <!-- Botón de Descarga -->
-                <button id="downloadCsvButton" class="w-full mt-2 p-2 font-bold bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-500" disabled>Descargar Datos (CSV)</button>
-            </div>
+            <details open>
+                <summary>2. Zona de Interés</summary>
+                <div id="zonaSelectorPanel" class="space-y-2"></div>
+            </details>
             
-            <!-- Resumen y Gráfico -->
-            <div class="flex-grow flex flex-col space-y-3">
-                 <div>
-                    <label class="font-bold">Resumen Estadístico</label>
-                    <div id="stats-panel" class="p-3 mt-1 min-h-[100px] text-sm bg-[#a04040] rounded whitespace-pre-wrap">Selecciona opciones y carga datos.</div>
+            <details open>
+                <summary>3. Variable Climática</summary>
+                <div>
+                    <select id="variableSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500"></select>
                 </div>
-                 <div class="flex-grow flex flex-col">
-                    <label class="font-bold">Gráfico de Serie Temporal</label>
-                    <div id="chart-panel" class="p-2 mt-1 flex-grow bg-[#a04040] rounded flex items-center justify-center">
-                        <span class="text-gray-300">El gráfico aparecerá aquí</span>
+            </details>
+            
+            <div id="precipAnalysisPanel" class="hidden"><details><summary>Análisis de Precipitación</summary><div class="space-y-2">
+                <select id="precipAnalysisSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="accumulated">Acumulado</option><option value="intensity">Intensidad</option><option value="frequency">Frecuencia (>20mm)</option></select>
+                <select id="precipAggregationSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="day">Diaria</option><option value="week" selected>Semanal</option><option value="month">Mensual</option><option value="year">Anual</option></select>
+                <button id="precipAnalysisButton" class="w-full p-2 font-bold bg-[var(--accent-color)] text-black rounded">Ejecutar</button>
+            </div></details></div>
+            
+            <div id="tempAnalysisPanel" class="hidden"><details><summary>Análisis de Temperatura</summary><div class="space-y-2">
+                <select id="tempAnalysisSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="heatwave">Olas de Calor</option><option value="frost">Heladas</option></select>
+                <button id="tempAnalysisButton" class="w-full p-2 font-bold bg-[var(--accent-color)] text-black rounded">Ejecutar</button>
+            </div></details></div>
+
+            <details><summary>4. Tipo de Gráfico</summary>
+                <div><select id="chartTypeSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500"><option value="LineChart">Línea</option><option value="ColumnChart">Barras</option><option value="ScatterChart">Dispersión</option><option value="AreaChart">Área</option></select></div>
+            </details>
+            
+            <details><summary>5. Acciones</summary><div class="grid grid-cols-2 gap-2">
+                <button id="loadDataButton" class="p-2 font-bold bg-[var(--lighter-maroon)] rounded">Cargar Datos</button>
+                <button id="compareButton" class="p-2 font-bold bg-[var(--lighter-maroon)] rounded">📊 Comparar</button>
+            </div></details>
+            
+            <details><summary>6. Productos Específicos</summary><div class="space-y-2">
+                <select id="spiTimescaleSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="3">SPI 3 Meses</option><option value="6">SPI 6 Meses</option><option value="12">SPI 12 Meses</option></select>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="calculateSpiButton" class="p-2 font-bold bg-[var(--accent-color)] text-black rounded">Calcular SPI</button>
+                    <button id="fireRiskButton" class="p-2 font-bold bg-[#c9302c] text-white rounded">🔥 Riesgo Incendio</button>
+                </div>
+            </div></details>
+            
+            <details><summary>7. Herramientas</summary><div class="space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                     <button id="clearDrawingButton" class="p-2 font-bold bg-[var(--lighter-maroon)] rounded">Limpiar Dibujo</button>
+                     <button id="resetButton" class="p-2 font-bold bg-[var(--lighter-maroon)] rounded">Reiniciar</button>
+                </div>
+                <button id="downloadCsvButton" class="w-full mt-2 p-2 font-bold bg-green-600 text-white rounded disabled:bg-gray-500" disabled>Descargar CSV</button>
+            </div></details>
+
+        </aside>
+        
+        <!-- Contenido Principal (Mapa, Gráfico, etc.) -->
+        <main class="flex-1 flex flex-col">
+            <div id="map" class="flex-grow w-full h-2/3 md:h-full"></div>
+            <div class="bg-gray-900 p-4 border-t border-gray-700 h-1/3 md:h-96 flex flex-col">
+                <h2 class="text-lg font-bold mb-2 text-center">Análisis de Datos</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                    <div id="stats-panel" class="md:col-span-1 bg-gray-800 p-3 rounded overflow-y-auto text-sm whitespace-pre-wrap">Selecciona opciones y carga datos.</div>
+                    <div id="chart-panel" class="md:col-span-2 bg-gray-800 p-2 rounded flex items-center justify-center">
+                        <span class="text-gray-400">El gráfico aparecerá aquí</span>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Panel del Mapa -->
-        <div id="map" class="flex-grow h-1/2 md:h-full"></div>
+        </main>
     </div>
 
     <script type="module">
@@ -209,7 +150,7 @@
             'Días Grado de Crecimiento (°C día)': { min: 0, max: 20, palette: ['#edf8b1', '#7fcdbb', '#2c7fb8'], bandName: 'GDD', unit: '°C día', dataset: 'ERA5_DAILY'}
         };
         const zonas = {
-            'Todo el Estado': { geom: [[[-92.32,20.84],[-89.1,20.84],[-89.1,17.8],[-92.32,17.8]]], style: {color: 'white', fillColor: '#FFFFFF22', weight: 2} },
+            'Todo el Estado': { geom: [[[-90.53,20.84],[-89.15,20.68],[-89.23,19.31],[-89.43,18.36],[-89.98,17.82],[-91.01,17.75],[-91.78,18.02],[-92.35,18.62],[-92.23,19.05],[-91.48,19.38],[-91.24,19.88],[-90.87,20.52],[-90.53,20.84]]], style: {color: 'white', fillOpacity: 0, weight: 2.5} },
             'Zona 1, Ciudad Campeche': { geom: [[[-90.4531, 19.8993],[-90.4890, 19.8781],[-90.5211, 19.8612],[-90.5290, 19.8671],[-90.5343, 19.8631],[-90.5273, 19.8578],[-90.5366, 19.8549],[-90.5444, 19.8461],[-90.5529, 19.8386],[-90.5613, 19.8334],[-90.5685, 19.8282],[-90.5702, 19.8273],[-90.5712, 19.8277],[-90.5735, 19.8269],[-90.5734, 19.8253],[-90.5792, 19.8218],[-90.5852, 19.8187],[-90.5900, 19.8153],[-90.5929, 19.8183],[-90.5997, 19.8136],[-90.6010, 19.8085],[-90.6102, 19.8018],[-90.6165, 19.7991],[-90.6195, 19.7967],[-90.6261, 19.7939],[-90.6294, 19.7909],[-90.6327, 19.7900],[-90.6333, 19.7847],[-90.6389, 19.7790],[-90.6390, 19.7746],[-90.6349, 19.7724],[-90.6277, 19.7780],[-90.6159, 19.7809],[-90.5992, 19.7835],[-90.5922, 19.7947],[-90.5496, 19.7942],[-90.5422, 19.7914],[-90.5308, 19.7932],[-90.5232, 19.7891],[-90.5167, 19.7923],[-90.5048, 19.7900],[-90.5055, 19.7809],[-90.5039, 19.7776],[-90.5080, 19.7714],[-90.5115, 19.7638],[-90.5099, 19.7598],[-90.5171, 19.7573],[-90.5272, 19.7512],[-90.5223, 19.7435],[-90.5138, 19.7338],[-90.4989, 19.7403],[-90.4857, 19.7552],[-90.4698, 19.7498],[-90.4596, 19.7476],[-90.4611, 19.7558],[-90.4641, 19.7628],[-90.4750, 19.7666],[-90.4820, 19.7835],[-90.4643, 19.7960],[-90.4585, 19.8226],[-90.4556, 19.8433],[-90.4460, 19.8818]]], style: {color: 'blue', fillColor: '#0000FF22', weight: 2} },
             'Zona 2, Lerma': { geom: [[[-90.5920, 19.8193],[-90.5996, 19.8133],[-90.6083, 19.8036],[-90.6327, 19.7897],[-90.6385, 19.7802],[-90.6396, 19.7744],[-90.6351, 19.7716],[-90.6279, 19.7779],[-90.5997, 19.7824],[-90.5924, 19.7946],[-90.5741, 19.7954],[-90.5831, 19.8203]]], style: {color: 'green', fillColor: '#00FF0022', weight: 2} },
             'Zona 3, Chiná': { geom: [[[-90.5045, 19.7762],[-90.5187, 19.7562],[-90.5211, 19.7420],[-90.5021, 19.7384],[-90.4856, 19.7542],[-90.4626, 19.7483],[-90.4602, 19.7518],[-90.4748, 19.7647],[-90.4813, 19.7833],[-90.5046, 19.7901]]], style: {color: 'orange', fillColor: '#FFA50022', weight: 2} },
@@ -219,15 +160,13 @@
         let map, drawnItems, currentGEELayer, legendControl;
         const zonaLayers = {};
         const zonaCheckboxes = {};
-        let currentChartData = null; // Variable para guardar los datos del gráfico
+        let currentChartData = null;
 
-        // --- Inicialización de UI y Mapa ---
         document.addEventListener('DOMContentLoaded', () => {
             google.charts.load('current', {'packages':['corechart']});
             initMap();
             populateSelectors();
             setupEventListeners();
-            // Seleccionar y mostrar "Todo el Estado" por defecto
             const defaultCheckbox = zonaCheckboxes[Object.keys(zonas)[0]];
             defaultCheckbox.checked = true;
             handleZoneSelection(Object.keys(zonas)[0]);
