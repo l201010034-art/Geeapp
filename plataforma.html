@@ -291,7 +291,25 @@
              }
         }
 
-        function setupEventListeners() {
+function setupEventListeners() {
+            // --- Lógica para el menú deslizable en móviles ---
+            const menuToggle = document.getElementById('menu-toggle');
+            const controlPanel = document.getElementById('control-panel');
+            const mainContent = document.querySelector('main');
+
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Evita que el clic se propague al mapa
+                controlPanel.classList.toggle('control-panel-hidden');
+            });
+
+            // Cierra el menú si se hace clic en el mapa o el gráfico
+            mainContent.addEventListener('click', () => {
+                if (!controlPanel.classList.contains('control-panel-hidden')) {
+                    controlPanel.classList.add('control-panel-hidden');
+                }
+            });
+
+            // --- Event Listeners para los botones de análisis ---
             document.getElementById('loadDataButton').addEventListener('click', () => handleAnalysis('general'));
             document.getElementById('compareButton').addEventListener('click', () => {
                 zoomToActiveLayers(); // Zoom al comparar
