@@ -46,8 +46,8 @@
     <nav class="bg-black bg-opacity-50 p-4 fixed w-full z-20">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold">Clima Campeche</h1>
-            <a href="plataforma.html" class="bg-[#800000] hover:bg-[#a04040] text-white font-bold py-2 px-4 rounded transition duration-300">
-                Acceder a la Plataforma
+            <a href="plataforma.html" class="bg-[#800000] hover:bg-[#a04040] text-white font-bold py-2 px-4 rounded transition duration-300 text-sm md:text-base">
+                Plataforma
             </a>
         </div>
     </nav>
@@ -57,7 +57,7 @@
         <div class="hero-video-container">
             <video autoplay loop muted playsinline id="hero-video">
                 <!-- Video de vista satelital de la Tierra -->
-                <source src="https://www.pexels.com/es-es/download/video/33858393/" type="video/mp4">
+                <source src="https://videos.pexels.com/video-files/3129959/3129959-hd_1920_1080_25fps.mp4" type="video/mp4">
                 Tu navegador no soporta videos HTML5.
             </video>
         </div>
@@ -67,9 +67,9 @@
         <div class="p-8 z-10 relative">
             <h2 class="text-4xl md:text-6xl font-bold mb-4">Inteligencia Climática para la Toma de Decisiones en Campeche</h2>
             <p class="text-lg md:text-xl mb-8 max-w-3xl mx-auto">Traduciendo datos satelitales en acciones estratégicas para la agricultura, el medio ambiente y la protección civil.</p>
-            <div>
-                <a href="#casos-de-uso" class="bg-transparent border-2 border-white hover:bg-white hover:text-black text-white font-bold py-3 px-6 rounded transition duration-300 mr-4">Ver Casos de Uso</a>
-                <a href="plataforma.html" class="bg-[#f0ad4e] hover:bg-yellow-500 text-[#800000] font-bold py-3 px-6 rounded transition duration-300">Iniciar Plataforma</a>
+            <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4">
+                <a href="#casos-de-uso" class="w-full md:w-auto bg-transparent border-2 border-white hover:bg-white hover:text-black text-white font-bold py-3 px-6 rounded transition duration-300">Ver Casos de Uso</a>
+                <a href="plataforma.html" class="w-full md:w-auto bg-[#f0ad4e] hover:bg-yellow-500 text-[#800000] font-bold py-3 px-6 rounded transition duration-300">Iniciar Plataforma</a>
             </div>
         </div>
     </header>
@@ -253,10 +253,9 @@
             </div>
         </div>
     </section>
-    
-    <!-- ================================================================= -->
-    <!-- === NUEVA SECCIÓN: METODOLOGÍA =================================== -->
-    <!-- ================================================================= -->
+
+
+    <!-- SECCIÓN: METODOLOGÍA -->
     <section id="metodologia" class="py-20 bg-gray-800">
         <div class="container mx-auto px-6 text-center">
             <h3 class="text-3xl font-bold mb-12">Nuestra Metodología</h3>
@@ -288,26 +287,25 @@
         </div>
     </section>
     
-    <!-- ================================================================= -->
     <!-- SECCIÓN: EL EQUIPO -->
     <section id="equipo" class="py-20 bg-gray-900">
         <div class="container mx-auto px-6 text-center">
             <h3 class="text-3xl font-bold mb-12">El Equipo Desarrollador</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
                 <div class="text-center">
-                    <img src="https://scontent.fisj3-3.fna.fbcdn.net/v/t1.6435-9/61610518_2330052080385684_4282597571144187904_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=a5f93a&_nc_ohc=Z2Jg9vmx5y4Q7kNvwE9H_UJ&_nc_oc=AdnWUXyZ24QxEBWHytVok-CVP_OA__4Dej49IgXw3KSUPCipFspKy-4viyDN5Q_06LuoyLS1sZTrSQ4h2E8I9VIz&_nc_zt=23&_nc_ht=scontent.fisj3-3.fna&_nc_gid=M4dUaipBFH0305LOV_dZZA&oh=00_AfbkiQkwU0ZcyLrb5mVmWEQd6qYI5iH2U33OxaDC_l3q0Q&oe=68F5B710" alt="Foto de Alexis Omar Lugo Arcos" class="w-24 h-24 mx-auto rounded-full mb-4 object-cover">
+                    <img src="https://i.imgur.com/Y1j9Z6H.jpeg" alt="Foto de Alexis Omar Lugo Arcos" class="w-24 h-24 mx-auto rounded-full mb-4 object-cover">
                     <h4 class="text-xl font-semibold">Alexis Omar Lugo Arcos</h4>
-                    <p class="text-gray-400">Líder de Proyecto Ing. Mecatronico.</p>
+                    <p class="text-gray-400">Líder de Proyecto</p>
                 </div>
                 <div class="text-center">
                     <img src="URL_DE_LA_FOTO_AQUI" alt="Foto de Angel Martínez Romero" class="w-24 h-24 mx-auto rounded-full mb-4 object-cover">
                     <h4 class="text-xl font-semibold">Angel Martínez Romero</h4>
-                    <p class="text-gray-400">Function App Tester Ing. Mecatronico.</p>
+                    <p class="text-gray-400">Analista de Datos</p>
                 </div>
                 <div class="text-center">
-                    <img src="https://scontent.fisj3-3.fna.fbcdn.net/v/t1.6435-9/84991469_2817016525011432_7420478494095704064_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=gAEr9wzPUDMQ7kNvwFY7eDp&_nc_oc=AdkE8eKFhggsa4pXOLS7ryXoUQvGW1--QAenhyEDXydfEO9W78msx8iy-0gG9H6V-yDO0MJ4Up3jwNfzaXUBjY6j&_nc_zt=23&_nc_ht=scontent.fisj3-3.fna&_nc_gid=O-jf5yJpYEGwHRCM4m6b4A&oh=00_AfZbOoZCWd89LRpgMO_ztr6DAco6Yo61jHMmDXFw7OdX2w&oe=68F5AA75" alt="Foto de Adrián Leonardo Espinosa López" class="w-24 h-24 mx-auto rounded-full mb-4 object-cover">
+                    <img src="URL_DE_LA_FOTO_AQUI" alt="Foto de Adrián Leonardo Espinosa López" class="w-24 h-24 mx-auto rounded-full mb-4 object-cover">
                     <h4 class="text-xl font-semibold">Adrián Leonardo Espinosa López</h4>
-                    <p class="text-gray-400">Programador GEE Ing. Mecatronico.</p>
+                    <p class="text-gray-400">Especialista GIS</p>
                 </div>
             </div>
         </div>
@@ -350,7 +348,14 @@
         // --- Lógica para Gráficos Dinámicos ---
         google.charts.load('current', {'packages':['corechart']});
         
-        // Datos y funciones para dibujar los gráficos de ejemplo
+        function drawAllCharts() {
+             setTimeout(() => { // Da un respiro al navegador móvil
+                drawCorrelationChart();
+                drawAnomalyChart();
+                drawFrequencyChart();
+            }, 100);
+        }
+
         function drawCorrelationChart() {
             const data = new google.visualization.DataTable();
             data.addColumn('number', 'Temperatura Media (°C)');
@@ -365,7 +370,7 @@
                 vAxis: {title: 'Evapotranspiración (mm/día)', textStyle: {color: '#ccc'}, titleTextStyle: {color: '#ccc'}},
                 legend: 'none',
                 backgroundColor: '#1f2937',
-                chartArea: {backgroundColor: '#1f2937'},
+                chartArea: {backgroundColor: '#1f2937', width: '80%', height: '70%'},
                 colors: ['#f0ad4e'],
                 trendlines: { 0: { type: 'linear', color: '#38bdf8', lineWidth: 3, opacity: 0.8 } }
             };
@@ -387,7 +392,7 @@
                 series: {1: {type: 'line', color: '#38bdf8', lineDashStyle: [4, 4]}},
                 legend: {position: 'top', textStyle: {color: '#fff'}},
                 backgroundColor: '#1f2937',
-                chartArea: {backgroundColor: '#1f2937'},
+                chartArea: {backgroundColor: '#1f2937', width: '80%', height: '70%'},
                 colors: ['#c9302c']
             };
             const chart = new google.visualization.ComboChart(document.getElementById('anomaly-chart'));
@@ -406,7 +411,7 @@
                 hAxis: {title: 'Rango de Temperatura Máxima', textStyle: {color: '#ccc'}, titleTextStyle: {color: '#ccc'}},
                 vAxis: {title: 'Número de Días', textStyle: {color: '#ccc'}, titleTextStyle: {color: '#ccc'}},
                 backgroundColor: '#1f2937',
-                chartArea: {backgroundColor: '#1f2937'},
+                chartArea: {backgroundColor: '#1f2937', width: '80%', height: '70%'},
                 colors: ['#38bdf8'],
                 bar: { groupWidth: '80%' }
             };
@@ -418,18 +423,23 @@
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    google.charts.setOnLoadCallback(drawCorrelationChart);
-                    google.charts.setOnLoadCallback(drawAnomalyChart);
-                    google.charts.setOnLoadCallback(drawFrequencyChart);
-                    observer.unobserve(entry.target); // Dejar de observar después de la primera vez
+                    google.charts.setOnLoadCallback(drawAllCharts);
+                    observer.unobserve(entry.target);
                 }
             });
         }, {
-            threshold: 0.5 // Dibuja los gráficos cuando el 50% de la sección es visible
+            threshold: 0.5
         });
 
         const chartSection = document.getElementById('analisis-avanzado');
         observer.observe(chartSection);
+        
+        // --- Redibujar gráficos si cambia el tamaño de la ventana ---
+        window.addEventListener('resize', function() {
+            if (chartSection.getBoundingClientRect().top < window.innerHeight) {
+                 drawAllCharts();
+            }
+        });
 
     </script>
 </body>
