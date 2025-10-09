@@ -228,8 +228,7 @@ async function handleGeneralData({ roi, varInfo, startDate, endDate, eeRoi }) {
     const mapId = await getMapId(imageForMap.clip(eeRoi), { min: varInfo.min, max: varInfo.max, palette: varInfo.palette });
     
     const stats = await getStats(imageForMap, eeRoi, varInfo.bandName, varInfo.unit, roi.name);
-    const chartData = await getOptimizedChartData(collection.select(varInfo.bandName), [roi], varInfo.bandName, startDate, endDate);
-
+    const chartData = await getOptimizedChartData(collection.select(varInfo.bandName), [roi], varInfo.bandName, startDate, endDate, eeRoi);
     return { mapId, stats, chartData, chartOptions: { title: `Serie Temporal para ${roi.name}` } };
 }
 
@@ -435,7 +434,7 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
     });
 }
 
-async function getOptimizedChartData(collection, rois, bandName, startDate, endDate) {
+async function getOptimizedChartData(collection, rois, bandName, startDate, endDate, eeRoi) {
     const eeStartDate = ee.Date(startDate);
     const eeEndDate = ee.Date(endDate);
     
@@ -458,7 +457,6 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
             const filtered = collection.filterDate(start, end);
             return ee.Algorithms.If(
                 filtered.size().gt(0),
-                // CORRECCIÓN: Renombrar la banda después de la media
                 filtered.mean().rename(bandName).set('system:time_start', start.millis()),
                 null
             );
@@ -468,8 +466,17 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
     }
     
     const scale = 5000;
-    const fc = ee.FeatureCollection(rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name })));
-    return rois.length > 1 ? getChartDataByRegion(collection, fc, bandName, scale) : getChartData(collection, ee.Geometry(rois[0].geom), bandName, scale);
+
+    // --- LÓGICA CORREGIDA ---
+    if (rois.length > 1) {
+        // Este camino es para la función "Comparar" y funciona como antes.
+        const fc = ee.FeatureCollection(rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name })));
+        return getChartDataByRegion(collection, fc, bandName, scale);
+    } else {
+        // Este es el camino para un solo análisis (incluyendo municipios).
+        // Usa el eeRoi que ya fue calculado y verificado en el handler principal.
+        return getChartData(collection, eeRoi, bandName, scale);
+    }
 }
 
 async function getChartData(collection, roi, bandName, scale = 2000) {
