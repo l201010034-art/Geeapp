@@ -210,6 +210,8 @@ async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate
 
 
 async function handleGeneralData({ roi, varInfo, startDate, endDate, eeRoi }) {
+    console.log('--- DEBUG: ENTRANDO A handleGeneralData v3 ---');
+    console.log('--- DEBUG: El ROI recibido es:', JSON.stringify(roi, null, 2));
     let collection;
 
     if (varInfo.dataset === 'ERA5') {
