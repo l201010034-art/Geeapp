@@ -46,7 +46,7 @@ export default async function handler(req, res) {
             
             // Creamos un 'sandbox' seguro para ejecutar el código.
             // Le damos acceso al objeto 'ee' y a 'console'.
-            const sandbox = { ee: ee, console: console, Map: { centerObject: () => {}, addLayer: (img) => img } };
+            const sandbox = { ee: ee, console: console, print: console.log, Map: { centerObject: () => {}, addLayer: (img) => img } };            
             vm.createContext(sandbox);
 
             // Ejecutamos el código. La última expresión (que debería ser Map.addLayer) será el resultado.

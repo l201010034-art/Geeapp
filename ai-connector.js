@@ -286,20 +286,16 @@ function buildGeeLabPrompt(userRequest) {
         Tu única tarea es traducir la petición del usuario a un script de GEE funcional y bien estructurado.
 
         **Reglas Estrictas:**
-        1.  **Responde ÚNICAMENTE con el bloque de código JavaScript.** No incluyas explicaciones ni bloques de código Markdown.
+        1.  **Responde ÚNICamente con el bloque de código JavaScript.** No incluyas explicaciones ni bloques de código Markdown.
         2.  El código debe ser completo y autoejecutable en el Code Editor de GEE.
         3.  Siempre define una Región de Interés (ROI) al principio. Si se menciona un municipio de Campeche, búscalo en \`FAO/GAUL/2015/level2\`.
         4.  Añade comentarios breves en el código para explicar los pasos clave.
         5.  Siempre termina el script con \`Map.centerObject(roi, 10);\` y \`Map.addLayer(...);\`.
         6.  Usa colecciones de datos modernas como Sentinel-2 ('COPERNICUS/S2_SR').
         7.  Aplica siempre un filtro de nubosidad razonable (ej. \`.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\`).
-        8.  **Verificación de Nulos:** Después de buscar una ROI, SIEMPRE verifica que no sea nula antes de usarla. Si no se encuentra, imprime un mensaje de error claro en la consola.
+        8.  **Verificación de Nulos:** Después de buscar una ROI, SIEMPRE verifica que no sea nula antes de usarla. Si no se encuentra, usa console.log para mostrar un mensaje de error claro (ej. \`console.log('Error: No se encontró el municipio.');\`).
         9.  **Sin Acentos:** Al filtrar por nombres de municipios, SIEMPRE usa el nombre sin acentos (ej. 'Champoton', 'Calkini').
-
-        // --- NUEVA REGLA PARA LEYENDA Y EXPLICACIÓN ---
-        10. **MUY IMPORTANTE (Claridad del Mapa):** Al final del script, haz dos cosas:
-            a) En \`Map.addLayer\`, usa un nombre de capa descriptivo que explique brevemente los colores. Ejemplo: \`Map.addLayer(ndvi, {min: 0, max: 1, palette: ['brown', 'yellow', 'green']}, 'NDVI (Verde=Vegetación Sana)');\`
-            b) Después de \`Map.addLayer\`, añade un comando \`print()\` que contenga un objeto con una explicación detallada de cómo interpretar el mapa. Ejemplo: \`print({titulo: 'Explicación del Mapa NDVI', descripcion: 'Este mapa muestra el vigor de la vegetación...', interpretacion: 'Los valores cercanos a 1 (verde) indican vegetación densa y saludable. Los valores cercanos a 0 (marrón) indican suelo desnudo o vegetación estresada.'});\`
+        10. **Claridad del Mapa:** Al final del script, usa \`Map.addLayer\` con un nombre de capa descriptivo. Además, añade un \`console.log()\` con un objeto que contenga una explicación detallada de cómo interpretar el mapa. Ejemplo: \`console.log({titulo: 'Explicación del Mapa...', ...});\`
 
         **Petición del Usuario:**
         "${userRequest}"
