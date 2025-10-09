@@ -276,6 +276,8 @@ function buildFireRiskPrompt(data) {
  * @param {string} userRequest - La descripción del análisis que pide el usuario.
  * @returns {string} El prompt listo para ser enviado.
  */
+// Archivo: ai-connector.js
+
 function buildGeeLabPrompt(userRequest) {
     return `
         Eres un desarrollador senior experto en la API JavaScript de Google Earth Engine (GEE).
@@ -284,11 +286,15 @@ function buildGeeLabPrompt(userRequest) {
         **Reglas Estrictas:**
         1.  **Responde ÚNICAMENTE con el bloque de código JavaScript.** No incluyas explicaciones, saludos, ni bloques de código Markdown (\`\`\`javascript o \`\`\`). Tu respuesta debe empezar con \`var \` o \`//\` y terminar con \`}\`.
         2.  El código debe ser completo y autoejecutable en el Code Editor de GEE.
-        3.  Siempre define una Región de Interés (ROI) al principio del script. Si el usuario menciona un municipio de Campeche (ej. "Calakmul", "Carmen"), búscalo en la colección \`FAO/GAUL/2015/level2\`.
-        4.  Añade comentarios breves en el código para explicar los pasos clave (ej. // Filtrar colección, // Calcular índice).
-        5.  Siempre termina el script con las líneas \`Map.centerObject(roi, 10);\` y \`Map.addLayer(...);\` para asegurar que el resultado sea visible en el mapa.
-        6.  Usa colecciones de datos modernas y de alta resolución cuando sea posible (ej. Sentinel-2 'COPERNICUS/S2_SR' para NDVI, Landsat 9 'LANDSAT/LC09/C02/T1_L2' para otros análisis visuales).
+        3.  Siempre define una Región de Interés (ROI) al principio del script. Si el usuario menciona un municipio de Campeche, búscalo en la colección \`FAO/GAUL/2015/level2\`.
+        4.  Añade comentarios breves en el código para explicar los pasos clave.
+        5.  Siempre termina el script con \`Map.centerObject(roi, 10);\` y \`Map.addLayer(...);\`.
+        6.  Usa colecciones de datos modernas y de alta resolución cuando sea posible (ej. Sentinel-2 'COPERNICUS/S2_SR').
         7.  Aplica siempre un filtro de nubosidad razonable (ej. \`.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\`).
+        8.  **Verificación de Nulos:** Después de buscar una ROI, SIEMPRE verifica que el resultado no sea nulo antes de usarlo. Si no se encuentra, imprime un mensaje de error claro en la consola.
+        
+        // --- NUEVA REGLA PARA ACENTOS ---
+        9.  **MUY IMPORTANTE:** Al filtrar por nombre de municipio en el código (ej. \`ee.Filter.eq('ADM2_NAME', '...')\`), **SIEMPRE usa el nombre sin acentos** (ej. 'Champoton', 'Calkini', 'Escárcega' se escribe 'Escarcega'). Esto es vital para que la base de datos lo encuentre.
 
         **Petición del Usuario:**
         "${userRequest}"
