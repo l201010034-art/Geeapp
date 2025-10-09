@@ -151,13 +151,14 @@ export default async function handler(req, res) {
         // --- FIN DE LA LÓGICA CORREGIDA ---
 
         let responseData;
+        // Pasamos tanto los parámetros originales ({...params}) como el eeRoi calculado
         switch (action) {
-            case 'getGeneralData': responseData = await handleGeneralData(params); break;
-            case 'getCompareData': responseData = await handleCompareData(params); break;
-            case 'getPrecipitationData': responseData = await handlePrecipitationData(params); break;
-            case 'getTemperatureData': responseData = await handleTemperatureData(params); break;
-            case 'getSpiData': responseData = await handleSpiData(params); break;
-            case 'getFireRiskData': responseData = await handleFireRiskData(params); break;
+            case 'getGeneralData': responseData = await handleGeneralData({...params, eeRoi}); break;
+            case 'getCompareData': responseData = await handleCompareData({...params, eeRoi}); break;
+            case 'getPrecipitationData': responseData = await handlePrecipitationData({...params, eeRoi}); break;
+            case 'getTemperatureData': responseData = await handleTemperatureData({...params, eeRoi}); break;
+            case 'getSpiData': responseData = await handleSpiData({...params, eeRoi}); break;
+            case 'getFireRiskData': responseData = await handleFireRiskData({...params, eeRoi}); break;
             default: throw new Error(`Action '${action}' not recognized.`);
         }
 
