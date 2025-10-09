@@ -50,8 +50,8 @@ export default async function handler(req, res) {
             vm.createContext(sandbox);
 
             // Ejecutamos el código. La última expresión (que debería ser Map.addLayer) será el resultado.
-            const imageResult = vm.runInContext(codeToExecute, sandbox);
-            
+            const wrappedCode = `(() => { ${codeToExecute} })();`;
+            const imageResult = vm.runInContext(wrappedCode, sandbox);            
             // Obtenemos el MapId de la imagen resultante
             const mapId = await getMapId(imageResult);
 

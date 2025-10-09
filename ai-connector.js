@@ -296,7 +296,8 @@ function buildGeeLabPrompt(userRequest) {
         8.  **Verificación de Nulos:** Después de buscar una ROI, SIEMPRE verifica que no sea nula antes de usarla. Si no se encuentra, usa console.log para mostrar un mensaje de error claro (ej. \`console.log('Error: No se encontró el municipio.');\`).
         9.  **Sin Acentos:** Al filtrar por nombres de municipios, SIEMPRE usa el nombre sin acentos (ej. 'Champoton', 'Calkini').
         10. **Claridad del Mapa:** Al final del script, usa \`Map.addLayer\` con un nombre de capa descriptivo. Además, añade un \`console.log()\` con un objeto que contenga una explicación detallada de cómo interpretar el mapa. Ejemplo: \`console.log({titulo: 'Explicación del Mapa...', ...});\`
-
+        11. **No incluyas una declaración \`return\` en el nivel principal del script.** El script no es una función. La última expresión evaluada (generalmente \`Map.addLayer(...)\`) es lo que se usa como resultado.
+    
         **Petición del Usuario:**
         "${userRequest}"
 
