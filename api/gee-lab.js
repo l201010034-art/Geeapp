@@ -43,48 +43,52 @@ export default async function handler(req, res) {
             return res.status(200).json({ generatedCode });
 
         } else if (codeToExecute) {
-            // --- MODO 2: EJECUTAR CÓDIGO (Aquí está la corrección) ---
-            await initializeGee();
-            
-            // ======================= INICIO DE LA CORRECCIÓN =======================
+    // --- MODO 2: EJECUTAR CÓDIGO (Aquí está la corrección) ---
+    await initializeGee();
+    process.chdir('/tmp'); 
 
-            // 1. Creamos un objeto que compartiremos con el sandbox.
-            //    Este objeto nos permitirá "capturar" la imagen desde fuera del sandbox.
-            const executionContext = {
-                capturedImage: null,
-                ee: ee,
-                console: console,
-                print: console.log
-            };
+    const logs = [];
+    const executionContext = {
+        capturedImage: null,
+        ee: ee,
+        print: console.log,
+        console: { // Capturamos los logs para buscar nuestros parámetros
+            log: (message) => logs.push(message)
+        }
+    };
 
-            // 2. Definimos nuestro 'Map' simulado. La función addLayer ahora
-            //    modificará el `executionContext` para guardar la imagen.
-            executionContext.Map = {
-                centerObject: () => {}, // No hace nada, como antes.
-                addLayer: (img, visParams, name) => {
-                    // ¡Esta es la clave! Capturamos la imagen aquí.
-                    executionContext.capturedImage = img;
-                    return img; // Devolvemos la imagen por si acaso.
-                }
-            };
-            
-            // 3. Creamos el contexto del sandbox usando nuestro objeto compartido.
-            const context = vm.createContext(executionContext);
+    executionContext.Map = {
+        centerObject: () => {},
+        addLayer: (img, visParams, name) => {
+            executionContext.capturedImage = img;
+            return img;
+        }
+    };
+    
+    const context = vm.createContext(executionContext);
+    vm.runInContext(codeToExecute, context);
+    
+    if (!context.capturedImage) {
+        throw new Error("El código ejecutado no añadió ninguna capa al mapa.");
+    }
+    
+    const mapId = await getMapId(context.capturedImage);
 
-            // 4. Ejecutamos el código. Ya no necesitamos envolverlo ni capturar su valor de retorno.
-            vm.runInContext(codeToExecute, context);
-            
-            // 5. Verificamos si la imagen fue capturada. Si no, el código del usuario nunca llamó a Map.addLayer.
-            if (!context.capturedImage) {
-                throw new Error("El código ejecutado no añadió ninguna capa al mapa. Asegúrate de que el script incluya una llamada a `Map.addLayer(image, visParams, 'nombre');`");
-            }
-            
-            // 6. Usamos la imagen que capturamos para obtener el MapId.
-            const mapId = await getMapId(context.capturedImage);
-            
-            // ======================== FIN DE LA CORRECCIÓN =========================
-
-            return res.status(200).json({ mapId });
+    // Buscamos en los logs el JSON que pedimos
+    let resultParams = { explanation: null, visParams: null };
+    const jsonLog = logs.find(log => typeof log === 'string' && log.trim().startsWith('{'));
+    if (jsonLog) {
+        try {
+            const parsedLog = JSON.parse(jsonLog);
+            resultParams.visParams = parsedLog.visParams; // Extraemos visParams
+            // También podríamos usar parsedLog.explanation si quisiéramos
+        } catch (e) {
+            console.error("No se pudo parsear el log JSON de la IA:", e.message);
+        }
+    }
+    
+    // Devolvemos el mapId Y los visParams al navegador
+    return res.status(200).json({ mapId, visParams: resultParams.visParams });
 
         } else {
             return res.status(400).json({ error: "Se requiere un 'prompt' o 'codeToExecute'." });

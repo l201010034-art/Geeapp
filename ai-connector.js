@@ -281,28 +281,29 @@ function buildFireRiskPrompt(data) {
  */
 // Archivo: ai-connector.js
 
+// Archivo: ai-connector.js
+
 function buildGeeLabPrompt(userRequest) {
     return `
         Eres un desarrollador senior experto en la API JavaScript de Google Earth Engine (GEE).
         Tu única tarea es traducir la petición del usuario a un script de GEE funcional y bien estructurado.
 
         **Reglas Estrictas:**
-        1.  **Responde ÚNICAMENTE con el bloque de código JavaScript.** No incluyas explicaciones ni bloques de código Markdown.
-        2.  El código debe ser completo y autoejecutable en el Code Editor de GEE.
-        3. Siempre define una Región de Interés (ROI) al principio. Si se menciona un municipio, búscalo en el asset personal del usuario: \`projects/residenciaproject-443903/assets/municipios_mexico_2024\`. Filtra usando la columna 'CVE_ENT' con el valor '04' para el estado de Campeche, y la columna 'NOMGEO' para el nombre del municipio.
-        4.  Añade comentarios breves en el código para explicar los pasos clave.
-        5.  Usa colecciones de datos modernas como Sentinel-2 ('COPERNICUS/S2_SR').
-        6.  Aplica siempre un filtro de nubosidad razonable (ej. \`.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\`).
-        7.  **Verificación de Nulos:** Después de buscar una ROI, SIEMPRE verifica que no sea nula antes de usarla y usa console.log para mostrar un error claro.
-        8.  **Usa Acentos:** Al filtrar por nombres de municipios en la columna 'NOMGEO', **SIEMPRE usa el nombre exacto con acentos**, tal como está en los datos oficiales de INEGI (ej. 'Champotón', 'Hecelchakán').
-        9.  **No usar 'return':** No incluyas una declaración \`return\` en el nivel principal del script.
-        10. Siempre incluye una leyenda que explique los colores usados en el mapa.
+        // ... (las reglas 1 a 9 no cambian) ...
+        9.  **REGLA CRÍTICA:** NUNCA uses el objeto \`ui\`...
 
-        // --- REGLA FINAL CORREGIDA ---
+        // --- REGLA FINAL CORREGIDA Y ACTUALIZADA ---
         10. **MUY IMPORTANTE (Orden de finalización):** Al final del script, debes hacer tres cosas en este orden exacto:
-            a) Primero, usa \`console.log()\` para imprimir el objeto con la explicación detallada del mapa.
+            a) Primero, usa \`console.log()\` para imprimir un **OBJETO JSON COMO STRING**. Este objeto DEBE contener dos claves: 'explanation' (con el texto descriptivo) y 'visParams' (con el objeto de visualización que incluye min, max, y palette).
             b) Segundo, usa \`Map.centerObject(roi, 10);\` para centrar el mapa.
-            c) La **ÚLTIMA LÍNEA ABSOLUTA** del script debe ser la llamada a \`Map.addLayer(...)\`, usando un nombre de capa descriptivo. Esto es crucial para que la plataforma pueda visualizar el resultado.
+            c) La **ÚLTIMA LÍNEA ABSOLUTA** del script debe ser la llamada a \`Map.addLayer(...)\`.
+
+        **Ejemplo de la línea console.log requerida:**
+        \`\`\`javascript
+        var visParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
+        var explanation = {titulo: "Mapa de NDVI", descripcion: "Muestra la salud de la vegetación."};
+        console.log(JSON.stringify({explanation: explanation, visParams: visParams}));
+        \`\`\`
 
         **Petición del Usuario:**
         "${userRequest}"
@@ -376,6 +377,8 @@ async function handleLabCodeGeneration() {
 /**
  * Envía el código generado al backend para su ejecución en GEE.
  */
+// Archivo: ai-connector.js
+
 async function handleLabCodeExecution() {
     const code = document.getElementById('lab-result-display').textContent;
     const executeButton = document.getElementById('lab-execute-button');
@@ -403,9 +406,26 @@ async function handleLabCodeExecution() {
         const result = await response.json();
 
         if (result.mapId) {
-            // Reutilizamos la función que ya tienes para añadir capas al mapa
+            // Añadimos la capa al mapa como siempre
             window.addGeeLayer(result.mapId.urlFormat, 'Resultado del Laboratorio');
-            alert("¡Éxito! La nueva capa se ha añadido al mapa. Cierra esta ventana para verla.");
+            
+            // ¡NUEVO! Si recibimos visParams, actualizamos la leyenda
+            if (result.visParams) {
+                const legendInfo = {
+                    bandName: 'Resultado del Laboratorio',
+                    unit: result.visParams.unit || '', // La IA puede añadir una unidad
+                    min: result.visParams.min,
+                    max: result.visParams.max,
+                    palette: result.visParams.palette
+                };
+                // Llamamos a la función global que actualiza la leyenda
+                window.legendControl.update(legendInfo);
+            } else {
+                // Si no hay visParams, limpiamos la leyenda
+                window.legendControl.update(null);
+            }
+            
+            alert("¡Éxito! La nueva capa y su leyenda se han añadido al mapa.");
         }
 
     } catch (error) {
