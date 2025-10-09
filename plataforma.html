@@ -11,6 +11,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
+                /* Archivo: plataforma.html (dentro de <style>) */
+
+        /* ... (después de tus otros estilos) ... */
+
+        #lab-modal pre {
+            margin: 0;
+        }
+        #lab-modal code {
+            display: block;
+            white-space: pre-wrap;
+            padding: 1rem;
+            color: #c5c8c6; /* Color de texto claro para código */
+        }
         :root {
             --maroon-color: #800000;
             --lighter-maroon: #a04040;
@@ -110,6 +123,7 @@
                      <button id="clearDrawingButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded">Limpiar Dibujo</button>
                      <button id="resetButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded">Reiniciar</button>
                 </div>
+                <button id="openLabButton" class="w-full mt-2 p-2 font-bold bg-[var(--accent-color)] text-black rounded">🧪 Abrir Laboratorio de IA</button>
                 <button id="downloadCsvButton" class="w-full mt-2 p-2 font-bold bg-green-600 text-white rounded disabled:bg-gray-500" disabled>Descargar CSV</button>
             </div></details>
         </aside>
@@ -442,6 +456,29 @@ function setupEventListeners() {
                     generatePrediction(currentChartData); 
                 }
             });
+                        // Archivo: plataforma.html (dentro de setupEventListeners)
+
+            // ... (después de tus otros event listeners) ...
+
+            // --- Lógica para el Modal del Laboratorio de IA ---
+            const openLabButton = document.getElementById('openLabButton');
+            const labOverlay = document.getElementById('lab-overlay');
+            const labCloseButton = document.getElementById('lab-close-button');
+
+            openLabButton.addEventListener('click', () => {
+                labOverlay.classList.remove('hidden');
+            });
+
+            labCloseButton.addEventListener('click', () => {
+                labOverlay.classList.add('hidden');
+            });
+
+            // Cierra el modal si se hace clic en el fondo oscuro
+            labOverlay.addEventListener('click', (event) => {
+                if (event.target === labOverlay) {
+                    labOverlay.classList.add('hidden');
+                }
+            });
         }
 
         function toggleAnalysisPanels() {
@@ -765,5 +802,22 @@ function setupEventListeners() {
 
 <script src="ai-connector.js"></script> 
 
+<div id="lab-overlay" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[3000]">
+    <div id="lab-modal" class="bg-gray-800 rounded-lg shadow-xl p-6 w-11/12 max-w-2xl h-5/6 flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold text-[var(--accent-color)]">Laboratorio de IA 🧪</h2>
+            <button id="lab-close-button" class="text-3xl font-bold hover:text-white">&times;</button>
+        </div>
+
+        <p class="text-gray-400 mb-2">Describe el análisis personalizado que deseas generar (en inglés o español).</p>
+        <textarea id="lab-prompt-input" class="w-full h-1/4 p-2 rounded bg-gray-900 border border-gray-600 text-white flex-shrink-0" placeholder="Ej: Genera un mapa NDVI promedio para el municipio de Calakmul durante marzo de 2024, usando imágenes Sentinel-2 sin nubes."></textarea>
+        <button id="lab-generate-button" class="w-full mt-3 p-2 font-bold bg-[var(--accent-color)] text-black rounded">Generar Código</button>
+
+        <h3 class="text-lg font-bold mt-6 mb-2">Código GEE Generado:</h3>
+        <div id="lab-result-container" class="bg-gray-900 rounded p-1 flex-1 overflow-auto">
+            <pre><code id="lab-result-display" class="language-javascript text-sm"></code></pre>
+        </div>
+    </div>
+</div>
 </body>
 </html>
