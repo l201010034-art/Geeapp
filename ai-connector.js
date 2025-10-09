@@ -1,14 +1,14 @@
-// ai-connector.js (Versión Final, Completa y Limpia)
+// Archivo: ai-connector.js (Versión 3.0 - Final y Unificada)
+
+// ==================================================================
+// === 1. CONEXIÓN CON LA IA PARA ANÁLISIS (PANELES DERECHOS) ========
+// ==================================================================
 
 const AI_API_URL = '/api/analyze';
 const aiPanel = document.getElementById('ai-analysis-panel');
 const aiSummaryDiv = document.getElementById('ai-summary');
 const commandForm = document.getElementById('ai-command-form');
 const commandBar = document.getElementById('ai-command-bar');
-
-//================================================================
-// FUNCIONES PRINCIPALES (Llamadas desde plataforma.html)
-//================================================================
 
 /**
  * Llama a la IA para generar un resumen ejecutivo de los datos cargados.
@@ -41,12 +41,28 @@ window.generateFireRiskAnalysis = async function(data) {
     await callAndDisplayAnalysis(prompt);
 }
 
-window.handleLabCodeGeneration = handleLabCodeGeneration;
-// 3. NO OLVIDES HACER LA NUEVA FUNCIÓN GLOBAL
-window.handleLabCodeExecution = handleLabCodeExecution;
-//================================================================
-// LÓGICA DE LA INTERFAZ CONVERSACIONAL
-//================================================================
+/**
+ * Función centralizada para llamar a la API de análisis y mostrar el resultado.
+ */
+async function callAndDisplayAnalysis(prompt) {
+    try {
+        const response = await fetch(AI_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt }),
+        });
+        if (!response.ok) throw new Error(`Error en la API: ${response.statusText}`);
+        const result = await response.json();
+        aiSummaryDiv.innerHTML = markdownToHtml(result.analysisText);
+    } catch (error) {
+        console.error("Error al generar análisis con IA:", error);
+        aiSummaryDiv.innerHTML = `<p class="text-red-400">Ocurrió un error: ${error.message}</p>`;
+    }
+}
+
+// ==================================================================
+// === 2. LÓGICA DE LA INTERFAZ CONVERSACIONAL (BARRA SUPERIOR) =====
+// ==================================================================
 
 commandForm.addEventListener('submit', function(event) {
     event.preventDefault(); 
@@ -70,6 +86,7 @@ async function processConversationalQuery(query) {
         const result = await response.json();
         const jsonMatch = result.analysisText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("La IA no devolvió un JSON válido.");
+        
         const params = JSON.parse(jsonMatch[0]);
         if (params.error) throw new Error(params.error);
         
@@ -90,7 +107,7 @@ async function processConversationalQuery(query) {
         }
     } catch (error) {
         console.error("Error al procesar el comando de IA:", error);
-        commandBar.value = "Error. Inténtalo de nuevo.";
+        commandBar.value = `Error: ${error.message}`;
     } finally {
         commandBar.disabled = false;
         commandBar.placeholder = "Ej: Lluvia en Chiná el mes pasado...";
@@ -98,230 +115,18 @@ async function processConversationalQuery(query) {
     }
 }
 
-
-//================================================================
-// FUNCIONES DE AYUDA (Helpers)
-//================================================================
-
-/**
- * Función centralizada para llamar a la API de análisis y mostrar el resultado.
- */
-async function callAndDisplayAnalysis(prompt) {
-    try {
-        const response = await fetch(AI_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt }),
-        });
-        if (!response.ok) throw new Error(`Error en la API: ${response.statusText}`);
-        const result = await response.json();
-        aiSummaryDiv.innerHTML = markdownToHtml(result.analysisText);
-    } catch (error) {
-        console.error("Error al generar análisis con IA:", error);
-        aiSummaryDiv.innerHTML = `<p class="text-red-400">Ocurrió un error: ${error.message}</p>`;
-    }
-}
-
-/**
- * Convierte una cadena de texto con Markdown simple a HTML.
- */
-function markdownToHtml(text) {
-    if (!text) return '';
-    return text
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .split('\n\n')
-        .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-        .join('')
-        .replace(/<p>\*/g, '<ul>*')
-        .replace(/\* (.*?)(<br>|<\/p>)/g, '<li>$1</li>')
-        .replace(/<\/li><\/ul><\/p>/g, '</li></ul>');
-}
-
-/**
- * Construye el prompt para el resumen ejecutivo (Fase 1).
- */
-function buildPrompt(data) {
-    const { stats, chartData, chartOptions, variable, roi, startDate, endDate } = data;
-    const chartSample = chartData ? `Los primeros 5 puntos de datos son: ${JSON.stringify(chartData.slice(0, 6))}` : "No hay datos de serie temporal disponibles.";
-    return `
-        Eres un experto en climatología y análisis de datos geoespaciales, especializado en el estado de Campeche, México.
-        Tu tarea es actuar como un asesor para una secretaría de gobierno (ej. Protección Civil, Desarrollo Agropecuario).
-        Analiza los siguientes datos y genera un resumen ejecutivo conciso (máximo 3 párrafos).
-        El resumen debe ser claro, directo y enfocado en las implicaciones prácticas. No uses jerga técnica a menos que la expliques.
-
-        **Contexto del Análisis:**
-        - **Variable Analizada:** ${variable}
-        - **Zona de Interés:** ${roi}
-        - **Periodo:** Desde ${startDate} hasta ${endDate}
-
-        **Datos Obtenidos:**
-        1.  **Estadísticas Generales:**
-            \`\`\`
-            ${stats || "No disponibles."}
-            \`\`\`
-        2.  **Datos de Serie Temporal (Muestra):**
-            ${chartSample}
-            - Título del gráfico: ${chartOptions?.title || "No disponible."}
-
-        **Instrucciones para tu respuesta:**
-        1.  **Interpretación:** ¿Qué significan estos números? ¿Son altos, bajos o normales para la época y la región?
-        2.  **Tendencias:** ¿Se observa alguna tendencia clave en la serie temporal (ej. aumento, descenso, picos anómalos)?
-        3.  **Implicaciones y Acciones:** ¿Qué implicaciones tienen estos datos para la agricultura, el riesgo de incendios, la gestión del agua o la población en general? ¿Qué acciones o alertas tempranas se podrían considerar?
-
-        **Formato de Salida:**
-        Responde en formato de texto simple. Inicia con un titular claro. Usa negritas para resaltar los puntos más importantes.
-    `;
-}
-
-/**
- * Construye el prompt para la interfaz conversacional (Fase 2).
- */
-function buildConversationalPrompt(query) {
-    const today = new Date().toISOString().split('T')[0];
-    // --- LISTA CORREGIDA Y COMPLETA ---
-    const municipios = "Calakmul, Calkiní, Campeche, Candelaria, Carmen, Champotón, Dzitbalché, Escárcega, Hecelchakán, Hopelchén, Palizada, Seybaplaya, Tenabo";
-    return `
-        Tu tarea es actuar como un traductor de lenguaje natural a un formato JSON para una plataforma de monitoreo climático en Campeche, México.
-        Analiza la petición del usuario y extrae los siguientes parámetros: startDate, endDate, variable, zona_type, y zona_name.
-        La fecha de hoy es ${today}.
-
-        **Opciones Válidas:**
-        - **Variables:** "Temperatura del Aire (°C)", "Humedad Relativa (%)", "Precipitación Acumulada (mm)", "Temp. Superficial (LST °C)", "Evapotranspiración (mm/8 días)".
-        - **Zonas Predefinidas:** "Todo el Estado", "Zona 1, Ciudad Campeche", "Zona 2, Lerma", "Zona 3, Chiná", "Zona 4, San Fco. Campeche".
-        - **Municipios de Campeche:** ${municipios}.
-
-        **Reglas:**
-        1.  **Responde ÚNICAMENTE con el objeto JSON.** No incluyas explicaciones, texto adicional ni bloques de código Markdown (\`\`\`).
-        2.  **Determina el Tipo de Zona:**
-            - Si la zona mencionada es una de las "Zonas Predefinidas", usa \`"zona_type": "predefinida"\` y el nombre exacto en \`zona_name\`.
-            - Si la zona mencionada es uno de los "Municipios de Campeche", usa \`"zona_type": "municipio"\` y el **nombre exacto con acentos** en \`zona_name\` (ej. 'Hopelchén', 'Calkiní').
-            - Si no se especifica una zona, asume "Todo el Estado" y trátala como predefinida.
-        3.  **Infiere la Variable:** Si el usuario dice "lluvia" o "sequía", asume "Precipitación Acumulada (mm)".
-        4.  **Calcula Fechas:** Interpreta fechas relativas ("mes pasado", "última semana", "2023") en formato "YYYY-MM-DD".
-
-        **Ejemplos:**
-        - Petición: "temperatura en zona lerma durante enero de 2023"
-        - Tu Respuesta: {"startDate": "2023-01-01", "endDate": "2023-01-31", "variable": "Temperatura del Aire (°C)", "zona_type": "predefinida", "zona_name": "Zona 2, Lerma"}
-
-        - Petición: "sequía en Hopelchén durante 2023"
-        - Tu Respuesta: {"startDate": "2023-01-01", "endDate": "2023-12-31", "variable": "Precipitación Acumulada (mm)", "zona_type": "municipio", "zona_name": "Hopelchén"}
-        
-        - Petición: "lluvia de la semana pasada"
-        - Tu Respuesta: {"startDate": "${new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0]}", "endDate": "${new Date().toISOString().split('T')[0]}", "variable": "Precipitación Acumulada (mm)", "zona_type": "predefinida", "zona_name": "Todo el Estado"}
-
-        **Petición de Usuario a Procesar:**
-        "${query}"
-        
-        **Tu Respuesta:**
-    `;
-}
-
-/**
- * Construye el prompt para la predicción de tendencias (Fase 3).
- */
-function buildPredictionPrompt(chartData) {
-    const variableName = chartData[0][1];
-    const recentDataSample = JSON.stringify(chartData.slice(-15));
-    return `
-        Eres un climatólogo experto en análisis de datos y modelado de tendencias para el estado de Campeche.
-        Tu tarea es analizar la siguiente serie temporal de datos climáticos y generar un pronóstico cualitativo a corto plazo (próximas 2-4 semanas).
-
-        **Datos de la Serie Temporal Reciente:**
-        - **Variable:** ${variableName}
-        - **Últimos 15 puntos de datos:** ${recentDataSample}
-
-        **Instrucciones para tu respuesta:**
-        1.  **Análisis de Tendencia:** Describe brevemente la tendencia observada en los datos más recientes. ¿Está aumentando, disminuyendo, es estable o es errática?
-        2.  **Pronóstico a Corto Plazo:** Basado en esta tendencia y en tu conocimiento general del clima de Campeche para la época del año, proyecta cómo es probable que se comporte esta variable en las próximas 2 a 4 semanas.
-        3.  **Implicaciones y Recomendaciones:** ¿Qué significa este pronóstico para los sectores clave?
-            - **Si la tendencia es negativa (ej. menos lluvia, más calor):** Advierte sobre los riesgos (estrés hídrico, riesgo de incendios, olas de calor) y sugiere acciones preventivas para Protección Civil y la Secretaría de Desarrollo Agropecuario.
-            - **Si la tendencia es positiva (ej. lluvias regulares, temperaturas moderadas):** Describe las condiciones favorables.
-            - **Si la tendencia es extrema (ej. lluvias muy intensas):** Advierte sobre posibles riesgos de inundaciones.
-
-        **Formato de Salida:**
-        Usa formato Markdown. Inicia con un titular claro como "**Pronóstico de Tendencia**". Usa negritas para resaltar los puntos clave.
-    `;
-}
-
-/**
- * Construye el prompt para interpretar el mapa de riesgo de incendio.
- */
-function buildFireRiskPrompt(data) {
-    const { roi, startDate, endDate } = data;
-    return `
-        Eres un experto en protección civil y analista de riesgos para el gobierno de Campeche.
-        Tu tarea es generar un resumen ejecutivo interpretando un mapa de "Riesgo de Incendio Promedio" que se ha generado para el periodo del **${startDate}** al **${endDate}** en la zona de **${roi}**.
-
-        **IMPORTANTE:** Tú no puedes ver el mapa, pero yo te doy la leyenda que utiliza. Debes basar tu análisis en la descripción de esta leyenda.
-
-        **Leyenda del Mapa de Riesgo:**
-        - **Verde (#2ca25f):** Zonas de Riesgo Bajo. La humedad en el suelo y la vegetación es relativamente alta.
-        - **Amarillo (#fee08b):** Zonas de Riesgo Moderado. Las condiciones de sequedad están presentes y el combustible vegetal empieza a ser inflamable.
-        - **Naranja (#fdae61):** Zonas de Riesgo Alto. Condiciones secas, altas temperaturas y baja humedad. El combustible es altamente inflamable.
-        - **Rojo (#d73027):** Zonas de Riesgo Extremo. Condiciones críticas de sequía y calor. El riesgo de ignición y propagación rápida es muy elevado.
-
-        **Instrucciones para tu respuesta:**
-        1.  **Título:** Comienza con un título claro, como "**Interpretación del Mapa de Riesgo de Incendio**".
-        2.  **Explicación General:** Explica al usuario qué significa el mapa y cómo interpretar los colores, basándote en la leyenda que te proporcioné. Menciona que el mapa muestra un promedio para el periodo seleccionado.
-        3.  **Análisis de Impacto (Simulado):** Aunque no ves la distribución de colores, describe qué implicaría si un funcionario viera "manchas amarillas y naranjas extendiéndose por zonas agrícolas o forestales".
-        4.  **Recomendaciones Accionables:** Proporciona una lista de recomendaciones claras y directas para las partes interesadas:
-            - **Para SEPROCI (Protección Civil):** Sugiere acciones como "intensificar el monitoreo en las zonas amarillas y naranjas", "pre-posicionar brigadas" o "emitir alertas tempranas a las comunidades cercanas".
-            - **Para Empresas y Sector Agropecuario (SDA):** Sugiere acciones como "reforzar guardarrayas", "evitar quemas agrícolas en días de alto viento" y "asegurar planes de evacuación para el personal y equipo".
-
-        **Formato de Salida:**
-        Usa formato Markdown. Sé claro, conciso y enfócate en la acción.
-    `;
-}
-// Archivo: ai-connector.js (añade esta función al final)
-
-/**
- * Construye un prompt para que la IA actúe como un desarrollador de GEE.
- * @param {string} userRequest - La descripción del análisis que pide el usuario.
- * @returns {string} El prompt listo para ser enviado.
- */
-// Archivo: ai-connector.js
-
-// Archivo: ai-connector.js
-
-function buildGeeLabPrompt(userRequest) {
-    return `
-        Eres un desarrollador senior experto en la API JavaScript de Google Earth Engine (GEE).
-        Tu única tarea es traducir la petición del usuario a un script de GEE funcional y bien estructurado.
-
-        **Reglas Estrictas:**
-        // ... (las reglas 1 a 9 no cambian) ...
-        9.  **REGLA CRÍTICA:** NUNCA uses el objeto \`ui\`...
-
-        // --- REGLA FINAL CORREGIDA Y ACTUALIZADA ---
-        10. **MUY IMPORTANTE (Orden de finalización):** Al final del script, debes hacer tres cosas en este orden exacto:
-            a) Primero, usa \`console.log()\` para imprimir un **OBJETO JSON COMO STRING**. Este objeto DEBE contener dos claves: 'explanation' (con el texto descriptivo) y 'visParams' (con el objeto de visualización que incluye min, max, y palette).
-            b) Segundo, usa \`Map.centerObject(roi, 10);\` para centrar el mapa.
-            c) La **ÚLTIMA LÍNEA ABSOLUTA** del script debe ser la llamada a \`Map.addLayer(...)\`.
-
-        **Ejemplo de la línea console.log requerida:**
-        \`\`\`javascript
-        var visParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']};
-        var explanation = {titulo: "Mapa de NDVI", descripcion: "Muestra la salud de la vegetación."};
-        console.log(JSON.stringify({explanation: explanation, visParams: visParams}));
-        \`\`\`
-
-        **Petición del Usuario:**
-        "${userRequest}"
-
-        **Tu Respuesta (solo código):**
-    `;
-}
-// Archivo: ai-connector.js (añade esta función)
+// ==================================================================
+// === 3. LÓGICA PARA EL LABORATORIO DE IA (MODAL) ==================
+// ==================================================================
 
 /**
  * Maneja la petición de generación de código del Laboratorio de IA.
  */
-// Archivo: ai-connector.js
-
 async function handleLabCodeGeneration() {
     const promptInput = document.getElementById('lab-prompt-input');
     const resultDisplay = document.getElementById('lab-result-display');
     const generateButton = document.getElementById('lab-generate-button');
+    const executeButton = document.getElementById('lab-execute-button');
 
     const userRequest = promptInput.value;
     if (!userRequest) {
@@ -331,8 +136,8 @@ async function handleLabCodeGeneration() {
 
     generateButton.disabled = true;
     generateButton.textContent = "Generando...";
+    executeButton.disabled = true;
     resultDisplay.textContent = "// Generando código, por favor espera...";
-    document.getElementById('lab-execute-button').disabled = true; // Deshabilitar mientras se genera
 
     const prompt = buildGeeLabPrompt(userRequest);
 
@@ -349,20 +154,10 @@ async function handleLabCodeGeneration() {
         }
 
         const result = await response.json();
-        let generatedCode = result.generatedCode;
-
-        // =================================================================
-        // === LA SOLUCIÓN: Limpiamos la respuesta de la IA de Markdown ===
-        // =================================================================
-        generatedCode = generatedCode.replace(/^```(javascript)?\s*/, '').replace(/```\s*$/, '');
+        let generatedCode = result.generatedCode.replace(/^```(javascript)?\s*/, '').replace(/```\s*$/, '');
         
-        // Mostramos el código YA LIMPIO en el área de resultados
         resultDisplay.textContent = generatedCode;
-
-        // Habilitamos el botón de ejecutar si se generó código
-        if (generatedCode) {
-            document.getElementById('lab-execute-button').disabled = false;
-        }
+        if (generatedCode) executeButton.disabled = false;
 
     } catch (error) {
         console.error("Error en la generación de código del Lab:", error);
@@ -373,12 +168,9 @@ async function handleLabCodeGeneration() {
     }
 }
 
-// 2. AÑADE ESTA NUEVA FUNCIÓN COMPLETA
 /**
  * Envía el código generado al backend para su ejecución en GEE.
  */
-// Archivo: ai-connector.js
-
 async function handleLabCodeExecution() {
     const code = document.getElementById('lab-result-display').textContent;
     const executeButton = document.getElementById('lab-execute-button');
@@ -406,22 +198,22 @@ async function handleLabCodeExecution() {
         const result = await response.json();
 
         if (result.mapId) {
-            // Añadimos la capa al mapa como siempre
+            if (result.code) {
+                document.getElementById('lab-result-display').textContent = result.code;
+            }
+            
             window.addGeeLayer(result.mapId.urlFormat, 'Resultado del Laboratorio');
             
-            // ¡NUEVO! Si recibimos visParams, actualizamos la leyenda
             if (result.visParams) {
                 const legendInfo = {
                     bandName: 'Resultado del Laboratorio',
-                    unit: result.visParams.unit || '', // La IA puede añadir una unidad
+                    unit: result.visParams.unit || '',
                     min: result.visParams.min,
                     max: result.visParams.max,
                     palette: result.visParams.palette
                 };
-                // Llamamos a la función global que actualiza la leyenda
                 window.legendControl.update(legendInfo);
             } else {
-                // Si no hay visParams, limpiamos la leyenda
                 window.legendControl.update(null);
             }
             
@@ -435,4 +227,44 @@ async function handleLabCodeExecution() {
         executeButton.disabled = false;
         executeButton.textContent = "🚀 Ejecutar y Mostrar en Mapa";
     }
+}
+
+// Hacemos las funciones del laboratorio accesibles globalmente para plataforma.html
+window.handleLabCodeGeneration = handleLabCodeGeneration;
+window.handleLabCodeExecution = handleLabCodeExecution;
+
+// ==================================================================
+// === 4. CONSTRUCCIÓN DE PROMPTS PARA LA IA ========================
+// ==================================================================
+
+function markdownToHtml(text) {
+    if (!text) return '';
+    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('').replace(/<p>\*/g, '<ul>*').replace(/\* (.*?)(<br>|<\/p>)/g, '<li>$1</li>').replace(/<\/li><\/ul><\/p>/g, '</li></ul>');
+}
+
+function buildPrompt(data) {
+    const { stats, chartData, variable, roi, startDate, endDate } = data;
+    const chartSample = chartData ? `Los primeros 5 puntos de datos son: ${JSON.stringify(chartData.slice(0, 6))}` : "No hay datos de serie temporal.";
+    return `Eres un climatólogo experto en Campeche. Analiza los siguientes datos y genera un resumen ejecutivo conciso (máx 3 párrafos) para una secretaría de gobierno. Enfócate en tendencias e implicaciones prácticas. **Variable:** ${variable}. **Zona:** ${roi}. **Periodo:** ${startDate} a ${endDate}. **Estadísticas:** ${stats || "N/A"}. **Muestra de datos:** ${chartSample}. Responde en texto simple, usando negritas para resaltar puntos clave.`;
+}
+
+function buildConversationalPrompt(query) {
+    const today = new Date().toISOString().split('T')[0];
+    const municipios = "Calakmul, Calkiní, Campeche, Candelaria, Carmen, Champotón, Dzitbalché, Escárcega, Hecelchakán, Hopelchén, Palizada, Seybaplaya, Tenabo";
+    return `Tu tarea es traducir la petición del usuario a JSON para una plataforma climática en Campeche. Hoy es ${today}. Extrae: startDate, endDate, variable, zona_type, zona_name. **Variables:** "Temperatura del Aire (°C)", "Humedad Relativa (%)", "Precipitación Acumulada (mm)", "Temp. Superficial (LST °C)", "Evapotranspiración (mm/8 días)". **Zonas Predefinidas:** "Todo el Estado", "Zona 1, Ciudad Campeche", "Zona 2, Lerma", "Zona 3, Chiná", "Zona 4, San Fco. Campeche". **Municipios:** ${municipios}. **Reglas:** 1. Responde solo con el JSON. 2. Determina 'zona_type' ('predefinida' o 'municipio'). Usa el nombre exacto con acentos para municipios. Si no hay zona, asume "Todo el Estado". 3. Infiere la variable (ej. "lluvia" -> "Precipitación Acumulada (mm)"). 4. Interpreta fechas relativas a hoy. **Petición:** "${query}" **Tu Respuesta:**`;
+}
+
+function buildPredictionPrompt(chartData) {
+    const variableName = chartData[0][1];
+    const recentDataSample = JSON.stringify(chartData.slice(-15));
+    return `Eres un climatólogo experto en tendencias para Campeche. Analiza la siguiente serie temporal y genera un pronóstico cualitativo a 2-4 semanas. **Variable:** ${variableName}. **Últimos 15 datos:** ${recentDataSample}. **Instrucciones:** 1. Analiza la tendencia reciente. 2. Proyecta el comportamiento a corto plazo. 3. Describe implicaciones y recomendaciones para Protección Civil o Desarrollo Agropecuario (ej. advertir de sequía/calor o inundaciones/lluvia). Usa Markdown y un titular claro.`;
+}
+
+function buildFireRiskPrompt(data) {
+    const { roi, startDate, endDate } = data;
+    return `Eres un analista de riesgos para el gobierno de Campeche. Interpreta un mapa de "Riesgo de Incendio Promedio" para **${roi}** del **${startDate}** al **${endDate}**. No puedes ver el mapa, pero su leyenda es: Verde (Bajo), Amarillo (Moderado), Naranja (Alto), Rojo (Extremo). **Instrucciones:** 1. Titula "Interpretación del Mapa de Riesgo de Incendio". 2. Explica la leyenda. 3. Describe qué implicaría ver manchas naranjas/rojas en zonas agrícolas. 4. Da recomendaciones accionables para SEPROCI (monitoreo, alertas) y el sector agropecuario (evitar quemas, reforzar guardarrayas). Usa Markdown.`;
+}
+
+function buildGeeLabPrompt(userRequest) {
+    return `Eres un desarrollador senior experto en la API JavaScript de Google Earth Engine (GEE). Tu única tarea es traducir la petición del usuario a un script de GEE funcional, optimizado y robusto. **Reglas Estrictas e Inquebrantables:** 1. **FORMATO DE RESPUESTA:** Responde ÚNICAMENTE con el bloque de código JavaScript. No incluyas explicaciones, texto introductorio, ni bloques de código Markdown (\`\`\`). 2. **REGIÓN DE INTERÉS (ROI):** * Siempre define una ROI al principio. Si se menciona un municipio de Campeche, debes usar el asset privado: \`projects/residenciaprociertoject-443903/assets/municipios_mexico_2024\`. * Para filtrar el municipio, usa la columna 'CVE_ENT' con el valor '04' (para Campeche) y la columna 'NOMGEO' para el nombre. * **IMPORTANTE:** Los nombres de los municipios en 'NOMGEO' DEBEN llevar acentos (ej. 'Champotón', 'Hecelchakán'). 3. **DATASETS PÚBLICOS:** * Usa siempre datasets modernos y de alta calidad (ej. 'COPERNICUS/S2_SR' para Sentinel-2). * Asegúrate de usar la versión más reciente y no-deprecada de los assets públicos para evitar errores de "asset not found". 4. **FILTRADO DE NUBES:** Aplica siempre un filtro de nubosidad razonable en las colecciones ópticas (ej. \`.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\`). 5. **CONTEXTO DE EJECUCIÓN (REGLA CRÍTICA):** El código se ejecutará en un servidor Node.js, NO en el GEE Code Editor. Por lo tanto: **NUNCA, BAJO NINGUNA CIRCUNSTANCIA, uses el objeto \`ui\`** ni ninguna de sus funciones (\`ui.Chart\`, \`ui.Label\`, etc.). Para mostrar datos, usa \`console.log()\`. 6. **OPTIMIZACIÓN OBLIGATORIA (REGLA DE ORO):** Para colecciones de datos de alta frecuencia (como GOES), SIEMPRE filtra por un rango de fechas corto y razonable ANTES de aplicar cualquier operación de ordenamiento (\`.sort()\`). No seguir esta regla causa errores de 'Computation timed out'. 7. **ESTRUCTURA DE FINALIZACIÓN (MUY IMPORTANTE):** El final de tu script DEBE seguir este orden exacto: a) **Primero, el JSON de salida:** Una llamada a \`console.log()\` imprimiendo un OBJETO JSON COMO STRING. Este objeto DEBE contener dos claves: 'explanation' (un objeto con título y descripción) y 'visParams' (el objeto de visualización con min, max, y palette). b) **Segundo, el centrado del mapa:** Una llamada a \`Map.centerObject(roi, ...)\`. c) **Tercero, la capa en el mapa:** La **ÚLTIMA LÍNEA ABSOLUTA** del script debe ser la llamada a \`Map.addLayer(...)\`. **Ejemplo de la estructura de finalización requerida:** \`\`\`javascript // ... análisis ... var visParams = {min: -1, max: 1, palette: ['blue', 'white', 'green']}; var explanation = { titulo: "Mapa de NDVI de Ejemplo", descripcion: "Muestra la salud de la vegetación." }; console.log(JSON.stringify({explanation: explanation, visParams: visParams})); Map.centerObject(roi, 10); Map.addLayer(laImagenResultante, visParams, 'NDVI de Ejemplo'); \`\`\` **Petición del Usuario a Procesar:** "${userRequest}" **Tu Respuesta (solo código JavaScript limpio):**`;
 }

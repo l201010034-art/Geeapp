@@ -1,4 +1,4 @@
-const ee = require('@google/earthengine');
+import ee from '@google/earthengine';
 
 // =========================================================================================
 // === HELPERS Y FUNCIONES DE PROCESAMIENTO DE GEE (traídas del script original) ==========
