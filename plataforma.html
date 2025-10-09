@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plataforma - Informe Climático de Campeche</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Leaflet CSS y JS para el mapa -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Leaflet.draw para dibujar en el mapa -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-    <!-- Google Charts para los gráficos -->
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
         :root {
@@ -19,7 +16,6 @@
             --lighter-maroon: #a04040;
             --accent-color: #f0ad4e;
         }
-        /* Asegura que la altura sea 100% de la ventana visible y deshabilita el scroll del body */
         html, body {
             height: 100vh;
             overflow: hidden;
@@ -32,6 +28,22 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
+        #opacity-slider-container {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 1000;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            border-radius: 5px;
+            color: white;
+        }
+        #opacity-slider-container label {
+            display: block; font-size: 12px; font-weight: bold;
+            margin-bottom: 4px; text-align: center;
+        }
+        #opacity-slider { width: 120px; }
+
         .legend { background: rgba(255, 255, 255, 0.85); border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); padding: 6px 10px; color: #333; }
         .legend-title { font-weight: bold; margin-bottom: 5px; font-size: 14px; }
         .legend-scale-bar { height: 10px; border-radius: 5px; }
@@ -45,18 +57,12 @@
 </head>
 <body class="bg-gray-800 text-white flex flex-col">
 
-    <!-- Overlay de Carga -->
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]">
-        <div class="loader"></div>
-    </div>
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2000]"><div class="loader"></div></div>
 
-    <!-- Barra de Navegación Superior -->
     <nav class="bg-black bg-opacity-70 text-white p-3 flex justify-between items-center z-[1100] w-full flex-shrink-0">
         <div class="flex items-center space-x-4">
             <button id="menu-toggle" class="md:hidden p-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
             </button>
             <h1 class="text-lg font-bold">Plataforma de Monitoreo</h1>
         </div>
@@ -64,49 +70,34 @@
     </nav>
     
     <div class="flex flex-1 overflow-hidden relative">
-        <!-- Panel de Control Deslizable -->
         <aside id="control-panel" class="absolute md:relative z-[1050] top-0 left-0 h-full w-80 md:w-96 bg-[var(--maroon-color)] p-4 overflow-y-auto flex-col space-y-4 control-panel-hidden md:transform-none pb-24 md:pb-4">
-            
-            <details open>
-                <summary>1. Rango de Fechas</summary>
-                <div>
-                    <input type="date" id="startDate" value="2023-01-01" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500">
-                    <input type="date" id="endDate" value="2023-12-31" class="w-full mt-2 p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500">
-                </div>
-            </details>
-            
-            <details open>
-                <summary>2. Zona de Interés</summary>
-                <div id="zonaSelectorPanel" class="space-y-2"></div>
-            </details>
-            
-            <details open>
-                <summary>3. Variable Climática</summary>
-                <div>
-                    <select id="variableSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500"></select>
-                </div>
-            </details>
-            
+            <form id="ai-command-form" class="p-2 bg-black bg-opacity-20 rounded-lg">
+                <label for="ai-command-bar" class="text-sm font-bold text-gray-300 block mb-1">Comando de IA</label>
+                <input type="text" id="ai-command-bar" placeholder="Ej: Lluvia en Chiná el mes pasado..." class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500 placeholder-gray-400">
+            </form>
+            <details open><summary>1. Rango de Fechas</summary><div>
+                <input type="date" id="startDate" value="2023-01-01" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500">
+                <input type="date" id="endDate" value="2023-12-31" class="w-full mt-2 p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500">
+            </div></details>
+            <details open><summary>2. Zona de Interés</summary><div id="zonaSelectorPanel" class="space-y-2"></div></details>
+            <details open><summary>3. Variable Climática</summary><div>
+                <select id="variableSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500"></select>
+            </div></details>
             <div id="precipAnalysisPanel" class="hidden"><details><summary>Análisis de Precipitación</summary><div class="space-y-2">
                 <select id="precipAnalysisSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="accumulated">Acumulado</option><option value="intensity">Intensidad</option><option value="frequency">Frecuencia (>20mm)</option></select>
                 <select id="precipAggregationSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="day">Diaria</option><option value="week" selected>Semanal</option><option value="month">Mensual</option><option value="year">Anual</option></select>
                 <button id="precipAnalysisButton" class="action-button w-full p-2 font-bold bg-[var(--accent-color)] text-black rounded">Ejecutar</button>
             </div></details></div>
-            
             <div id="tempAnalysisPanel" class="hidden"><details><summary>Análisis de Temperatura</summary><div class="space-y-2">
                 <select id="tempAnalysisSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="heatwave">Olas de Calor</option><option value="frost">Heladas</option></select>
                 <button id="tempAnalysisButton" class="action-button w-full p-2 font-bold bg-[var(--accent-color)] text-black rounded">Ejecutar</button>
             </div></details></div>
-
-            <details><summary>4. Tipo de Gráfico</summary>
-                <div><select id="chartTypeSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500"><option value="LineChart">Línea</option><option value="ColumnChart">Barras</option><option value="ScatterChart">Dispersión</option><option value="AreaChart">Área</option></select></div>
-            </details>
-            
+            <details><summary>4. Tipo de Gráfico</summary><div><select id="chartTypeSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500"><option value="LineChart">Línea</option><option value="ColumnChart">Barras</option><option value="ScatterChart">Dispersión</option><option value="AreaChart">Área</option></select></div></details>
             <details><summary>5. Acciones</summary><div class="grid grid-cols-2 gap-2">
                 <button id="loadDataButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded">Cargar Datos</button>
                 <button id="compareButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded">📊 Comparar</button>
+                <button id="predictButton" class="action-button p-2 font-bold bg-[#f0ad4e] text-black rounded col-span-2" disabled>🔮 Predecir Tendencia</button>
             </div></details>
-            
             <details><summary>6. Productos Específicos</summary><div class="space-y-2">
                 <select id="spiTimescaleSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="3">SPI 3 Meses</option><option value="6">SPI 6 Meses</option><option value="12">SPI 12 Meses</option></select>
                 <div class="grid grid-cols-2 gap-2">
@@ -114,7 +105,6 @@
                     <button id="fireRiskButton" class="action-button p-2 font-bold bg-[#c9302c] text-white rounded">🔥 Riesgo Incendio</button>
                 </div>
             </div></details>
-            
             <details><summary>7. Herramientas</summary><div class="space-y-2">
                 <div class="grid grid-cols-2 gap-2">
                      <button id="clearDrawingButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded">Limpiar Dibujo</button>
@@ -122,23 +112,34 @@
                 </div>
                 <button id="downloadCsvButton" class="w-full mt-2 p-2 font-bold bg-green-600 text-white rounded disabled:bg-gray-500" disabled>Descargar CSV</button>
             </div></details>
-
         </aside>
         
-        <!-- Contenido Principal -->
         <main id="main-content" class="flex-1 flex flex-col md:flex-row">
-            <div id="map" class="w-full h-1/2 md:h-full md:flex-1 flex-shrink-0"></div>
-            <div class="w-full h-1/2 md:h-full md:w-96 bg-gray-900 p-4 border-t md:border-t-0 md:border-l border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto pb-100 md:pb-4">                        <h2 class="text-lg font-bold mb-2 text-center flex-shrink-0">Análisis de Datos</h2>
-                 <div class="flex-1 flex flex-col min-h-0 space-y-4">
+            <div id="map" class="w-full h-1/2 md:h-full md:flex-1 flex-shrink-0 relative">
+                <div id="opacity-slider-container" class="leaflet-control" style="display: none;">
+                    <label for="opacity-slider">Opacidad de Capa</label>
+                    <input id="opacity-slider" type="range" min="0" max="1" step="0.1" value="1">
+                </div>
+            </div>
+            <div class="w-full h-1/2 md:h-full md:w-96 bg-gray-900 p-4 border-t md:border-t-0 md:border-l border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">
+                <h2 class="text-lg font-bold mb-2 text-center flex-shrink-0">Análisis de Datos</h2>
+                <div class="space-y-4">
                     <div id="stats-panel" class="bg-gray-800 p-3 rounded text-sm whitespace-pre-wrap overflow-y-auto flex-shrink-0">Selecciona opciones y carga datos.</div>
-                    <div id="chart-panel" class="bg-gray-800 p-2 rounded flex-1 flex items-center justify-center min-h-[250px]">
+                    <div id="ai-analysis-panel" class="hidden bg-gray-800 p-3 rounded border border-[#f0ad4e] max-h-60 overflow-y-auto">
+                        <h3 class="text-md font-bold text-[#f0ad4e] mb-2 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                            Análisis con IA
+                        </h3>
+                        <div id="ai-summary" class="text-sm text-gray-300"><p>Esperando análisis...</p></div>
+                    </div>
+                    <div id="chart-panel" class="bg-gray-800 p-2 rounded flex items-center justify-center min-h-[250px]">
                         <span class="text-gray-400">El gráfico aparecerá aquí</span>
                     </div>
                 </div>
             </div>
         </main>
     </div>
-
+    
     <script type="module">
         // --- Configuración Inicial ---
         const varParams = {
@@ -152,8 +153,81 @@
             'Evapotranspiración Potencial (mm/8 días)': { min: 0, max: 60, palette: ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'], bandName: 'PET', unit: 'mm/8d', dataset: 'MODIS_ET'},
             'Días Grado de Crecimiento (°C día)': { min: 0, max: 20, palette: ['#edf8b1', '#7fcdbb', '#2c7fb8'], bandName: 'GDD', unit: '°C día', dataset: 'ERA5_DAILY'}
         };
-        const zonas = {
-            'Todo el Estado': { geom: [[[-90.53,20.84],[-89.15,20.68],[-89.23,19.31],[-89.43,18.36],[-89.98,17.82],[-91.01,17.75],[-91.78,18.02],[-92.35,18.62],[-92.23,19.05],[-91.48,19.38],[-91.24,19.88],[-90.87,20.52],[-90.53,20.84]]], style: {color: 'white', fillOpacity: 0, weight: 2.5} },
+         const zonas = {
+            'Todo el Estado': { geom: [[[-92.48081080043468, 18.65355807836496],
+           [-92.35447229129556, 18.460884296324984],
+           [-92.16221734343428, 18.471304305759396],
+           [-92.13475296400698, 18.111438694698073],
+           [-91.6184110273219, 17.87111527739684],
+           [-91.60742480741112, 18.147980196889847],
+           [-90.99770164002766, 17.949517238969747],
+           [-90.97023657870965, 17.813598266339437],
+           [-89.14106621026559, 17.824060479430226],
+           [-89.13557892216805, 19.42204955423591],
+           [-89.61347018735313, 19.872114537091726],
+           [-89.60797756323925, 20.00120926341917],
+           [-89.9924873419241, 20.45992279936665],
+           [-90.36051704104561, 20.55767386812184],
+           [-90.38798236289146, 20.86595162452869],
+           [-90.48685545996365, 20.50623326315475],
+           [-90.50126334922226, 20.198239794861617],
+           [-90.47449584348993, 19.91859926891992],
+           [-90.56723652422342, 19.84112133327383],
+           [-90.66674982145047, 19.7635919081168],
+           [-90.71751878867602, 19.69063414583596],
+           [-90.71374618344261, 19.607797531295255],
+           [-90.7209602638816, 19.52107992371851],
+           [-90.73811736036171, 19.35152532843782],
+           [-90.77288249381387, 19.304233168163105],
+           [-90.82547549582875, 19.258226695820653],
+           [-90.929208889095, 19.172657015362176],
+           [-91.15283804512104, 19.016903103757333],
+           [-91.39796288822421, 18.89546787187933],
+           [-91.5035314274159, 18.784995677669183],
+           [-91.50205038200042, 18.77571146048472],
+           [-91.48803897779558, 18.77406564592335],
+           [-91.47402734443185, 18.776562203155617],
+           [-91.46290066725412, 18.798448261841077],
+           [-91.45304395202704, 18.811990350829365],
+           [-91.43936024497982, 18.825259859084955],
+           [-91.42327282570446, 18.818055876826495],
+           [-91.3772689813456, 18.859645758569055],
+           [-91.36834287121141, 18.844700571985108],
+           [-91.39443460999227, 18.804406936506698],
+           [-91.3312651843683, 18.760202787631933],
+           [-91.2969114043687, 18.788135386966516],
+           [-91.24060821419975, 18.737424766796593],
+           [-91.25571396008489, 18.680194510561403],
+           [-91.28455219065492, 18.66848594192294],
+           [-91.3175101982309, 18.547450082693317],
+           [-91.51525813292268, 18.4849464069018],
+           [-91.5317371569148, 18.436750868302077],
+           [-91.89427490518244, 18.54094074046795],
+           [-91.85445060003165, 18.603423959680036],
+           [-91.91487351640282, 18.638560789411414],
+           [-91.95744415239584, 18.699707487556932],
+         [-91.85548057570495, 18.649420266010736],
+           [-91.8252681733612, 18.62599734720394],
+           [-91.7978023530487, 18.63738389166631],
+           [-91.77994956984557, 18.631202719338145],
+           [-91.73634758009948, 18.655600775318117],
+           [-91.69034233107604, 18.68259720222792],
+           [-91.66527977004088, 18.661455787041387],
+           [-91.64021720900573, 18.68292243417524],
+           [-91.59318199172057, 18.717393478524492],
+           [-91.61618461623229, 18.731049874184887],
+           [-91.57704582228698, 18.727798451485423],
+           [-91.56811943068541, 18.736902277376217],
+           [-91.52623405470885, 18.73657714918446],
+           [-91.50597801222838, 18.74990689178588],
+           [-91.52211418166198, 18.76811166866011],
+           [-91.53310050978698, 18.78338916097083],
+           [-91.6608165742401, 18.71999478180073],
+           [-91.69961204543151, 18.708613784563624],
+           [-91.70270195021666, 18.699833634976926],
+           [-91.72192802443541, 18.688776502468155],
+           [-91.78990592970885, 18.669262155007363],
+           [-91.84861412062682, 18.666660072273917]]], style: {color: 'white', fillOpacity: 0, weight: 2.5} },
             'Zona 1, Ciudad Campeche': { geom: [[[-90.4531, 19.8993],[-90.4890, 19.8781],[-90.5211, 19.8612],[-90.5290, 19.8671],[-90.5343, 19.8631],[-90.5273, 19.8578],[-90.5366, 19.8549],[-90.5444, 19.8461],[-90.5529, 19.8386],[-90.5613, 19.8334],[-90.5685, 19.8282],[-90.5702, 19.8273],[-90.5712, 19.8277],[-90.5735, 19.8269],[-90.5734, 19.8253],[-90.5792, 19.8218],[-90.5852, 19.8187],[-90.5900, 19.8153],[-90.5929, 19.8183],[-90.5997, 19.8136],[-90.6010, 19.8085],[-90.6102, 19.8018],[-90.6165, 19.7991],[-90.6195, 19.7967],[-90.6261, 19.7939],[-90.6294, 19.7909],[-90.6327, 19.7900],[-90.6333, 19.7847],[-90.6389, 19.7790],[-90.6390, 19.7746],[-90.6349, 19.7724],[-90.6277, 19.7780],[-90.6159, 19.7809],[-90.5992, 19.7835],[-90.5922, 19.7947],[-90.5496, 19.7942],[-90.5422, 19.7914],[-90.5308, 19.7932],[-90.5232, 19.7891],[-90.5167, 19.7923],[-90.5048, 19.7900],[-90.5055, 19.7809],[-90.5039, 19.7776],[-90.5080, 19.7714],[-90.5115, 19.7638],[-90.5099, 19.7598],[-90.5171, 19.7573],[-90.5272, 19.7512],[-90.5223, 19.7435],[-90.5138, 19.7338],[-90.4989, 19.7403],[-90.4857, 19.7552],[-90.4698, 19.7498],[-90.4596, 19.7476],[-90.4611, 19.7558],[-90.4641, 19.7628],[-90.4750, 19.7666],[-90.4820, 19.7835],[-90.4643, 19.7960],[-90.4585, 19.8226],[-90.4556, 19.8433],[-90.4460, 19.8818]]], style: {color: 'blue', fillColor: '#0000FF22', weight: 2} },
             'Zona 2, Lerma': { geom: [[[-90.5920, 19.8193],[-90.5996, 19.8133],[-90.6083, 19.8036],[-90.6327, 19.7897],[-90.6385, 19.7802],[-90.6396, 19.7744],[-90.6351, 19.7716],[-90.6279, 19.7779],[-90.5997, 19.7824],[-90.5924, 19.7946],[-90.5741, 19.7954],[-90.5831, 19.8203]]], style: {color: 'green', fillColor: '#00FF0022', weight: 2} },
             'Zona 3, Chiná': { geom: [[[-90.5045, 19.7762],[-90.5187, 19.7562],[-90.5211, 19.7420],[-90.5021, 19.7384],[-90.4856, 19.7542],[-90.4626, 19.7483],[-90.4602, 19.7518],[-90.4748, 19.7647],[-90.4813, 19.7833],[-90.5046, 19.7901]]], style: {color: 'orange', fillColor: '#FFA50022', weight: 2} },
@@ -161,8 +235,9 @@
         };
 
         let map, drawnItems, currentGEELayer, legendControl;
+        let layerControl; // << AÑADE ESTA NUEVA VARIABLE GLOBAL
         const zonaLayers = {};
-        const zonaCheckboxes = {};
+        const zonaCheckboxes = window.zonaCheckboxes = {};
         let currentChartData = null;
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -176,14 +251,29 @@
         });
 
         function initMap() {
-            map = L.map('map').setView([19.84, -90.53], 9);
-            L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
+            // Definimos nuestros dos mapas base
+            const googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
                 maxZoom: 20,
-                subdomains:['mt0','mt1','mt2','mt3']
-            }).addTo(map);
+                subdomains:['mt0','mt1','mt2','mt3'],
+                attribution: 'Google Satellite'
+            });
+
+            const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{
+                maxZoom: 20,
+                subdomains:['mt0','mt1','mt2','mt3'],
+                attribution: 'Google Hybrid'
+            });
+
+            // Inicializamos el mapa con el mapa Híbrido (con etiquetas) por defecto
+            map = L.map('map', {
+                center: [19.84, -90.53],
+                zoom: 9,
+                layers: [googleHybrid] // << Usamos el Híbrido por defecto
+            });
 
             drawnItems = new L.FeatureGroup();
             map.addLayer(drawnItems);
+
 
             const drawControl = new L.Control.Draw({
                 edit: { featureGroup: drawnItems },
@@ -207,6 +297,14 @@
             });
             map.on(L.Draw.Event.EDITED, () => updateStatsPanel('Área editada. Vuelve a cargar los datos.'));
             
+            const baseMaps = {
+                "Híbrido (con Etiquetas)": googleHybrid,
+                "Satélite (sin Etiquetas)": googleSat
+            };
+
+            // Inicializamos el control de capas y lo añadimos al mapa
+            layerControl = L.control.layers(baseMaps, {}).addTo(map);
+
             legendControl = L.control({position: 'bottomright'});
             legendControl.onAdd = function (map) {
                 this._div = L.DomUtil.create('div', 'legend');
@@ -252,7 +350,7 @@
             });
         }
         
-        function handleZoneSelection(selectedName) {
+            window.handleZoneSelection = function(selectedName) {
             // Permitir selección múltiple, pero si se dibuja algo, se desmarcan las zonas.
             drawnItems.clearLayers(); 
 
@@ -282,7 +380,7 @@
         }
 
 
-        function clearZoneCheckboxes(removeLayers = true) {
+            window.clearZoneCheckboxes = function(removeLayers = true) {
              Object.values(zonaCheckboxes).forEach(cb => cb.checked = false);
              if (removeLayers) {
                 Object.keys(zonaLayers).forEach(name => {
@@ -312,6 +410,15 @@ function setupEventListeners() {
                 }
             });
 
+            // Archivo: plataforma.html (dentro de la función setupEventListeners)
+
+            document.getElementById('opacity-slider').addEventListener('input', function(e) {
+                if (currentGEELayer) {
+                    // Obtenemos el valor del slider (de 0 a 1) y actualizamos la opacidad de la capa
+                    currentGEELayer.setOpacity(e.target.value);
+                }
+            });
+
             // --- Event Listeners para los botones de análisis ---
             document.getElementById('loadDataButton').addEventListener('click', () => handleAnalysis('general'));
             document.getElementById('compareButton').addEventListener('click', () => {
@@ -329,6 +436,12 @@ function setupEventListeners() {
             document.getElementById('resetButton').addEventListener('click', resetApp);
             document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
             document.getElementById('variableSelector').addEventListener('change', toggleAnalysisPanels);
+            document.getElementById('predictButton').addEventListener('click', () => {
+                if (currentChartData) {
+                    // Llamamos a una nueva función en nuestro conector de IA
+                    generatePrediction(currentChartData); 
+                }
+            });
         }
 
         function toggleAnalysisPanels() {
@@ -415,7 +528,8 @@ function setupEventListeners() {
                 const response = await callGeeApi(action, params);
                 legendControl.update(varInfo); 
                 if (response.mapId) {
-                    addGeeLayer(response.mapId.urlFormat);
+                    // Pasamos la URL y también el nombre de la variable para la etiqueta
+                    addGeeLayer(response.mapId.urlFormat, varInfo.bandName); 
                 }
                 if (response.stats) {
                     updateStatsPanel(response.stats);
@@ -424,6 +538,32 @@ function setupEventListeners() {
                     currentChartData = response.chartData; 
                     document.getElementById('downloadCsvButton').disabled = false;
                     drawChart(response.chartData, response.chartOptions);
+
+                }
+                if (response.chartData) {
+                    // ...
+                    drawChart(response.chartData, response.chartOptions);
+                    document.getElementById('predictButton').disabled = false; // Habilitamos el botón
+                }
+                if (type === 'fireRisk') {
+                    // Si es el mapa de incendios, llamamos a un especialista
+                    generateFireRiskAnalysis({
+                        stats: response.stats,
+                        roi: activeROIs.length > 0 ? activeROIs[0].name : "área seleccionada",
+                        startDate: startDate,
+                        endDate: endDate
+                    });
+                } else {
+                    // Para todos los demás casos, usamos el analista general
+                    generateAiAnalysis({
+                        stats: response.stats,
+                        chartData: response.chartData,
+                        chartOptions: response.chartOptions,
+                        variable: selectedVar,
+                        roi: activeROIs.length > 0 ? activeROIs[0].name : "área seleccionada",
+                        startDate: startDate,
+                        endDate: endDate
+                    });
                 }
             } catch (error) {
                 console.error("Error en el análisis:", error);
@@ -543,11 +683,28 @@ function setupEventListeners() {
             chartPanel.innerHTML = '<span class="text-gray-300">El gráfico aparecerá aquí</span>';
         }
 
-        function addGeeLayer(url) {
-            if (currentGEELayer) map.removeLayer(currentGEELayer);
+        function addGeeLayer(url, varName) {
+            // Si ya existe una capa de GEE, la eliminamos del mapa Y del control
+            if (currentGEELayer) {
+                map.removeLayer(currentGEELayer);
+                layerControl.removeLayer(currentGEELayer);
+            }
+
+            // Creamos la nueva capa de GEE
             currentGEELayer = L.tileLayer(url, {
                 attribution: 'Google Earth Engine'
-            }).addTo(map);
+            });
+
+            // La añadimos al mapa
+            currentGEELayer.addTo(map);
+
+            // Y LO MÁS IMPORTANTE: la añadimos al control de capas como un "Overlay"
+            // Esto crea el checkbox para activarla/desactivarla.
+            layerControl.addOverlay(currentGEELayer, `Capa: ${varName}`);
+            
+            // Habilitamos el slider de opacidad
+            document.getElementById('opacity-slider-container').style.display = 'block';
+            document.getElementById('opacity-slider').value = 1; // Reseteamos el valor a 100%
         }
         
         function drawChart(data, options) {
@@ -604,7 +761,9 @@ function setupEventListeners() {
 
             chart.draw(dataTable, {...defaultOptions, ...options});
         }
-    </script>
+</script>
+
+<script src="ai-connector.js"></script> 
+
 </body>
 </html>
-
