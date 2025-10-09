@@ -94,9 +94,22 @@ function aggregateCollection(collection, unit, reducer, startDate, endDate) {
 
 
 // =========================================================================================
-// === MANEJADOR PRINCIPAL DE LA API (SERVERLESS FUNCTION) =================================
+// === LÓGICA DE BÚSQUEDA DE MUNICIPIOS ====================================================
 // =========================================================================================
+function getMunicipalityGeometry(municipalityName) {
+    const municipalities = ee.FeatureCollection('FAO/GAUL/2015/level2');
+    const campecheMunicipality = municipalities.filter(ee.Filter.and(
+        ee.Filter.eq('ADM1_NAME', 'Campeche'),
+        ee.Filter.eq('ADM2_NAME', municipalityName)
+    ));
+    const feature = ee.Feature(campecheMunicipality.first());
+    return ee.Algorithms.If(feature, feature.geometry(), null);
+}
 
+
+// =========================================================================================
+// === MANEJADOR PRINCIPAL DE LA API (VERSIÓN CORREGIDA) ===================================
+// =========================================================================================
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
@@ -104,23 +117,38 @@ export default async function handler(req, res) {
 
     try {
         await new Promise((resolve, reject) => {
-            ee.data.authenticateViaPrivateKey(
-                {
-                    client_email: process.env.EE_SERVICE_ACCOUNT_EMAIL,
-                    private_key: process.env.EE_PRIVATE_KEY,
-                },
+            ee.data.authenticateViaPrivateKey({ client_email: process.env.EE_SERVICE_ACCOUNT_EMAIL, private_key: process.env.EE_PRIVATE_KEY },
                 () => ee.initialize(null, null, resolve, reject),
-                (err) => {
-                    console.error('ERROR DE AUTENTICACIÓN:', err);
-                    reject(new Error('La autenticación con Google Earth Engine falló. Revisa las credenciales en Vercel.'));
-                }
+                (err) => reject(new Error('La autenticación con GEE falló.'))
             );
         });
 
         const { action, params } = req.body;
         if (!action || !params) {
-            throw new Error('Solicitud incorrecta: Falta "action" o "params" en el cuerpo de la solicitud.');
+            throw new Error('Solicitud incorrecta: Falta "action" o "params".');
         }
+
+        // --- LÓGICA CORREGIDA Y CENTRALIZADA PARA DETERMINAR EL ÁREA DE ANÁLISIS ---
+        let eeRoi;
+        const roiParam = params.roi || (params.rois ? params.rois[0] : null);
+
+        if (action === 'getCompareData' && params.rois) {
+            const features = params.rois.map(r => ee.Feature(ee.Geometry(r.geom)));
+            eeRoi = ee.FeatureCollection(features).geometry();
+        } else if (roiParam && roiParam.geom) {
+            eeRoi = ee.Geometry(roiParam.geom);
+        } else if (roiParam && roiParam.zona_type === 'municipio') {
+            eeRoi = getMunicipalityGeometry(roiParam.zona_name);
+            if (!eeRoi) {
+                throw new Error(`El municipio "${roiParam.zona_name}" no fue encontrado.`);
+            }
+        } else {
+            throw new Error('Formato de Región de Interés (ROI) no reconocido o ausente.');
+        }
+
+        // CORRECCIÓN CLAVE: Añadimos la geometría procesada a los parámetros
+        params.eeRoi = eeRoi;
+        // --- FIN DE LA LÓGICA CORREGIDA ---
 
         let responseData;
         switch (action) {
@@ -136,12 +164,11 @@ export default async function handler(req, res) {
         res.status(200).json(responseData);
 
     } catch (error) {
-        console.error('--- ERROR DETALLADO DEL SERVIDOR GEE ---');
-        console.error('Mensaje de Error:', error.message);
-        console.error('--- FIN DEL INFORME DE ERROR ---');
+        console.error('ERROR DETALLADO DEL SERVIDOR GEE:', error.message);
         res.status(500).json({ error: 'Error Interno del Servidor', details: error.message });
     }
 }
+
 
 // =========================================================================================
 // === LÓGICA DE OPTIMIZACIÓN Y MANEJADORES DE ACCIONES ====================================
@@ -182,8 +209,7 @@ async function getOptimizedHighFrequencyCollection(datasetName, eeRoi, startDate
 }
 
 
-async function handleGeneralData({ roi, varInfo, startDate, endDate }) {
-    const eeRoi = ee.Geometry(roi.geom);
+async function handleGeneralData({ roi, varInfo, startDate, endDate, eeRoi }) {
     let collection;
 
     if (varInfo.dataset === 'ERA5') {
@@ -204,10 +230,9 @@ async function handleGeneralData({ roi, varInfo, startDate, endDate }) {
     return { mapId, stats, chartData, chartOptions: { title: `Serie Temporal para ${roi.name}` } };
 }
 
-async function handleCompareData({ rois, varInfo, startDate, endDate }) {
+async function handleCompareData({ rois, varInfo, startDate, endDate, eeRoi }) {
     const features = rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name }));
     const fc = ee.FeatureCollection(features);
-    const eeRoi = fc.geometry();
     let collection;
 
     if (varInfo.dataset === 'ERA5') {
@@ -229,12 +254,11 @@ async function handleCompareData({ rois, varInfo, startDate, endDate }) {
 }
 
 
-async function handlePrecipitationData({ roi, analysisType, aggregation, startDate, endDate }) {
+async function handlePrecipitationData({ roi, analysisType, aggregation, startDate, endDate, eeRoi }) {
     if (!startDate || !endDate) {
         throw new Error("Fechas de inicio y fin son requeridas para el análisis de precipitación.");
     }
 
-    const eeRoi = ee.Geometry(roi.geom);
     const precipCollection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY')
         .filterDate(startDate, endDate).filterBounds(eeRoi).map(processChirps);
 
@@ -273,8 +297,7 @@ async function handlePrecipitationData({ roi, analysisType, aggregation, startDa
     return { mapId, stats, chartData, chartOptions: { title: `${chartTitle} (${aggregation}) para ${roi.name}` } };
 }
 
-async function handleTemperatureData({ roi, analysisType, startDate, endDate }) {
-    const eeRoi = ee.Geometry(roi.geom);
+async function handleTemperatureData({ roi, analysisType, startDate, endDate, eeRoi }) {
     
     const dailyCollection = ee.ImageCollection("ECMWF/ERA5/DAILY")
         .filterDate(startDate, endDate).filterBounds(eeRoi);
@@ -304,8 +327,7 @@ async function handleTemperatureData({ roi, analysisType, startDate, endDate }) 
     return { mapId, stats, chartData: null };
 }
 
-async function handleSpiData({ roi, timescale, startDate, endDate }) {
-    const eeRoi = ee.Geometry(roi.geom);
+async function handleSpiData({ roi, timescale, startDate, endDate, eeRoi }) {
     const spiCollection = getSpiCollection(eeRoi, timescale);
     const spiForPeriod = spiCollection.filterDate(startDate, endDate);
     
@@ -318,8 +340,7 @@ async function handleSpiData({ roi, timescale, startDate, endDate }) {
     return { mapId, stats: `Mostrando el mapa SPI más reciente para el periodo.`, chartData, chartOptions: { title: `SPI de ${timescale} meses para ${roi.name}` }};
 }
 
-async function handleFireRiskData({ roi, startDate, endDate }) {
-    const eeRoi = ee.Geometry(roi.geom);
+async function handleFireRiskData({ roi, startDate, endDate, eeRoi }) {
     const eeStartDate = ee.Date(startDate);
     const eeEndDate = ee.Date(endDate);
 
@@ -362,6 +383,7 @@ async function handleFireRiskData({ roi, startDate, endDate }) {
     
     return { mapId, stats: `Riesgo de incendio promedio calculado para el periodo seleccionado.` };
 }
+
 
 
 // =========================================================================================
