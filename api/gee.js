@@ -96,16 +96,21 @@ function aggregateCollection(collection, unit, reducer, startDate, endDate) {
 // =========================================================================================
 // === LÓGICA DE BÚSQUEDA DE MUNICIPIOS ====================================================
 // =========================================================================================
+
 function getMunicipalityGeometry(municipalityName) {
-    const municipalities = ee.FeatureCollection('FAO/GAUL/2015/level2');
-    const campecheMunicipality = municipalities.filter(ee.Filter.and(
-        ee.Filter.eq('ADM1_NAME', 'Campeche'),
-        ee.Filter.eq('ADM2_NAME', municipalityName)
+    // 1. Usa el ID de tu asset personal que subiste.
+    const MI_ASSET_ID = 'projects/residenciaproject-443903/assets/municipios_mexico_2024';
+    const municipios = ee.FeatureCollection(MI_ASSET_ID);
+
+    // 2. Filtramos usando las columnas correctas: CVE_ENT para el estado y NOMGEO para el municipio.
+    const campecheMunicipality = municipios.filter(ee.Filter.and(
+        ee.Filter.eq('CVE_ENT', '04'), // Usamos el código de estado '04' para Campeche
+        ee.Filter.eq('NOMGEO', municipalityName) // Usamos la columna del nombre geográfico
     ));
+    
     const feature = ee.Feature(campecheMunicipality.first());
     return ee.Algorithms.If(feature, feature.geometry(), null);
 }
-
 
 // =========================================================================================
 // === MANEJADOR PRINCIPAL DE LA API (VERSIÓN CORREGIDA) ===================================

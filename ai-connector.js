@@ -178,7 +178,7 @@ function buildPrompt(data) {
  */
 function buildConversationalPrompt(query) {
     const today = new Date().toISOString().split('T')[0];
-    const municipios = "Calakmul, Calkiní, Campeche, Candelaria, Carmen, Champotón, Dzitbalché, Escárcega, Hecelchakán, Hopelchén, Palizada, Seybaplaya, Tenabo";
+    const municipios = "Calkini, Campeche, Carmen, Champoton, Dzitbalche, Escarcega, Hecelchakan, Hopelchen, Palizada, Seybaplaya, Tenabo, Calakmul, Candelaria";
     return `
         Tu tarea es actuar como un traductor de lenguaje natural a un formato JSON para una plataforma de monitoreo climático en Campeche, México.
         Analiza la petición del usuario y extrae los siguientes parámetros: startDate, endDate, variable, zona_type, y zona_name.
@@ -286,18 +286,22 @@ function buildGeeLabPrompt(userRequest) {
         Tu única tarea es traducir la petición del usuario a un script de GEE funcional y bien estructurado.
 
         **Reglas Estrictas:**
-        1.  **Responde ÚNICamente con el bloque de código JavaScript.** No incluyas explicaciones ni bloques de código Markdown.
+        1.  **Responde ÚNICAMENTE con el bloque de código JavaScript.** No incluyas explicaciones ni bloques de código Markdown.
         2.  El código debe ser completo y autoejecutable en el Code Editor de GEE.
-        3.  Siempre define una Región de Interés (ROI) al principio. Si se menciona un municipio de Campeche, búscalo en \`FAO/GAUL/2015/level2\`.
+        3. Siempre define una Región de Interés (ROI) al principio. Si se menciona un municipio, búscalo en el asset personal del usuario: \`projects/residenciaproject-443903/assets/municipios_mexico_2024\`. Filtra usando la columna 'CVE_ENT' con el valor '04' para el estado de Campeche, y la columna 'NOMGEO' para el nombre del municipio.
         4.  Añade comentarios breves en el código para explicar los pasos clave.
-        5.  Siempre termina el script con \`Map.centerObject(roi, 10);\` y \`Map.addLayer(...);\`.
-        6.  Usa colecciones de datos modernas como Sentinel-2 ('COPERNICUS/S2_SR').
-        7.  Aplica siempre un filtro de nubosidad razonable (ej. \`.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\`).
-        8.  **Verificación de Nulos:** Después de buscar una ROI, SIEMPRE verifica que no sea nula antes de usarla. Si no se encuentra, usa console.log para mostrar un mensaje de error claro (ej. \`console.log('Error: No se encontró el municipio.');\`).
-        9.  **Sin Acentos:** Al filtrar por nombres de municipios, SIEMPRE usa el nombre sin acentos (ej. 'Champoton', 'Calkini').
-        10. **Claridad del Mapa:** Al final del script, usa \`Map.addLayer\` con un nombre de capa descriptivo. Además, añade un \`console.log()\` con un objeto que contenga una explicación detallada de cómo interpretar el mapa. Ejemplo: \`console.log({titulo: 'Explicación del Mapa...', ...});\`
-        11. **No incluyas una declaración \`return\` en el nivel principal del script.** El script no es una función. La última expresión evaluada (generalmente \`Map.addLayer(...)\`) es lo que se usa como resultado.
-    
+        5.  Usa colecciones de datos modernas como Sentinel-2 ('COPERNICUS/S2_SR').
+        6.  Aplica siempre un filtro de nubosidad razonable (ej. \`.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\`).
+        7.  **Verificación de Nulos:** Después de buscar una ROI, SIEMPRE verifica que no sea nula antes de usarla y usa console.log para mostrar un error claro.
+        8.  **Sin Acentos:** Al filtrar por nombres de municipios, SIEMPRE usa el nombre sin acentos.
+        9.  **No usar 'return':** No incluyas una declaración \`return\` en el nivel principal del script.
+
+        // --- REGLA FINAL CORREGIDA ---
+        10. **MUY IMPORTANTE (Orden de finalización):** Al final del script, debes hacer tres cosas en este orden exacto:
+            a) Primero, usa \`console.log()\` para imprimir el objeto con la explicación detallada del mapa.
+            b) Segundo, usa \`Map.centerObject(roi, 10);\` para centrar el mapa.
+            c) La **ÚLTIMA LÍNEA ABSOLUTA** del script debe ser la llamada a \`Map.addLayer(...)\`, usando un nombre de capa descriptivo. Esto es crucial para que la plataforma pueda visualizar el resultado.
+
         **Petición del Usuario:**
         "${userRequest}"
 
