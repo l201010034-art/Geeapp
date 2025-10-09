@@ -20,8 +20,11 @@ function autoCorrectCode(code) {
 }
 
 // --- Lógica de Ejecución de GEE (Ahora en su propia función) ---
+// ... (el resto del archivo, como 'commonFixes', se mantiene igual) ...
+
+// --- Lógica de Ejecución de GEE (Ahora en su propia función) ---
 async function executeGeeCode(codeToExecute) {
-    // 1. Inicializar GEE (es necesario en cada ejecución)
+    // 1. Inicializar GEE
     await new Promise((resolve, reject) => {
         ee.data.authenticateViaPrivateKey(
             { client_email: process.env.EE_SERVICE_ACCOUNT_EMAIL, private_key: process.env.EE_PRIVATE_KEY },
@@ -30,35 +33,41 @@ async function executeGeeCode(codeToExecute) {
         );
     });
     
-    // 2. Preparar el Sandbox para la ejecución segura
+    // 2. Preparar el Sandbox
     const logs = [];
     const executionContext = {
         capturedImage: null,
         ee: ee,
         print: (message) => logs.push(message.toString()),
-        console: {
-            log: (message) => logs.push(message.toString())
-        }
+        console: { log: (message) => logs.push(message.toString()) }
     };
-
     executionContext.Map = {
         centerObject: () => {},
-        addLayer: (img) => {
-            executionContext.capturedImage = img;
-            return img;
-        }
+        addLayer: (img) => { executionContext.capturedImage = img; return img; }
     };
-    
     const context = vm.createContext(executionContext);
 
-    // 3. Ejecutar el código del usuario
-    vm.runInContext(codeToExecute, context, { timeout: 30000 }); // 30 segundos de timeout para el script
+    // 3. Ejecutar el código
+    vm.runInContext(codeToExecute, context, { timeout: 30000 });
     
     if (!context.capturedImage) {
         throw new Error("El código ejecutado no añadió ninguna capa al mapa usando Map.addLayer().");
     }
     
-   const mapId = await new Promise((resolve, reject) => {
+    // 4. Extraer los parámetros de visualización del log ANTES de pedir el mapa
+    let visParams = {}; // Inicia como objeto vacío por si la IA no lo provee
+    const jsonLog = logs.find(log => typeof log === 'string' && log.trim().startsWith('{'));
+    if (jsonLog) {
+        try {
+            // Asignamos los parámetros extraídos a nuestra variable visParams
+            visParams = JSON.parse(jsonLog).visParams;
+        } catch (e) {
+            console.warn("No se pudo parsear el log JSON de la IA:", e.message);
+        }
+    }
+
+    // 5. OBTENER EL MAP ID USANDO LOS PARÁMETROS DE COLOR EXTRAÍDOS
+    const mapId = await new Promise((resolve, reject) => {
         // ▼▼▼ ESTA ES LA LÍNEA CORREGIDA Y CRÍTICA ▼▼▼
         context.capturedImage.getMapId(visParams, (mapid, error) => {
             if (error) reject(new Error(error));
@@ -67,21 +76,10 @@ async function executeGeeCode(codeToExecute) {
     });
 
     // 6. Devolvemos tanto el mapId como los visParams para la leyenda
-
-    // 5. Extraer los parámetros de visualización del log
-    let visParams = null;
-    const jsonLog = logs.find(log => typeof log === 'string' && log.trim().startsWith('{'));
-    if (jsonLog) {
-        try {
-            visParams = JSON.parse(jsonLog).visParams;
-        } catch (e) {
-            console.warn("No se pudo parsear el log JSON de la IA:", e.message);
-        }
-    }
-    
     return { mapId, visParams };
 }
 
+// ... (el resto del archivo handler no cambia) ...
 
 // --- Manejador Principal de la API ---
 export default async function handler(req, res) {

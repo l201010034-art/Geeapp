@@ -327,19 +327,30 @@
             };
             legendControl.update = function (varInfo) {
                 if (varInfo) {
-                    const gradient = `linear-gradient(to right, ${varInfo.palette.join(', ')})`;
+                    // VERIFICACIÓN CLAVE: ¿Existe una paleta de colores y es un array?
+                    const hasPalette = varInfo.palette && Array.isArray(varInfo.palette);
+                    
+                    // Si hay paleta, la usamos. Si no, creamos una escala de grises por defecto.
+                    const gradient = hasPalette
+                        ? `linear-gradient(to right, ${varInfo.palette.join(', ')})`
+                        : `linear-gradient(to right, black, white)`;
+
+                    const unit = varInfo.unit || ''; // Asegurarnos de que la unidad no sea 'undefined'
+                    const title = varInfo.bandName || 'Leyenda';
+
                     this._div.innerHTML = `
-                        <div class="legend-title">${varInfo.bandName} (${varInfo.unit})</div>
+                        <div class="legend-title">${title} ${unit ? `(${unit})` : ''}</div>
                         <div class="legend-scale-bar" style="background: ${gradient};"></div>
                         <div class="legend-labels">
-                            <span>${varInfo.min}</span>
-                            <span>${varInfo.max}</span>
+                            <span>${varInfo.min !== undefined ? varInfo.min : ''}</span>
+                            <span>${varInfo.max !== undefined ? varInfo.max : ''}</span>
                         </div>
                     `;
                 } else {
                     this._div.innerHTML = '';
                 }
             };
+
             legendControl.addTo(map);
             window.legendControl = legendControl; // Hacemos el control accesible globalmente
 
