@@ -510,6 +510,8 @@ async function getChartData(collection, roi, bandName, scale = 2000) {
     });
 }
 
+// Archivo: gee.js
+
 async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
     return new Promise((resolve, reject) => {
         fc.aggregate_array('label').evaluate((labels, error) => {
@@ -526,7 +528,6 @@ async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
                     });
                     const values = labels.map(label => {
                         const feature = means.filter(ee.Filter.eq('label', label)).first();
-                        // CORRECCIÓN FINAL: Obtener la propiedad 'mean' que añade reduceRegions
                         return ee.Feature(feature).get('mean');
                     });
                     return ee.Feature(null, {'system:time_start': time}).set('means', values);
@@ -544,5 +545,4 @@ async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
             }
         });
     });
-}
-
+} // <--- ESTA LLAVE FALTABA

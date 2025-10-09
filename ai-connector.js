@@ -204,7 +204,7 @@ function buildConversationalPrompt(query) {
         - Tu Respuesta: {"startDate": "2023-01-01", "endDate": "2023-01-31", "variable": "Temperatura del Aire (°C)", "zona_type": "predefinida", "zona_name": "Zona 2, Lerma"}
 
         - Petición: "sequía en Hopelchén durante 2023"
-        - Tu Respuesta: {"startDate": "2023-01-01", "endDate": "2023-12-31", "variable": "Precipitación Acumulada (mm)", "zona_type": "municipio", "zona_name": "Hopelchen"}
+        - Tu Respuesta: {"startDate": "2023-01-01", "endDate": "2023-12-31", "variable": "Precipitación Acumulada (mm)", "zona_type": "municipio", "zona_name": "Hopelchén"}
         
         - Petición: "lluvia de la semana pasada"
         - Tu Respuesta: {"startDate": "${new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0]}", "endDate": "${new Date().toISOString().split('T')[0]}", "variable": "Precipitación Acumulada (mm)", "zona_type": "predefinida", "zona_name": "Todo el Estado"}

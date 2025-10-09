@@ -572,8 +572,8 @@ function setupEventListeners() {
                 legendControl.update(varInfo); 
                 if (response.mapId) {
                     // Pasamos la URL y también el nombre de la variable para la etiqueta
-                    addGeeLayer(response.mapId.urlFormat, varInfo.bandName); 
-                }
+// LÍNEA CORREGIDA
+                    addGeeLayer(response.mapId.urlFormat, varInfo ? varInfo.bandName : 'Resultado del Análisis');                }
                 if (response.stats) {
                     updateStatsPanel(response.stats);
                 }
