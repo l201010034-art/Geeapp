@@ -178,7 +178,8 @@ function buildPrompt(data) {
  */
 function buildConversationalPrompt(query) {
     const today = new Date().toISOString().split('T')[0];
-    const municipios = "Calkini, Campeche, Carmen, Champoton, Dzitbalche, Escarcega, Hecelchakan, Hopelchen, Palizada, Seybaplaya, Tenabo, Calakmul, Candelaria";
+    // --- LISTA CORREGIDA Y COMPLETA ---
+    const municipios = "Calakmul, Calkiní, Campeche, Candelaria, Carmen, Champotón, Dzitbalché, Escárcega, Hecelchakán, Hopelchén, Palizada, Seybaplaya, Tenabo";
     return `
         Tu tarea es actuar como un traductor de lenguaje natural a un formato JSON para una plataforma de monitoreo climático en Campeche, México.
         Analiza la petición del usuario y extrae los siguientes parámetros: startDate, endDate, variable, zona_type, y zona_name.
@@ -193,7 +194,7 @@ function buildConversationalPrompt(query) {
         1.  **Responde ÚNICAMENTE con el objeto JSON.** No incluyas explicaciones, texto adicional ni bloques de código Markdown (\`\`\`).
         2.  **Determina el Tipo de Zona:**
             - Si la zona mencionada es una de las "Zonas Predefinidas", usa \`"zona_type": "predefinida"\` y el nombre exacto en \`zona_name\`.
-            - Si la zona mencionada es uno de los "Municipios de Campeche", usa \`"zona_type": "municipio"\` y el nombre del municipio en \`zona_name\`. Asegúrate de usar el nombre oficial sin acentos (ej. "Hopelchen", "Calkini").
+            - Si la zona mencionada es uno de los "Municipios de Campeche", usa \`"zona_type": "municipio"\` y el **nombre exacto con acentos** en \`zona_name\` (ej. 'Hopelchén', 'Calkiní').
             - Si no se especifica una zona, asume "Todo el Estado" y trátala como predefinida.
         3.  **Infiere la Variable:** Si el usuario dice "lluvia" o "sequía", asume "Precipitación Acumulada (mm)".
         4.  **Calcula Fechas:** Interpreta fechas relativas ("mes pasado", "última semana", "2023") en formato "YYYY-MM-DD".
@@ -293,7 +294,7 @@ function buildGeeLabPrompt(userRequest) {
         5.  Usa colecciones de datos modernas como Sentinel-2 ('COPERNICUS/S2_SR').
         6.  Aplica siempre un filtro de nubosidad razonable (ej. \`.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\`).
         7.  **Verificación de Nulos:** Después de buscar una ROI, SIEMPRE verifica que no sea nula antes de usarla y usa console.log para mostrar un error claro.
-        8.  **Sin Acentos:** Al filtrar por nombres de municipios, SIEMPRE usa el nombre sin acentos.
+        8.  **Usa Acentos:** Al filtrar por nombres de municipios en la columna 'NOMGEO', **SIEMPRE usa el nombre exacto con acentos**, tal como está en los datos oficiales de INEGI (ej. 'Champotón', 'Hecelchakán').
         9.  **No usar 'return':** No incluyas una declaración \`return\` en el nivel principal del script.
 
         // --- REGLA FINAL CORREGIDA ---
