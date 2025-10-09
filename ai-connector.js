@@ -312,6 +312,8 @@ function buildGeeLabPrompt(userRequest) {
 /**
  * Maneja la petición de generación de código del Laboratorio de IA.
  */
+// Archivo: ai-connector.js
+
 async function handleLabCodeGeneration() {
     const promptInput = document.getElementById('lab-prompt-input');
     const resultDisplay = document.getElementById('lab-result-display');
@@ -323,16 +325,14 @@ async function handleLabCodeGeneration() {
         return;
     }
 
-    // Desactivamos el botón y mostramos un estado de carga
     generateButton.disabled = true;
     generateButton.textContent = "Generando...";
     resultDisplay.textContent = "// Generando código, por favor espera...";
+    document.getElementById('lab-execute-button').disabled = true; // Deshabilitar mientras se genera
 
-    // Construimos el prompt especializado
     const prompt = buildGeeLabPrompt(userRequest);
 
     try {
-        // Llamamos a nuestra NUEVA API
         const response = await fetch('/api/gee-lab', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -345,17 +345,25 @@ async function handleLabCodeGeneration() {
         }
 
         const result = await response.json();
-        
-        // Mostramos el código generado en el área de resultados
-        resultDisplay.textContent = result.generatedCode;
-        document.getElementById('lab-execute-button').disabled = false;
+        let generatedCode = result.generatedCode;
 
+        // =================================================================
+        // === LA SOLUCIÓN: Limpiamos la respuesta de la IA de Markdown ===
+        // =================================================================
+        generatedCode = generatedCode.replace(/^```(javascript)?\s*/, '').replace(/```\s*$/, '');
+        
+        // Mostramos el código YA LIMPIO en el área de resultados
+        resultDisplay.textContent = generatedCode;
+
+        // Habilitamos el botón de ejecutar si se generó código
+        if (generatedCode) {
+            document.getElementById('lab-execute-button').disabled = false;
+        }
 
     } catch (error) {
         console.error("Error en la generación de código del Lab:", error);
         resultDisplay.textContent = `// Ocurrió un error:\n// ${error.message}`;
     } finally {
-        // Reactivamos el botón
         generateButton.disabled = false;
         generateButton.textContent = "Generar Código";
     }
