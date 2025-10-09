@@ -463,7 +463,9 @@ function setupEventListeners() {
             // --- Lógica para el Modal del Laboratorio de IA ---
             const openLabButton = document.getElementById('openLabButton');
             const labGenerateButton = document.getElementById('lab-generate-button');
-            labGenerateButton.addEventListener('click', handleLabCodeGeneration);   
+            labGenerateButton.addEventListener('click', handleLabCodeGeneration);
+            const labExecuteButton = document.getElementById('lab-execute-button');
+            labExecuteButton.addEventListener('click', handleLabCodeExecution);   
             const labOverlay = document.getElementById('lab-overlay');
             const labCloseButton = document.getElementById('lab-close-button');
 
@@ -814,6 +816,8 @@ function setupEventListeners() {
         <p class="text-gray-400 mb-2">Describe el análisis personalizado que deseas generar (en inglés o español).</p>
         <textarea id="lab-prompt-input" class="w-full h-1/4 p-2 rounded bg-gray-900 border border-gray-600 text-white flex-shrink-0" placeholder="Ej: Genera un mapa NDVI promedio para el municipio de Calakmul durante marzo de 2024, usando imágenes Sentinel-2 sin nubes."></textarea>
         <button id="lab-generate-button" class="w-full mt-3 p-2 font-bold bg-[var(--accent-color)] text-black rounded">Generar Código</button>
+        <button id="lab-execute-button" class="w-full mt-2 p-2 font-bold bg-blue-600 text-white rounded disabled:bg-gray-500" disabled>🚀 Ejecutar y Mostrar en Mapa</button>
+
 
         <h3 class="text-lg font-bold mt-6 mb-2">Código GEE Generado:</h3>
         <div id="lab-result-container" class="bg-gray-900 rounded p-1 flex-1 overflow-auto">

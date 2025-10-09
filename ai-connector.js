@@ -42,6 +42,8 @@ window.generateFireRiskAnalysis = async function(data) {
 }
 
 window.handleLabCodeGeneration = handleLabCodeGeneration;
+// 3. NO OLVIDES HACER LA NUEVA FUNCIÓN GLOBAL
+window.handleLabCodeExecution = handleLabCodeExecution;
 //================================================================
 // LÓGICA DE LA INTERFAZ CONVERSACIONAL
 //================================================================
@@ -343,6 +345,8 @@ async function handleLabCodeGeneration() {
         
         // Mostramos el código generado en el área de resultados
         resultDisplay.textContent = result.generatedCode;
+        document.getElementById('lab-execute-button').disabled = false;
+
 
     } catch (error) {
         console.error("Error en la generación de código del Lab:", error);
@@ -351,5 +355,50 @@ async function handleLabCodeGeneration() {
         // Reactivamos el botón
         generateButton.disabled = false;
         generateButton.textContent = "Generar Código";
+    }
+}
+
+// 2. AÑADE ESTA NUEVA FUNCIÓN COMPLETA
+/**
+ * Envía el código generado al backend para su ejecución en GEE.
+ */
+async function handleLabCodeExecution() {
+    const code = document.getElementById('lab-result-display').textContent;
+    const executeButton = document.getElementById('lab-execute-button');
+
+    if (!code || code.startsWith('//')) {
+        alert("No hay código válido para ejecutar.");
+        return;
+    }
+
+    executeButton.disabled = true;
+    executeButton.textContent = "Ejecutando en GEE...";
+
+    try {
+        const response = await fetch('/api/gee-lab', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codeToExecute: code }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || "Error al ejecutar el código en el servidor.");
+        }
+
+        const result = await response.json();
+
+        if (result.mapId) {
+            // Reutilizamos la función que ya tienes para añadir capas al mapa
+            window.addGeeLayer(result.mapId.urlFormat, 'Resultado del Laboratorio');
+            alert("¡Éxito! La nueva capa se ha añadido al mapa. Cierra esta ventana para verla.");
+        }
+
+    } catch (error) {
+        console.error("Error en la ejecución del código del Lab:", error);
+        alert(`Ocurrió un error al ejecutar el código: ${error.message}`);
+    } finally {
+        executeButton.disabled = false;
+        executeButton.textContent = "🚀 Ejecutar y Mostrar en Mapa";
     }
 }
