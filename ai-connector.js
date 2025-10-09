@@ -105,93 +105,103 @@ commandForm.addEventListener('submit', function(event) {
  * Procesa la petición en lenguaje natural del usuario.
  * @param {string} query - Lo que el usuario escribió.
  */
+// Archivo: ai-connector.js
+
 async function processConversationalQuery(query) {
-    // 1. Enviamos la petición a nuestra API de IA con un prompt especial
     const prompt = buildConversationalPrompt(query);
-    
- try {
-    const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: prompt }),
-    });
-    const result = await response.json();
-    let aiResponseText = result.analysisText;
+    try {
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt }),
+        });
+        const result = await response.json();
+        const jsonMatch = result.analysisText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("La IA no devolvió un JSON válido.");
+        const params = JSON.parse(jsonMatch[0]);
+        if (params.error) throw new Error(params.error);
+        
+        // Actualizamos la UI con los parámetros de fecha y variable
+        document.getElementById('startDate').value = params.startDate;
+        document.getElementById('endDate').value = params.endDate;
+        document.getElementById('variableSelector').value = params.variable;
 
-    // =================================================================
-    // === LA SOLUCIÓN: Limpiar y extraer el JSON de la respuesta   ===
-    // =================================================================
-    const jsonMatch = aiResponseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-        throw new Error("La respuesta de la IA no contenía un JSON válido.");
-    }
-    const cleanedJsonString = jsonMatch[0];
-    // =================================================================
+        // Limpiamos selecciones anteriores
+        window.clearZoneCheckboxes();
+        if (window.drawnItems) window.drawnItems.clearLayers();
 
-    // Ahora parseamos la cadena de texto ya limpia
-    const params = JSON.parse(cleanedJsonString);
-    
-    if (params.error) {
-        throw new Error(params.error);
-    }
+        // =================================================================
+        // === LÓGICA FINAL: Decidimos qué hacer según el tipo de zona ===
+        // =================================================================
+        if (params.zona_type === 'predefinida') {
+            // Caso antiguo: Marcamos la casilla y dejamos que el sistema existente funcione
+            window.zonaCheckboxes[params.zona_name].checked = true;
+            window.handleZoneSelection(params.zona_name);
+            window.handleAnalysis('general'); // Llamamos directamente al análisis
+        } else if (params.zona_type === 'municipio') {
+            // Caso nuevo: Creamos un objeto ROI especial y lo pasamos directamente
+            const municipioRoi = {
+                name: params.zona_name, // ej. "Hopelchen"
+                zona_type: 'municipio',
+                zona_name: params.zona_name
+            };
+            window.handleAnalysis('general', municipioRoi); // Llamamos al análisis con el ROI especial
+        }
+        // =================================================================
 
-    // ¡La Magia! Usamos los parámetros extraídos por la IA
-    // para rellenar la UI y llamar a la función de análisis que ya existe.
-    document.getElementById('startDate').value = params.startDate;
-    document.getElementById('endDate').value = params.endDate;
-    document.getElementById('variableSelector').value = params.variable;
-    
-    //...
-    window.clearZoneCheckboxes();
-    window.zonaCheckboxes[params.zona].checked = true;
-    window.handleZoneSelection(params.zona);
-    //...
-    
-    document.getElementById('loadDataButton').click();
     } catch (error) {
         console.error("Error al procesar el comando de IA:", error);
         commandBar.value = "Error. Inténtalo de nuevo.";
     } finally {
         commandBar.disabled = false;
         commandBar.placeholder = "Ej: Lluvia en Chiná el mes pasado...";
+        if (window.innerWidth < 768) { // Opcional: Oculta el teclado en móvil
+            commandBar.blur();
+        }
     }
 }
 // ... (código del paso 2) ...
 
+// Archivo: ai-connector.js
+
 /**
- * Crea un prompt para que la IA extraiga parámetros de una petición de usuario.
+ * Crea un prompt para que la IA extraiga parámetros de una petición de usuario,
+ * diferenciando entre zonas predefinidas y municipios.
  * @param {string} query - Lo que el usuario escribió.
  * @returns {string} El prompt listo para ser enviado.
  */
 function buildConversationalPrompt(query) {
-    // Obtenemos la fecha de hoy para dar contexto a la IA sobre "ayer", "mes pasado", etc.
     const today = new Date().toISOString().split('T')[0];
+    const municipios = "Calakmul, Calkiní, Campeche, Candelaria, Carmen, Champotón, Dzitbalché, Escárcega, Hecelchakán, Hopelchén, Palizada, Seybaplaya, Tenabo";
 
     return `
-        Tu tarea es actuar como un traductor de lenguaje natural a un formato JSON para una plataforma de monitoreo climático.
-        Analiza la petición del usuario y extrae los siguientes parámetros: startDate, endDate, variable, y zona.
+        Tu tarea es actuar como un traductor de lenguaje natural a un formato JSON para una plataforma de monitoreo climático en Campeche, México.
+        Analiza la petición del usuario y extrae los siguientes parámetros: startDate, endDate, variable, zona_type, y zona_name.
         La fecha de hoy es ${today}.
-        
+
         **Opciones Válidas:**
-        - Variables: "Temperatura del Aire (°C)", "Humedad Relativa (%)", "Precipitación Acumulada (mm)", "Temp. Superficial (LST °C)", "Evapotranspiración (mm/8 días)".
-        - Zonas: "Todo el Estado", "Zona 1, Ciudad Campeche", "Zona 2, Lerma", "Zona 3, Chiná", "Zona 4, San Fco. Campeche".
-        
+        - **Variables:** "Temperatura del Aire (°C)", "Humedad Relativa (%)", "Precipitación Acumulada (mm)", "Temp. Superficial (LST °C)", "Evapotranspiración (mm/8 días)".
+        - **Zonas Predefinidas:** "Todo el Estado", "Zona 1, Ciudad Campeche", "Zona 2, Lerma", "Zona 3, Chiná", "Zona 4, San Fco. Campeche".
+        - **Municipios de Campeche:** ${municipios}.
+
         **Reglas:**
-        - Responde ÚNICAMENTE con el objeto JSON. No incluyas explicaciones, texto adicional ni la palabra "json".
-        - Si el usuario dice "lluvia", asume "Precipitación Acumulada (mm)".
-        - Si el usuario no especifica una zona, asume "Todo el Estado".
-        - Calcula las fechas relativas (ej. "mes pasado", "última semana", "2023"). Las fechas deben estar en formato "YYYY-MM-DD".
-        - Si no puedes entender la petición, devuelve un JSON con un campo "error".
-        
+        1.  **Responde ÚNICAMENTE con el objeto JSON.** No incluyas explicaciones, texto adicional ni bloques de código Markdown (\`\`\`).
+        2.  **Determina el Tipo de Zona:**
+            - Si la zona mencionada es una de las "Zonas Predefinidas", usa \`"zona_type": "predefinida"\` y el nombre exacto en \`zona_name\`.
+            - Si la zona mencionada es uno de los "Municipios de Campeche", usa \`"zona_type": "municipio"\` y el nombre del municipio en \`zona_name\`. Asegúrate de usar el nombre oficial sin acentos (ej. "Hopelchen", "Calkini").
+            - Si no se especifica una zona, asume "Todo el Estado" y trátala como predefinida.
+        3.  **Infiere la Variable:** Si el usuario dice "lluvia" o "sequía", asume "Precipitación Acumulada (mm)".
+        4.  **Calcula Fechas:** Interpreta fechas relativas ("mes pasado", "última semana", "2023") en formato "YYYY-MM-DD".
+
         **Ejemplos:**
-        - Petición de Usuario: "temperatura en zona lerma durante enero de 2023"
-        - Tu Respuesta: {"startDate": "2023-01-01", "endDate": "2023-01-31", "variable": "Temperatura del Aire (°C)", "zona": "Zona 2, Lerma"}
+        - Petición: "temperatura en zona lerma durante enero de 2023"
+        - Tu Respuesta: {"startDate": "2023-01-01", "endDate": "2023-01-31", "variable": "Temperatura del Aire (°C)", "zona_type": "predefinida", "zona_name": "Zona 2, Lerma"}
+
+        - Petición: "sequía en Hopelchén durante 2023"
+        - Tu Respuesta: {"startDate": "2023-01-01", "endDate": "2023-12-31", "variable": "Precipitación Acumulada (mm)", "zona_type": "municipio", "zona_name": "Hopelchen"}
         
-        - Petición de Usuario: "muéstrame la lluvia de la semana pasada"
-        - Tu Respuesta: {"startDate": "2025-09-21", "endDate": "2025-09-27", "variable": "Precipitación Acumulada (mm)", "zona": "Todo el Estado"}
-        
-        - Petición de Usuario: "gfsdgdg"
-        - Tu Respuesta: {"error": "No se pudo entender la petición."}
+        - Petición: "lluvia de la semana pasada"
+        - Tu Respuesta: {"startDate": "2025-10-01", "endDate": "2025-10-07", "variable": "Precipitación Acumulada (mm)", "zona_type": "predefinida", "zona_name": "Todo el Estado"}
 
         **Petición de Usuario a Procesar:**
         "${query}"

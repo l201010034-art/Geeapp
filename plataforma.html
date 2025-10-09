@@ -465,7 +465,7 @@ function setupEventListeners() {
 
         // --- Lógica de Análisis ---
 
-        async function handleAnalysis(type) {
+        window.handleAnalysis = async function(type, overrideRoi = null) {
             // Para 'general', solo permitimos una zona.
             if (type === 'general' && getActiveROIs().length > 1) {
                  updateStatsPanel('Error: Para "Cargar Datos", selecciona solo una zona o dibuja una sola área.');
@@ -479,7 +479,7 @@ function setupEventListeners() {
                 return;
             }
 
-            const activeROIs = getActiveROIs();
+            const activeROIs = overrideRoi ? [overrideRoi] : getActiveROIs();
             if (activeROIs.length === 0) {
                 updateStatsPanel('Error: Selecciona al menos una zona o dibuja un área.');
                 return;
