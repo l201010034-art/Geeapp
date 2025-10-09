@@ -328,6 +328,8 @@ async function handleTemperatureData({ roi, analysisType, startDate, endDate, ee
 }
 
 async function handleSpiData({ roi, timescale, startDate, endDate, eeRoi }) {
+     console.log('--- DEBUG: EJECUTANDO handleSpiData v3 ---');
+
     const spiCollection = getSpiCollection(eeRoi, timescale);
     const spiForPeriod = spiCollection.filterDate(startDate, endDate);
     
