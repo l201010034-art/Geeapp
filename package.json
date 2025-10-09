@@ -10,10 +10,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google/earthengine": "^0.1.391"
+    "@google/earthengine": "^0.1.391",
+    "@google/generative-ai": "^0.24.1"
   },
   "engines": {
     "node": "22.x"
   }
 }
-
