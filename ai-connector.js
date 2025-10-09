@@ -1,11 +1,127 @@
-// ai-connector.js (Versión Actualizada y Segura)
+// ai-connector.js (Versión Final, Completa y Limpia)
 
-// ¡Ya no necesitamos la clave de API aquí!
-const AI_API_URL = '/api/analyze'; // URL de nuestra nueva función segura
-
+const AI_API_URL = '/api/analyze';
 const aiPanel = document.getElementById('ai-analysis-panel');
 const aiSummaryDiv = document.getElementById('ai-summary');
+const commandForm = document.getElementById('ai-command-form');
+const commandBar = document.getElementById('ai-command-bar');
 
+//================================================================
+// FUNCIONES PRINCIPALES (Llamadas desde plataforma.html)
+//================================================================
+
+/**
+ * Llama a la IA para generar un resumen ejecutivo de los datos cargados.
+ */
+window.generateAiAnalysis = async function(data) {
+    if (!data.stats && !data.chartData) return;
+    aiPanel.classList.remove('hidden');
+    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Analizando datos...</p>';
+    const prompt = buildPrompt(data);
+    await callAndDisplayAnalysis(prompt);
+}
+
+/**
+ * Llama a la IA para generar una predicción basada en la tendencia de los datos.
+ */
+window.generatePrediction = async function(chartData) {
+    aiPanel.classList.remove('hidden');
+    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Generando pronóstico...</p>';
+    const prompt = buildPredictionPrompt(chartData);
+    await callAndDisplayAnalysis(prompt);
+}
+
+/**
+ * Llama a la IA para interpretar el mapa de riesgo de incendio.
+ */
+window.generateFireRiskAnalysis = async function(data) {
+    aiPanel.classList.remove('hidden');
+    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Interpretando mapa de riesgo...</p>';
+    const prompt = buildFireRiskPrompt(data);
+    await callAndDisplayAnalysis(prompt);
+}
+
+//================================================================
+// LÓGICA DE LA INTERFAZ CONVERSACIONAL
+//================================================================
+
+commandForm.addEventListener('submit', function(event) {
+    event.preventDefault(); 
+    event.stopPropagation();
+    const userQuery = commandBar.value;
+    if (userQuery) {
+        commandBar.disabled = true;
+        commandBar.placeholder = "Procesando...";
+        processConversationalQuery(userQuery);
+    }
+});
+
+async function processConversationalQuery(query) {
+    const prompt = buildConversationalPrompt(query);
+    try {
+        const response = await fetch(AI_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt }),
+        });
+        const result = await response.json();
+        const jsonMatch = result.analysisText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("La IA no devolvió un JSON válido.");
+        const params = JSON.parse(jsonMatch[0]);
+        if (params.error) throw new Error(params.error);
+        
+        document.getElementById('startDate').value = params.startDate;
+        document.getElementById('endDate').value = params.endDate;
+        document.getElementById('variableSelector').value = params.variable;
+
+        window.clearZoneCheckboxes();
+        if (window.drawnItems) window.drawnItems.clearLayers();
+
+        if (params.zona_type === 'predefinida') {
+            window.zonaCheckboxes[params.zona_name].checked = true;
+            window.handleZoneSelection(params.zona_name);
+            window.handleAnalysis('general');
+        } else if (params.zona_type === 'municipio') {
+            const municipioRoi = { name: params.zona_name, zona_type: 'municipio', zona_name: params.zona_name };
+            window.handleAnalysis('general', municipioRoi);
+        }
+    } catch (error) {
+        console.error("Error al procesar el comando de IA:", error);
+        commandBar.value = "Error. Inténtalo de nuevo.";
+    } finally {
+        commandBar.disabled = false;
+        commandBar.placeholder = "Ej: Lluvia en Chiná el mes pasado...";
+        if (window.innerWidth < 768) { commandBar.blur(); }
+    }
+}
+
+
+//================================================================
+// FUNCIONES DE AYUDA (Helpers)
+//================================================================
+
+/**
+ * Función centralizada para llamar a la API de análisis y mostrar el resultado.
+ */
+async function callAndDisplayAnalysis(prompt) {
+    try {
+        const response = await fetch(AI_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt }),
+        });
+        if (!response.ok) throw new Error(`Error en la API: ${response.statusText}`);
+        const result = await response.json();
+        aiSummaryDiv.innerHTML = markdownToHtml(result.analysisText);
+    } catch (error) {
+        console.error("Error al generar análisis con IA:", error);
+        aiSummaryDiv.innerHTML = `<p class="text-red-400">Ocurrió un error: ${error.message}</p>`;
+    }
+}
+
+/**
+ * Convierte una cadena de texto con Markdown simple a HTML.
+ */
 function markdownToHtml(text) {
     if (!text) return '';
     return text
@@ -16,40 +132,14 @@ function markdownToHtml(text) {
         .replace(/<p>\*/g, '<ul>*')
         .replace(/\* (.*?)(<br>|<\/p>)/g, '<li>$1</li>')
         .replace(/<\/li><\/ul><\/p>/g, '</li></ul>');
-    }
-
-window.generateAiAnalysis = async function(data) {
-    if (!data.stats && !data.chartData) return;
-    aiPanel.classList.remove('hidden');
-    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Analizando datos...</p>';
-    const prompt = buildPrompt(data);
-    try {
-        const response = await fetch(AI_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt }),
-        });
-        if (!response.ok) throw new Error(`Error en la API: ${response.statusText}`);
-        const result = await response.json();
-        // Corregido para que también use la función
-        aiSummaryDiv.innerHTML = markdownToHtml(result.analysisText);
-    } catch (error) {
-        console.error("Error al generar análisis con IA:", error);
-        aiSummaryDiv.innerHTML = '<p class="text-red-400">Ocurrió un error al contactar al servicio de IA.</p>';
-    }
 }
 
 /**
- * Construye un prompt detallado y contextualizado para Gemini.
- * @param {object} data - Los datos de la plataforma.
- * @returns {string} El prompt listo para ser enviado.
+ * Construye el prompt para el resumen ejecutivo (Fase 1).
  */
 function buildPrompt(data) {
     const { stats, chartData, chartOptions, variable, roi, startDate, endDate } = data;
-
-    // Simplificamos los datos del gráfico para no exceder el límite de tokens
     const chartSample = chartData ? `Los primeros 5 puntos de datos son: ${JSON.stringify(chartData.slice(0, 6))}` : "No hay datos de serie temporal disponibles.";
-
     return `
         Eres un experto en climatología y análisis de datos geoespaciales, especializado en el estado de Campeche, México.
         Tu tarea es actuar como un asesor para una secretaría de gobierno (ej. Protección Civil, Desarrollo Agropecuario).
@@ -80,100 +170,12 @@ function buildPrompt(data) {
     `;
 }
 
-// =================================================================
-// === PASO 2: AÑADE ESTA NUEVA LÓGICA CONVERSACIONAL          ===
-// =================================================================
-
-const commandForm = document.getElementById('ai-command-form');
-const commandBar = document.getElementById('ai-command-bar');
-
-commandForm.addEventListener('submit', function(event) {
-    // 1. Evita que la página se recargue (comportamiento por defecto del formulario)
-    event.preventDefault(); 
-    
-    // 2. Evita que el evento "se propague" y cierre el panel del menú
-    event.stopPropagation();
-
-    const userQuery = commandBar.value;
-    if (userQuery) {
-        commandBar.disabled = true;
-        commandBar.placeholder = "Procesando...";
-        processConversationalQuery(userQuery);
-    }
-});
 /**
- * Procesa la petición en lenguaje natural del usuario.
- * @param {string} query - Lo que el usuario escribió.
- */
-// Archivo: ai-connector.js
-
-async function processConversationalQuery(query) {
-    const prompt = buildConversationalPrompt(query);
-    try {
-        const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt }),
-        });
-        const result = await response.json();
-        const jsonMatch = result.analysisText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("La IA no devolvió un JSON válido.");
-        const params = JSON.parse(jsonMatch[0]);
-        if (params.error) throw new Error(params.error);
-        
-        // Actualizamos la UI con los parámetros de fecha y variable
-        document.getElementById('startDate').value = params.startDate;
-        document.getElementById('endDate').value = params.endDate;
-        document.getElementById('variableSelector').value = params.variable;
-
-        // Limpiamos selecciones anteriores
-        window.clearZoneCheckboxes();
-        if (window.drawnItems) window.drawnItems.clearLayers();
-
-        // =================================================================
-        // === LÓGICA FINAL: Decidimos qué hacer según el tipo de zona ===
-        // =================================================================
-        if (params.zona_type === 'predefinida') {
-            // Caso antiguo: Marcamos la casilla y dejamos que el sistema existente funcione
-            window.zonaCheckboxes[params.zona_name].checked = true;
-            window.handleZoneSelection(params.zona_name);
-            window.handleAnalysis('general'); // Llamamos directamente al análisis
-        } else if (params.zona_type === 'municipio') {
-            // Caso nuevo: Creamos un objeto ROI especial y lo pasamos directamente
-            const municipioRoi = {
-                name: params.zona_name, // ej. "Hopelchen"
-                zona_type: 'municipio',
-                zona_name: params.zona_name
-            };
-            window.handleAnalysis('general', municipioRoi); // Llamamos al análisis con el ROI especial
-        }
-        // =================================================================
-
-    } catch (error) {
-        console.error("Error al procesar el comando de IA:", error);
-        commandBar.value = "Error. Inténtalo de nuevo.";
-    } finally {
-        commandBar.disabled = false;
-        commandBar.placeholder = "Ej: Lluvia en Chiná el mes pasado...";
-        if (window.innerWidth < 768) { // Opcional: Oculta el teclado en móvil
-            commandBar.blur();
-        }
-    }
-}
-// ... (código del paso 2) ...
-
-// Archivo: ai-connector.js
-
-/**
- * Crea un prompt para que la IA extraiga parámetros de una petición de usuario,
- * diferenciando entre zonas predefinidas y municipios.
- * @param {string} query - Lo que el usuario escribió.
- * @returns {string} El prompt listo para ser enviado.
+ * Construye el prompt para la interfaz conversacional (Fase 2).
  */
 function buildConversationalPrompt(query) {
     const today = new Date().toISOString().split('T')[0];
     const municipios = "Calakmul, Calkiní, Campeche, Candelaria, Carmen, Champotón, Dzitbalché, Escárcega, Hecelchakán, Hopelchén, Palizada, Seybaplaya, Tenabo";
-
     return `
         Tu tarea es actuar como un traductor de lenguaje natural a un formato JSON para una plataforma de monitoreo climático en Campeche, México.
         Analiza la petición del usuario y extrae los siguientes parámetros: startDate, endDate, variable, zona_type, y zona_name.
@@ -201,7 +203,7 @@ function buildConversationalPrompt(query) {
         - Tu Respuesta: {"startDate": "2023-01-01", "endDate": "2023-12-31", "variable": "Precipitación Acumulada (mm)", "zona_type": "municipio", "zona_name": "Hopelchen"}
         
         - Petición: "lluvia de la semana pasada"
-        - Tu Respuesta: {"startDate": "2025-10-01", "endDate": "2025-10-07", "variable": "Precipitación Acumulada (mm)", "zona_type": "predefinida", "zona_name": "Todo el Estado"}
+        - Tu Respuesta: {"startDate": "${new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0]}", "endDate": "${new Date().toISOString().split('T')[0]}", "variable": "Precipitación Acumulada (mm)", "zona_type": "predefinida", "zona_name": "Todo el Estado"}
 
         **Petición de Usuario a Procesar:**
         "${query}"
@@ -210,47 +212,12 @@ function buildConversationalPrompt(query) {
     `;
 }
 
-// =================================================================
-// === PASO 3: AÑADE ESTA NUEVA LÓGICA DE PREDICCIÓN          ===
-// =================================================================
-
 /**
- * Llama a la IA para generar una predicción basada en datos históricos.
- * @param {Array} chartData - Los datos de la serie temporal del gráfico.
- */
-window.generatePrediction = async function(chartData) {
-    aiPanel.classList.remove('hidden');
-    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Analizando tendencias y generando pronóstico...</p>';
-
-    const prompt = buildPredictionPrompt(chartData);
-
-    try {
-        const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt }),
-        });
-        const result = await response.json();
-        const predictionText = result.analysisText;
-
-        aiSummaryDiv.innerHTML = markdownToHtml(predictionText); // Reutilizamos la función de formateo
-
-    } catch (error) {
-        console.error("Error al generar la predicción:", error);
-        aiSummaryDiv.innerHTML = '<p class="text-red-400">Ocurrió un error al generar el pronóstico.</p>';
-    }
-}
-
-/**
- * Construye un prompt para que la IA actúe como un analista predictivo.
- * @param {Array} chartData - Los datos de la serie temporal.
- * @returns {string} El prompt listo para ser enviado.
+ * Construye el prompt para la predicción de tendencias (Fase 3).
  */
 function buildPredictionPrompt(chartData) {
-    const variableName = chartData[0][1]; // ej: "TAM" o "Precipitacion"
-    // Tomamos una muestra de los datos más recientes para no exceder el límite de tokens
-    const recentDataSample = JSON.stringify(chartData.slice(-15)); // Últimos 15 puntos de datos
-
+    const variableName = chartData[0][1];
+    const recentDataSample = JSON.stringify(chartData.slice(-15));
     return `
         Eres un climatólogo experto en análisis de datos y modelado de tendencias para el estado de Campeche.
         Tu tarea es analizar la siguiente serie temporal de datos climáticos y generar un pronóstico cualitativo a corto plazo (próximas 2-4 semanas).
@@ -272,40 +239,11 @@ function buildPredictionPrompt(chartData) {
     `;
 }
 
-//================================================================
-// LÓGICA ESPECIALIZADA: ANÁLISIS DEL MAPA DE RIESGO DE INCENDIO
-//================================================================
-window.generateFireRiskAnalysis = async function(data) {
-    aiPanel.classList.remove('hidden');
-    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Interpretando mapa de riesgo de incendio...</p>';
-
-    const prompt = buildFireRiskPrompt(data); // Usamos un constructor de prompt específico
-
-    try {
-        const response = await fetch(AI_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: prompt }),
-        });
-        const result = await response.json();
-        const analysisText = result.analysisText;
-
-        aiSummaryDiv.innerHTML = markdownToHtml(analysisText);
-
-    } catch (error) {
-        console.error("Error al generar el análisis de riesgo de incendio:", error);
-        aiSummaryDiv.innerHTML = '<p class="text-red-400">Ocurrió un error al interpretar el mapa.</p>';
-    }
-}
-
 /**
- * Construye un prompt para que la IA interprete el mapa de riesgo de incendio.
- * @param {object} data - Contiene la zona y el rango de fechas.
- * @returns {string} El prompt listo para ser enviado.
+ * Construye el prompt para interpretar el mapa de riesgo de incendio.
  */
 function buildFireRiskPrompt(data) {
     const { roi, startDate, endDate } = data;
-
     return `
         Eres un experto en protección civil y analista de riesgos para el gobierno de Campeche.
         Tu tarea es generar un resumen ejecutivo interpretando un mapa de "Riesgo de Incendio Promedio" que se ha generado para el periodo del **${startDate}** al **${endDate}** en la zona de **${roi}**.
@@ -330,6 +268,3 @@ function buildFireRiskPrompt(data) {
         Usa formato Markdown. Sé claro, conciso y enfócate en la acción.
     `;
 }
-
-// Asegúrate de añadir esta nueva función al final de tu archivo,
-// junto a los otros constructores de prompts.
