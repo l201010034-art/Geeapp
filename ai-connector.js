@@ -41,6 +41,7 @@ window.generateFireRiskAnalysis = async function(data) {
     await callAndDisplayAnalysis(prompt);
 }
 
+window.handleLabCodeGeneration = handleLabCodeGeneration;
 //================================================================
 // LÓGICA DE LA INTERFAZ CONVERSACIONAL
 //================================================================
@@ -300,7 +301,7 @@ function buildGeeLabPrompt(userRequest) {
 /**
  * Maneja la petición de generación de código del Laboratorio de IA.
  */
-window.handleLabCodeGeneration = handleLabCodeGeneration; {
+async function handleLabCodeGeneration() {
     const promptInput = document.getElementById('lab-prompt-input');
     const resultDisplay = document.getElementById('lab-result-display');
     const generateButton = document.getElementById('lab-generate-button');
