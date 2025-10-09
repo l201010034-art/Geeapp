@@ -7,6 +7,8 @@ import vm from 'vm';
 // --- Diccionario de Auto-Correcciones (Nivel 2) ---
 const commonFixes = {
     "'USDOS/LSIB_simple/2017'": "'USDOS/LSIB/2017'",
+    "'MODIS/061/MCD14ML'": "'VIIRS/I-1/VNP14IMGML'",
+
 };
 
 function autoCorrectCode(code) {
@@ -90,7 +92,7 @@ export default async function handler(req, res) {
     try {
         const { prompt, codeToExecute } = req.body;
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
         if (prompt) {
             // --- MODO 1: GENERAR CÓDIGO ---
@@ -109,7 +111,6 @@ export default async function handler(req, res) {
                 try {
                     console.log(`Ejecutando código (Intento ${attempt})...`);
                     const { mapId, visParams } = await executeGeeCode(codeToRun);
-                    // ¡ÉXITO!
                     return res.status(200).json({ mapId, visParams, code: codeToRun });
                 
                 } catch (error) {
@@ -117,11 +118,35 @@ export default async function handler(req, res) {
                     lastError = error;
 
                     if (attempt === MAX_ATTEMPTS) {
-                        throw lastError; // Nos rendimos
+                        throw lastError;
                     }
 
                     console.log("Pidiendo a la IA una corrección...");
-                    const debugPrompt = `Eres un experto depurador de código de Google Earth Engine. El siguiente script falló. **Código Fallido:**\n\`\`\`javascript\n${codeToRun}\n\`\`\`\n**Error Producido:**\n"${error.message}"\n\n**Instrucciones:** Analiza el error y corrige el código. Responde solo con el bloque de código JavaScript corregido y completo.`;
+                    
+                    // ▼▼▼ ESTE ES EL PROMPT MEJORADO ▼▼▼
+                    const debugPrompt = `
+                        Eres un experto depurador de código de Google Earth Engine. El siguiente script falló.
+
+                        **Código Fallido:**
+                        \`\`\`javascript
+                        ${codeToRun}
+                        \`\`\`
+                        
+                        **Error Producido:**
+                        "${error.message}"
+
+                        ---
+                        **Documentación de la Función que Falló (del error):**
+                        ${error.message.includes('Args:') ? error.message.split('Args:')[1].trim() : 'No disponible.'}
+                        ---
+
+                        **Instrucciones:**
+                        1.  Analiza el **Error Producido**.
+                        2.  Compara los argumentos usados en el **Código Fallido** con la **Documentación de la Función**.
+                        3.  Corrige el código para que use los argumentos correctos.
+                        4.  Responde solo con el bloque de código JavaScript corregido y completo.
+                    `;
+                    // ▲▲▲ FIN DEL PROMPT MEJORADO ▲▲▲
                     
                     const result = await model.generateContent(debugPrompt);
                     codeToRun = result.response.text().replace(/^```(javascript)?\s*/, '').replace(/```\s*$/, '');
@@ -135,4 +160,5 @@ export default async function handler(req, res) {
         console.error('Error final en la API del Lab:', error.message);
         res.status(500).json({ error: 'Error Interno del Servidor', details: error.message });
     }
+
 }
