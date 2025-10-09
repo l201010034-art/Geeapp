@@ -268,3 +268,81 @@ function buildFireRiskPrompt(data) {
         Usa formato Markdown. Sé claro, conciso y enfócate en la acción.
     `;
 }
+// Archivo: ai-connector.js (añade esta función al final)
+
+/**
+ * Construye un prompt para que la IA actúe como un desarrollador de GEE.
+ * @param {string} userRequest - La descripción del análisis que pide el usuario.
+ * @returns {string} El prompt listo para ser enviado.
+ */
+function buildGeeLabPrompt(userRequest) {
+    return `
+        Eres un desarrollador senior experto en la API JavaScript de Google Earth Engine (GEE).
+        Tu única tarea es traducir la petición del usuario a un script de GEE funcional y bien estructurado.
+
+        **Reglas Estrictas:**
+        1.  **Responde ÚNICAMENTE con el bloque de código JavaScript.** No incluyas explicaciones, saludos, ni bloques de código Markdown (\`\`\`javascript o \`\`\`). Tu respuesta debe empezar con \`var \` o \`//\` y terminar con \`}\`.
+        2.  El código debe ser completo y autoejecutable en el Code Editor de GEE.
+        3.  Siempre define una Región de Interés (ROI) al principio del script. Si el usuario menciona un municipio de Campeche (ej. "Calakmul", "Carmen"), búscalo en la colección \`FAO/GAUL/2015/level2\`.
+        4.  Añade comentarios breves en el código para explicar los pasos clave (ej. // Filtrar colección, // Calcular índice).
+        5.  Siempre termina el script con las líneas \`Map.centerObject(roi, 10);\` y \`Map.addLayer(...);\` para asegurar que el resultado sea visible en el mapa.
+        6.  Usa colecciones de datos modernas y de alta resolución cuando sea posible (ej. Sentinel-2 'COPERNICUS/S2_SR' para NDVI, Landsat 9 'LANDSAT/LC09/C02/T1_L2' para otros análisis visuales).
+        7.  Aplica siempre un filtro de nubosidad razonable (ej. \`.filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))\`).
+
+        **Petición del Usuario:**
+        "${userRequest}"
+
+        **Tu Respuesta (solo código):**
+    `;
+}
+// Archivo: ai-connector.js (añade esta función)
+
+/**
+ * Maneja la petición de generación de código del Laboratorio de IA.
+ */
+window.handleLabCodeGeneration = handleLabCodeGeneration; {
+    const promptInput = document.getElementById('lab-prompt-input');
+    const resultDisplay = document.getElementById('lab-result-display');
+    const generateButton = document.getElementById('lab-generate-button');
+
+    const userRequest = promptInput.value;
+    if (!userRequest) {
+        alert("Por favor, describe el análisis que deseas generar.");
+        return;
+    }
+
+    // Desactivamos el botón y mostramos un estado de carga
+    generateButton.disabled = true;
+    generateButton.textContent = "Generando...";
+    resultDisplay.textContent = "// Generando código, por favor espera...";
+
+    // Construimos el prompt especializado
+    const prompt = buildGeeLabPrompt(userRequest);
+
+    try {
+        // Llamamos a nuestra NUEVA API
+        const response = await fetch('/api/gee-lab', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: prompt }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Error en el servidor del laboratorio.");
+        }
+
+        const result = await response.json();
+        
+        // Mostramos el código generado en el área de resultados
+        resultDisplay.textContent = result.generatedCode;
+
+    } catch (error) {
+        console.error("Error en la generación de código del Lab:", error);
+        resultDisplay.textContent = `// Ocurrió un error:\n// ${error.message}`;
+    } finally {
+        // Reactivamos el botón
+        generateButton.disabled = false;
+        generateButton.textContent = "Generar Código";
+    }
+}
