@@ -747,6 +747,7 @@ function setupEventListeners() {
             document.getElementById('opacity-slider-container').style.display = 'block';
             document.getElementById('opacity-slider').value = 1; // Reseteamos el valor a 100%
         }
+        window.addGeeLayer = addGeeLayer;
         
         function drawChart(data, options) {
             const chartPanel = document.getElementById('chart-panel');
