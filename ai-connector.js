@@ -296,6 +296,7 @@ function buildGeeLabPrompt(userRequest) {
         7.  **Verificación de Nulos:** Después de buscar una ROI, SIEMPRE verifica que no sea nula antes de usarla y usa console.log para mostrar un error claro.
         8.  **Usa Acentos:** Al filtrar por nombres de municipios en la columna 'NOMGEO', **SIEMPRE usa el nombre exacto con acentos**, tal como está en los datos oficiales de INEGI (ej. 'Champotón', 'Hecelchakán').
         9.  **No usar 'return':** No incluyas una declaración \`return\` en el nivel principal del script.
+        10. Siempre incluye una leyenda que explique los colores usados en el mapa.
 
         // --- REGLA FINAL CORREGIDA ---
         10. **MUY IMPORTANTE (Orden de finalización):** Al final del script, debes hacer tres cosas en este orden exacto:
