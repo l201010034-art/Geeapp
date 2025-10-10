@@ -157,7 +157,17 @@ async function handleLabCodeExecution() {
     const previewText = document.getElementById('lab-preview-text');
 
 // LÍNEA NUEVA - CORREGIDA
-    if (!code || code.trim().startsWith('//')) { alert("No hay código válido para ejecutar. Asegúrate de generar el código primero y de que no haya errores."); return; }
+// BLOQUE NUEVO - CORRECCIÓN DEFINITIVA
+    const trimmedCode = code.trim();
+    const isPlaceholderOrError = 
+        trimmedCode.startsWith("// El código generado por la IA aparecerá aquí.") ||
+        trimmedCode.startsWith("// Generando código, por favor espera...") ||
+        trimmedCode.startsWith("// Ocurrió un error:");
+
+    if (!code || isPlaceholderOrError) {
+        alert("No hay código válido para ejecutar. Asegúrate de que la generación de código fue exitosa.");
+        return;
+    }    
     executeButton.classList.add('hidden');
     previewOverlay.classList.remove('hidden');
     previewText.textContent = "Ejecutando en GEE y preparando previsualización...";
