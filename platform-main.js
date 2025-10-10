@@ -295,7 +295,7 @@ function downloadCSV() {
 function downloadChart() {
     if (currentChart) {
         const link = document.createElement('a');
-        link.href = currentChart.getImageURI();
+        link.href = currentChart.getImageURI(); 
         link.download = 'grafico_climatico.png';
         link.click();
     }
@@ -402,10 +402,22 @@ function addGeeLayer(url, varName) {
     document.getElementById('opacity-slider').value = 1;
 }
 
+// UBICACIÓN: platform-main.js
+
 function updateChartAndData(data, options) {
-    console.log("GUARDANDO DATOS:", data);
-    currentChartData = data;
+    console.log("GUARDANDO DATOS (antes de la copia):", data);
+
+    // --- LA CORRECCIÓN CLAVE Y DEFINITIVA ---
+    // Creamos una copia profunda de los datos solo para la descarga.
+    // Esto lo aísla de cualquier modificación inesperada por otras funciones o librerías.
+    currentChartData = data.map(row => [...row]);
+
+    console.log("DATOS AISLADOS PARA DESCARGA:", currentChartData);
+
+    // La función de dibujo usa los datos originales, como siempre
     drawChart(data, options);
+    
+    // Habilita los botones
     document.getElementById('downloadCsvButton').disabled = false;
     document.getElementById('downloadChartButton').disabled = false;
     document.getElementById('predictButton').disabled = false;
