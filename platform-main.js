@@ -410,3 +410,5 @@ function drawChart(data, options) {
     const defaultOptions = { backgroundColor: '#a04040', titleTextStyle: { color: '#FFFFFF' }, legend: { textStyle: { color: '#FFFFFF' }, position: 'top' }, hAxis: { textStyle: { color: '#FFFFFF' }, titleTextStyle: { color: '#FFFFFF' } }, vAxis: { textStyle: { color: '#FFFFFF' }, titleTextStyle: { color: '#FFFFFF' } }, chartArea: { width: '85%', height: '75%' } };
     currentChart.draw(dataTable, {...defaultOptions, ...options});
 }
+window.updateStatsPanel = updateStatsPanel;
+window.drawChart = drawChart;
