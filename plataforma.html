@@ -11,19 +11,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
-                /* Archivo: plataforma.html (dentro de <style>) */
-
-        /* ... (después de tus otros estilos) ... */
-
-        #lab-modal pre {
-            margin: 0;
-        }
-        #lab-modal code {
-            display: block;
-            white-space: pre-wrap;
-            padding: 1rem;
-            color: #c5c8c6; /* Color de texto claro para código */
-        }
         :root {
             --maroon-color: #800000;
             --lighter-maroon: #a04040;
@@ -66,6 +53,10 @@
         .control-panel-hidden { transform: translateX(-100%); }
         summary { cursor: pointer; font-weight: 600; padding: 0.75rem; background-color: rgba(0,0,0,0.1); border-radius: 5px; }
         details > div { padding: 0.75rem; background-color: rgba(0,0,0,0.2); border-radius: 0 0 5px 5px; }
+        
+        /* Estilos para el Laboratorio de IA */
+        #lab-modal pre { margin: 0; }
+        #lab-modal code { display: block; white-space: pre-wrap; padding: 1rem; color: #c5c8c6; }
     </style>
 </head>
 <body class="bg-gray-800 text-white flex flex-col">
@@ -74,27 +65,27 @@
 
     <nav class="bg-black bg-opacity-70 text-white p-3 flex justify-between items-center z-[1100] w-full flex-shrink-0">
         <div class="flex items-center space-x-4">
-            <button id="menu-toggle" class="md:hidden p-2">
+            <button id="menu-toggle" class="md:hidden p-2" aria-label="Abrir menú de controles">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
             </button>
-            <h1 class="text-lg font-bold">Plataforma de Monitoreo</h1>
+            <h1 class="text-lg font-bold">Plataforma de Monitoreo Climático</h1>
         </div>
         <a href="index.html" class="bg-transparent border border-white hover:bg-white hover:text-black py-2 px-4 rounded transition text-sm">Página Principal</a>
     </nav>
     
     <div class="flex flex-1 overflow-hidden relative">
-        <aside id="control-panel" class="absolute md:relative z-[1050] top-0 left-0 h-full w-80 md:w-96 bg-[var(--maroon-color)] p-4 overflow-y-auto flex-col space-y-4 control-panel-hidden md:transform-none pb-24 md:pb-4">
+        <aside id="control-panel" class="absolute md:relative z-[1050] top-0 left-0 h-full w-80 md:w-96 bg-[var(--maroon-color)] p-4 overflow-y-auto flex-col space-y-4 control-panel-hidden md:transform-none pb-24 md:pb-4" role="navigation" aria-label="Panel de controles">
             <form id="ai-command-form" class="p-2 bg-black bg-opacity-20 rounded-lg">
                 <label for="ai-command-bar" class="text-sm font-bold text-gray-300 block mb-1">Comando de IA</label>
-                <input type="text" id="ai-command-bar" placeholder="Ej: Lluvia en Chiná el mes pasado..." class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500 placeholder-gray-400">
+                <input type="text" id="ai-command-bar" placeholder="Ej: Lluvia en Chiná el mes pasado..." class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500 placeholder-gray-400 focus:ring-2 focus:ring-[var(--accent-color)]">
             </form>
             <details open><summary>1. Rango de Fechas</summary><div>
-                <input type="date" id="startDate" value="2023-01-01" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500">
-                <input type="date" id="endDate" value="2023-12-31" class="w-full mt-2 p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500">
+                <input type="date" id="startDate" value="2023-01-01" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500" aria-label="Fecha de inicio">
+                <input type="date" id="endDate" value="2023-12-31" class="w-full mt-2 p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500" aria-label="Fecha de fin">
             </div></details>
             <details open><summary>2. Zona de Interés</summary><div id="zonaSelectorPanel" class="space-y-2"></div></details>
             <details open><summary>3. Variable Climática</summary><div>
-                <select id="variableSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500"></select>
+                <select id="variableSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500" aria-label="Seleccionar variable climática"></select>
             </div></details>
             <div id="precipAnalysisPanel" class="hidden"><details><summary>Análisis de Precipitación</summary><div class="space-y-2">
                 <select id="precipAnalysisSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="accumulated">Acumulado</option><option value="intensity">Intensidad</option><option value="frequency">Frecuencia (>20mm)</option></select>
@@ -105,30 +96,33 @@
                 <select id="tempAnalysisSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="heatwave">Olas de Calor</option><option value="frost">Heladas</option></select>
                 <button id="tempAnalysisButton" class="action-button w-full p-2 font-bold bg-[var(--accent-color)] text-black rounded">Ejecutar</button>
             </div></details></div>
-            <details><summary>4. Tipo de Gráfico</summary><div><select id="chartTypeSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500"><option value="LineChart">Línea</option><option value="ColumnChart">Barras</option><option value="ScatterChart">Dispersión</option><option value="AreaChart">Área</option></select></div></details>
+            <details><summary>4. Tipo de Gráfico</summary><div><select id="chartTypeSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500" aria-label="Seleccionar tipo de gráfico"><option value="LineChart">Línea</option><option value="ColumnChart">Barras</option><option value="ScatterChart">Dispersión</option><option value="AreaChart">Área</option></select></div></details>
             <details><summary>5. Acciones</summary><div class="grid grid-cols-2 gap-2">
-                <button id="loadDataButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded">Cargar Datos</button>
-                <button id="compareButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded">📊 Comparar</button>
-                <button id="predictButton" class="action-button p-2 font-bold bg-[#f0ad4e] text-black rounded col-span-2" disabled>🔮 Predecir Tendencia</button>
+                <button id="loadDataButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded" title="Cargar datos para una sola zona">Cargar Datos</button>
+                <button id="compareButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded" title="Comparar datos entre múltiples zonas">📊 Comparar</button>
+                <button id="predictButton" class="action-button p-2 font-bold bg-[#f0ad4e] text-black rounded col-span-2 disabled:opacity-50" disabled title="Generar predicción a corto plazo (requiere datos cargados)">🔮 Predecir Tendencia</button>
             </div></details>
             <details><summary>6. Productos Específicos</summary><div class="space-y-2">
                 <select id="spiTimescaleSelector" class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white"><option value="3">SPI 3 Meses</option><option value="6">SPI 6 Meses</option><option value="12">SPI 12 Meses</option></select>
                 <div class="grid grid-cols-2 gap-2">
-                    <button id="calculateSpiButton" class="action-button p-2 font-bold bg-[var(--accent-color)] text-black rounded">Calcular SPI</button>
-                    <button id="fireRiskButton" class="action-button p-2 font-bold bg-[#c9302c] text-white rounded">🔥 Riesgo Incendio</button>
+                    <button id="calculateSpiButton" class="action-button p-2 font-bold bg-[var(--accent-color)] text-black rounded" title="Calcular Índice de Precipitación Estandarizado">Calcular SPI</button>
+                    <button id="fireRiskButton" class="action-button p-2 font-bold bg-[#c9302c] text-white rounded" title="Generar mapa de riesgo de incendio promedio">🔥 Riesgo Incendio</button>
                 </div>
             </div></details>
             <details><summary>7. Herramientas</summary><div class="space-y-2">
                 <div class="grid grid-cols-2 gap-2">
-                     <button id="clearDrawingButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded">Limpiar Dibujo</button>
-                     <button id="resetButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded">Reiniciar</button>
+                     <button id="clearDrawingButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded" title="Eliminar todas las áreas dibujadas en el mapa">Limpiar Dibujo</button>
+                     <button id="resetButton" class="action-button p-2 font-bold bg-[var(--lighter-maroon)] rounded" title="Restaurar la plataforma a su estado inicial">Reiniciar</button>
                 </div>
-                <button id="openLabButton" class="w-full mt-2 p-2 font-bold bg-[var(--accent-color)] text-black rounded">🧪 Abrir Laboratorio de IA</button>
-                <button id="downloadCsvButton" class="w-full mt-2 p-2 font-bold bg-green-600 text-white rounded disabled:bg-gray-500" disabled>Descargar CSV</button>
+                <button id="openLabButton" class="w-full mt-2 p-2 font-bold bg-[var(--accent-color)] text-black rounded" title="Abrir laboratorio para análisis personalizados con IA">🧪 Abrir Laboratorio de IA</button>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <button id="downloadCsvButton" class="w-full p-2 font-bold bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled title="Descargar datos del gráfico y estadísticas como CSV">Descargar Reporte</button>
+                    <button id="downloadChartButton" class="w-full p-2 font-bold bg-blue-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled title="Descargar el gráfico actual como imagen PNG">Descargar Gráfico</button>
+                </div>
             </div></details>
         </aside>
         
-        <main id="main-content" class="flex-1 flex flex-col md:flex-row">
+        <main id="main-content" class="flex-1 flex flex-col md:flex-row" role="main">
             <div id="map" class="w-full h-1/2 md:h-full md:flex-1 flex-shrink-0 relative">
                 <div id="opacity-slider-container" class="leaflet-control" style="display: none;">
                     <label for="opacity-slider">Opacidad de Capa</label>
@@ -138,14 +132,22 @@
             <div class="w-full h-1/2 md:h-full md:w-96 bg-gray-900 p-4 border-t md:border-t-0 md:border-l border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">
                 <h2 class="text-lg font-bold mb-2 text-center flex-shrink-0">Análisis de Datos</h2>
                 <div class="space-y-4">
-                    <div id="stats-panel" class="bg-gray-800 p-3 rounded text-sm whitespace-pre-wrap overflow-y-auto flex-shrink-0">Selecciona opciones y carga datos.</div>
+                    <div id="stats-panel" class="bg-gray-800 p-3 rounded text-sm whitespace-pre-wrap overflow-y-auto flex-shrink-0" aria-live="polite">Selecciona opciones y carga datos.</div>
+                    
                     <div id="ai-analysis-panel" class="hidden bg-gray-800 p-3 rounded border border-[#f0ad4e] max-h-60 overflow-y-auto">
-                        <h3 class="text-md font-bold text-[#f0ad4e] mb-2 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
-                            Análisis con IA
-                        </h3>
-                        <div id="ai-summary" class="text-sm text-gray-300"><p>Esperando análisis...</p></div>
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-md font-bold text-[#f0ad4e] flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                Análisis con IA
+                            </h3>
+                            <div id="ai-actions-container" class="hidden space-x-2">
+                                <button id="copy-ai-button" title="Copiar análisis" class="p-1 hover:bg-gray-700 rounded"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                                <button id="download-ai-button" title="Descargar análisis" class="p-1 hover:bg-gray-700 rounded"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></button>
+                            </div>
+                        </div>
+                        <div id="ai-summary" class="text-sm text-gray-300" aria-live="polite"><p>Esperando análisis...</p></div>
                     </div>
+
                     <div id="chart-panel" class="bg-gray-800 p-2 rounded flex items-center justify-center min-h-[250px]">
                         <span class="text-gray-400">El gráfico aparecerá aquí</span>
                     </div>
@@ -153,691 +155,63 @@
             </div>
         </main>
     </div>
+
+    <div id="lab-overlay" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[3000]">
+        <div id="lab-modal" class="bg-gray-800 rounded-lg shadow-xl p-6 w-11/12 max-w-4xl h-5/6 flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-[var(--accent-color)]">Laboratorio de IA 🧪</h2>
+                <button id="lab-close-button" class="text-3xl font-bold hover:text-white" aria-label="Cerrar laboratorio">&times;</button>
+            </div>
     
-    <script type="module">
-        // --- Configuración Inicial ---
-        const varParams = {
-            'Temperatura del Aire (°C)': { min: 20, max: 40, palette: ['blue', 'cyan', 'yellow', 'red'], bandName: 'TAM', unit: '°C', dataset: 'ERA5' },
-            'Humedad Relativa (%)': { min: 50, max: 100, palette: ['lightyellow', 'green', 'darkblue'], bandName: 'HR', unit: '%', dataset: 'ERA5' },
-            'Radiación Solar (W/m²)': { min: 0, max: 1000, palette: ['lightgray', 'orange', 'red'], bandName: 'Radiacion_Solar', unit: 'W/m²', dataset: 'ERA5' },
-            'Velocidad del Viento (m/s)': { min: 0, max: 10, palette: ['white', 'lightblue', 'blue'], bandName: 'wind_speed', unit: 'm/s', dataset: 'ERA5' },
-            'Temp. Superficial (LST °C)': { min: 20, max: 50, palette: ['navy', 'blue', 'cyan', 'yellow', 'red'], bandName: 'LST', unit: '°C', dataset: 'MODIS' },
-            'Precipitación Acumulada (mm)': { min: 0, max: 200, palette: ['#ffffcc', '#a1dab4', '#41b6c4', '#225ea8'], bandName: 'Precipitacion', unit: 'mm', dataset: 'CHIRPS' },
-            'Evapotranspiración (mm/8 días)': { min: 0, max: 40, palette: ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'], bandName: 'ET', unit: 'mm/8d', dataset: 'MODIS_ET'},
-            'Evapotranspiración Potencial (mm/8 días)': { min: 0, max: 60, palette: ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'], bandName: 'PET', unit: 'mm/8d', dataset: 'MODIS_ET'},
-            'Días Grado de Crecimiento (°C día)': { min: 0, max: 20, palette: ['#edf8b1', '#7fcdbb', '#2c7fb8'], bandName: 'GDD', unit: '°C día', dataset: 'ERA5_DAILY'}
-        };
-         const zonas = {
-            'Todo el Estado': { geom: [[[-92.48081080043468, 18.65355807836496],
-           [-92.35447229129556, 18.460884296324984],
-           [-92.16221734343428, 18.471304305759396],
-           [-92.13475296400698, 18.111438694698073],
-           [-91.6184110273219, 17.87111527739684],
-           [-91.60742480741112, 18.147980196889847],
-           [-90.99770164002766, 17.949517238969747],
-           [-90.97023657870965, 17.813598266339437],
-           [-89.14106621026559, 17.824060479430226],
-           [-89.13557892216805, 19.42204955423591],
-           [-89.61347018735313, 19.872114537091726],
-           [-89.60797756323925, 20.00120926341917],
-           [-89.9924873419241, 20.45992279936665],
-           [-90.36051704104561, 20.55767386812184],
-           [-90.38798236289146, 20.86595162452869],
-           [-90.48685545996365, 20.50623326315475],
-           [-90.50126334922226, 20.198239794861617],
-           [-90.47449584348993, 19.91859926891992],
-           [-90.56723652422342, 19.84112133327383],
-           [-90.66674982145047, 19.7635919081168],
-           [-90.71751878867602, 19.69063414583596],
-           [-90.71374618344261, 19.607797531295255],
-           [-90.7209602638816, 19.52107992371851],
-           [-90.73811736036171, 19.35152532843782],
-           [-90.77288249381387, 19.304233168163105],
-           [-90.82547549582875, 19.258226695820653],
-           [-90.929208889095, 19.172657015362176],
-           [-91.15283804512104, 19.016903103757333],
-           [-91.39796288822421, 18.89546787187933],
-           [-91.5035314274159, 18.784995677669183],
-           [-91.50205038200042, 18.77571146048472],
-           [-91.48803897779558, 18.77406564592335],
-           [-91.47402734443185, 18.776562203155617],
-           [-91.46290066725412, 18.798448261841077],
-           [-91.45304395202704, 18.811990350829365],
-           [-91.43936024497982, 18.825259859084955],
-           [-91.42327282570446, 18.818055876826495],
-           [-91.3772689813456, 18.859645758569055],
-           [-91.36834287121141, 18.844700571985108],
-           [-91.39443460999227, 18.804406936506698],
-           [-91.3312651843683, 18.760202787631933],
-           [-91.2969114043687, 18.788135386966516],
-           [-91.24060821419975, 18.737424766796593],
-           [-91.25571396008489, 18.680194510561403],
-           [-91.28455219065492, 18.66848594192294],
-           [-91.3175101982309, 18.547450082693317],
-           [-91.51525813292268, 18.4849464069018],
-           [-91.5317371569148, 18.436750868302077],
-           [-91.89427490518244, 18.54094074046795],
-           [-91.85445060003165, 18.603423959680036],
-           [-91.91487351640282, 18.638560789411414],
-           [-91.95744415239584, 18.699707487556932],
-         [-91.85548057570495, 18.649420266010736],
-           [-91.8252681733612, 18.62599734720394],
-           [-91.7978023530487, 18.63738389166631],
-           [-91.77994956984557, 18.631202719338145],
-           [-91.73634758009948, 18.655600775318117],
-           [-91.69034233107604, 18.68259720222792],
-           [-91.66527977004088, 18.661455787041387],
-           [-91.64021720900573, 18.68292243417524],
-           [-91.59318199172057, 18.717393478524492],
-           [-91.61618461623229, 18.731049874184887],
-           [-91.57704582228698, 18.727798451485423],
-           [-91.56811943068541, 18.736902277376217],
-           [-91.52623405470885, 18.73657714918446],
-           [-91.50597801222838, 18.74990689178588],
-           [-91.52211418166198, 18.76811166866011],
-           [-91.53310050978698, 18.78338916097083],
-           [-91.6608165742401, 18.71999478180073],
-           [-91.69961204543151, 18.708613784563624],
-           [-91.70270195021666, 18.699833634976926],
-           [-91.72192802443541, 18.688776502468155],
-           [-91.78990592970885, 18.669262155007363],
-           [-91.84861412062682, 18.666660072273917]]], style: {color: 'white', fillOpacity: 0, weight: 2.5} },
-            'Zona 1, Ciudad Campeche': { geom: [[[-90.4531, 19.8993],[-90.4890, 19.8781],[-90.5211, 19.8612],[-90.5290, 19.8671],[-90.5343, 19.8631],[-90.5273, 19.8578],[-90.5366, 19.8549],[-90.5444, 19.8461],[-90.5529, 19.8386],[-90.5613, 19.8334],[-90.5685, 19.8282],[-90.5702, 19.8273],[-90.5712, 19.8277],[-90.5735, 19.8269],[-90.5734, 19.8253],[-90.5792, 19.8218],[-90.5852, 19.8187],[-90.5900, 19.8153],[-90.5929, 19.8183],[-90.5997, 19.8136],[-90.6010, 19.8085],[-90.6102, 19.8018],[-90.6165, 19.7991],[-90.6195, 19.7967],[-90.6261, 19.7939],[-90.6294, 19.7909],[-90.6327, 19.7900],[-90.6333, 19.7847],[-90.6389, 19.7790],[-90.6390, 19.7746],[-90.6349, 19.7724],[-90.6277, 19.7780],[-90.6159, 19.7809],[-90.5992, 19.7835],[-90.5922, 19.7947],[-90.5496, 19.7942],[-90.5422, 19.7914],[-90.5308, 19.7932],[-90.5232, 19.7891],[-90.5167, 19.7923],[-90.5048, 19.7900],[-90.5055, 19.7809],[-90.5039, 19.7776],[-90.5080, 19.7714],[-90.5115, 19.7638],[-90.5099, 19.7598],[-90.5171, 19.7573],[-90.5272, 19.7512],[-90.5223, 19.7435],[-90.5138, 19.7338],[-90.4989, 19.7403],[-90.4857, 19.7552],[-90.4698, 19.7498],[-90.4596, 19.7476],[-90.4611, 19.7558],[-90.4641, 19.7628],[-90.4750, 19.7666],[-90.4820, 19.7835],[-90.4643, 19.7960],[-90.4585, 19.8226],[-90.4556, 19.8433],[-90.4460, 19.8818]]], style: {color: 'blue', fillColor: '#0000FF22', weight: 2} },
-            'Zona 2, Lerma': { geom: [[[-90.5920, 19.8193],[-90.5996, 19.8133],[-90.6083, 19.8036],[-90.6327, 19.7897],[-90.6385, 19.7802],[-90.6396, 19.7744],[-90.6351, 19.7716],[-90.6279, 19.7779],[-90.5997, 19.7824],[-90.5924, 19.7946],[-90.5741, 19.7954],[-90.5831, 19.8203]]], style: {color: 'green', fillColor: '#00FF0022', weight: 2} },
-            'Zona 3, Chiná': { geom: [[[-90.5045, 19.7762],[-90.5187, 19.7562],[-90.5211, 19.7420],[-90.5021, 19.7384],[-90.4856, 19.7542],[-90.4626, 19.7483],[-90.4602, 19.7518],[-90.4748, 19.7647],[-90.4813, 19.7833],[-90.5046, 19.7901]]], style: {color: 'orange', fillColor: '#FFA50022', weight: 2} },
-            'Zona 4, San Fco. Campeche': { geom: [[[-90.5051, 19.7895],[-90.4811, 19.7838],[-90.4643, 19.7964],[-90.4464, 19.8814],[-90.4541, 19.8990],[-90.5210, 19.8621],[-90.5292, 19.8663],[-90.5346, 19.8625],[-90.5332, 19.8567],[-90.5831, 19.8203],[-90.5722, 19.7940],[-90.5495, 19.7938],[-90.5261, 19.7906]]], style: {color: 'purple', fillColor: '#80008022', weight: 2} }
-        };
-
-        let map, drawnItems, currentGEELayer, legendControl;
-        let layerControl; // << AÑADE ESTA NUEVA VARIABLE GLOBAL
-        const zonaLayers = {};
-        const zonaCheckboxes = window.zonaCheckboxes = {};
-        let currentChartData = null;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            google.charts.load('current', {'packages':['corechart']});
-            initMap();
-            populateSelectors();
-            setupEventListeners();
-            const defaultCheckbox = zonaCheckboxes[Object.keys(zonas)[0]];
-            defaultCheckbox.checked = true;
-            handleZoneSelection(Object.keys(zonas)[0]);
-        });
-
-        function initMap() {
-            // Definimos nuestros dos mapas base
-            const googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
-                maxZoom: 20,
-                subdomains:['mt0','mt1','mt2','mt3'],
-                attribution: 'Google Satellite'
-            });
-
-            const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{
-                maxZoom: 20,
-                subdomains:['mt0','mt1','mt2','mt3'],
-                attribution: 'Google Hybrid'
-            });
-
-            // Inicializamos el mapa con el mapa Híbrido (con etiquetas) por defecto
-            map = L.map('map', {
-                center: [19.84, -90.53],
-                zoom: 9,
-                layers: [googleHybrid] // << Usamos el Híbrido por defecto
-            });
-
-            drawnItems = new L.FeatureGroup();
-            map.addLayer(drawnItems);
-
-
-            const drawControl = new L.Control.Draw({
-                edit: { featureGroup: drawnItems },
-                draw: {
-                    polygon: true,
-                    polyline: false,
-                    rectangle: true,
-                    circle: false,
-                    marker: false,
-                    circlemarker: false
-                }
-            });
-            map.addControl(drawControl);
-
-            map.on(L.Draw.Event.CREATED, (e) => {
-                // Modificado: Permite múltiples dibujos para comparación
-                drawnItems.addLayer(e.layer);
-                clearZoneCheckboxes(false); // Desmarcar zonas predefinidas
-                updateStatsPanel(`${drawnItems.getLayers().length} área(s) dibujada(s). Carga datos para analizar.`);
-                zoomToActiveLayers(); // Zoom a todas las formas dibujadas
-            });
-            map.on(L.Draw.Event.EDITED, () => updateStatsPanel('Área editada. Vuelve a cargar los datos.'));
-            
-            const baseMaps = {
-                "Híbrido (con Etiquetas)": googleHybrid,
-                "Satélite (sin Etiquetas)": googleSat
-            };
-
-            // Inicializamos el control de capas y lo añadimos al mapa
-            layerControl = L.control.layers(baseMaps, {}).addTo(map);
-
-            legendControl = L.control({position: 'bottomright'});
-            legendControl.onAdd = function (map) {
-                this._div = L.DomUtil.create('div', 'legend');
-                this.update();
-                return this._div;
-            };
-            legendControl.update = function (varInfo) {
-                if (varInfo) {
-                    // VERIFICACIÓN CLAVE: ¿Existe una paleta de colores y es un array?
-                    const hasPalette = varInfo.palette && Array.isArray(varInfo.palette);
-                    
-                    // Si hay paleta, la usamos. Si no, creamos una escala de grises por defecto.
-                    const gradient = hasPalette
-                        ? `linear-gradient(to right, ${varInfo.palette.join(', ')})`
-                        : `linear-gradient(to right, black, white)`;
-
-                    const unit = varInfo.unit || ''; // Asegurarnos de que la unidad no sea 'undefined'
-                    const title = varInfo.bandName || 'Leyenda';
-
-                    this._div.innerHTML = `
-                        <div class="legend-title">${title} ${unit ? `(${unit})` : ''}</div>
-                        <div class="legend-scale-bar" style="background: ${gradient};"></div>
-                        <div class="legend-labels">
-                            <span>${varInfo.min !== undefined ? varInfo.min : ''}</span>
-                            <span>${varInfo.max !== undefined ? varInfo.max : ''}</span>
+            <div class="flex-1 flex gap-4 overflow-hidden">
+                <div class="w-1/3 flex flex-col space-y-4">
+                    <h3 class="text-lg font-semibold">1. Construye tu Análisis</h3>
+                    <div>
+                        <label for="lab-analysis-type" class="block mb-1 text-sm font-medium text-gray-300">Tipo de Análisis</label>
+                        <select id="lab-analysis-type" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
+                            <option value="NDVI">Índice de Vegetación (NDVI)</option>
+                            <option value="LST">Mapa de Calor (LST)</option>
+                            <option value="NDWI">Índice de Humedad (NDWI)</option>
+                            <option value="FIRE">Detección de Incendios (VIIRS)</option>
+                            <option value="FAI">Índice de Algas Flotantes (Sargazo)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="lab-region-selector" class="block mb-1 text-sm font-medium text-gray-300">Región</label>
+                        <select id="lab-region-selector" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white"></select>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-sm font-medium text-gray-300">Rango de Fechas</label>
+                        <input type="date" id="lab-start-date" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white" aria-label="Fecha de inicio para laboratorio">
+                        <input type="date" id="lab-end-date" class="w-full mt-2 p-2 rounded bg-gray-900 border border-gray-600 text-white" aria-label="Fecha de fin para laboratorio">
+                    </div>
+                    <button id="lab-generate-button" class="w-full mt-3 p-2 font-bold bg-[var(--accent-color)] text-black rounded">Generar Código</button>
+                    <hr class="border-gray-600">
+                     <button id="lab-execute-button" class="w-full p-2 font-bold bg-blue-600 text-white rounded disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>🚀 Previsualizar y Ejecutar</button>
+                     <button id="lab-apply-button" class="hidden w-full p-2 font-bold bg-green-600 text-white rounded">Cerrar y Aplicar al Mapa</button>
+                </div>
+    
+                <div class="w-2/3 flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-semibold">2. Código GEE y Previsualización</h3>
+                         <button id="lab-copy-code-button" title="Copiar código" class="p-1 hover:bg-gray-700 rounded disabled:opacity-50" disabled><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
+                    </div>
+                    <div id="lab-result-container" class="bg-gray-900 rounded p-1 flex-1 overflow-auto relative">
+                        <pre><code id="lab-result-display" class="language-javascript text-sm">// El código generado por la IA aparecerá aquí.</code></pre>
+                        <div id="lab-preview-overlay" class="hidden absolute inset-0 bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center text-center p-4">
+                            <div class="loader mb-4"></div>
+                            <p id="lab-preview-text" class="text-lg font-semibold text-white animate-pulse">Simulando previsualización en el servidor...</p>
                         </div>
-                    `;
-                } else {
-                    this._div.innerHTML = '';
-                }
-            };
-
-            legendControl.addTo(map);
-            window.legendControl = legendControl; // Hacemos el control accesible globalmente
-
-        }
-
-        function populateSelectors() {
-            const varSelector = document.getElementById('variableSelector');
-            Object.keys(varParams).forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                varSelector.appendChild(option);
-            });
-
-            const zonaPanel = document.getElementById('zonaSelectorPanel');
-            Object.keys(zonas).forEach(name => {
-                const id = `check-${name.replace(/\s/g, '')}`;
-                const div = document.createElement('div');
-                div.innerHTML = `<input type="checkbox" id="${id}" class="mr-2"><label for="${id}">${name}</label>`;
-                const checkbox = div.firstChild;
-                zonaCheckboxes[name] = checkbox;
-                checkbox.addEventListener('change', () => handleZoneSelection(name));
-                zonaPanel.appendChild(div);
-            });
-        }
-        
-            window.handleZoneSelection = function(selectedName) {
-            // Permitir selección múltiple, pero si se dibuja algo, se desmarcan las zonas.
-            drawnItems.clearLayers(); 
-
-            if (zonaCheckboxes[selectedName].checked) {
-                const zona = zonas[selectedName];
-                const layer = L.polygon(L.GeoJSON.coordsToLatLngs(zona.geom[0]), zona.style);
-                map.addLayer(layer);
-                zonaLayers[selectedName] = layer;
-            } else {
-                if (zonaLayers[selectedName]) {
-                    map.removeLayer(zonaLayers[selectedName]);
-                    delete zonaLayers[selectedName];
-                }
-            }
-            zoomToActiveLayers(); // Hacer zoom a las zonas seleccionadas
-        }
-        
-        function zoomToActiveLayers() {
-            const layersToZoom = [];
-            Object.values(zonaLayers).forEach(layer => layersToZoom.push(layer));
-            drawnItems.getLayers().forEach(layer => layersToZoom.push(layer));
-
-            if (layersToZoom.length > 0) {
-                const featureGroup = L.featureGroup(layersToZoom);
-                map.fitBounds(featureGroup.getBounds(), { padding: [50, 50] }); // CORRECCIÓN: Usar padding en las opciones
-            }
-        }
-
-
-            window.clearZoneCheckboxes = function(removeLayers = true) {
-             Object.values(zonaCheckboxes).forEach(cb => cb.checked = false);
-             if (removeLayers) {
-                Object.keys(zonaLayers).forEach(name => {
-                    if (zonaLayers[name]) {
-                        map.removeLayer(zonaLayers[name]);
-                        delete zonaLayers[name];
-                    }
-                });
-             }
-        }
-
-function setupEventListeners() {
-            // --- Lógica para el menú deslizable en móviles ---
-            const menuToggle = document.getElementById('menu-toggle');
-            const controlPanel = document.getElementById('control-panel');
-            const mainContent = document.querySelector('main');
-
-            menuToggle.addEventListener('click', (e) => {
-                e.stopPropagation(); // Evita que el clic se propague al mapa
-                controlPanel.classList.toggle('control-panel-hidden');
-            });
-
-            // Cierra el menú si se hace clic en el mapa o el gráfico
-            mainContent.addEventListener('click', () => {
-                if (!controlPanel.classList.contains('control-panel-hidden')) {
-                    controlPanel.classList.add('control-panel-hidden');
-                }
-            });
-
-            // Archivo: plataforma.html (dentro de la función setupEventListeners)
-
-            document.getElementById('opacity-slider').addEventListener('input', function(e) {
-                if (currentGEELayer) {
-                    // Obtenemos el valor del slider (de 0 a 1) y actualizamos la opacidad de la capa
-                    currentGEELayer.setOpacity(e.target.value);
-                }
-            });
-
-            // --- Event Listeners para los botones de análisis ---
-            document.getElementById('loadDataButton').addEventListener('click', () => handleAnalysis('general'));
-            document.getElementById('compareButton').addEventListener('click', () => {
-                zoomToActiveLayers(); // Zoom al comparar
-                handleAnalysis('compare');
-            });
-            document.getElementById('precipAnalysisButton').addEventListener('click', () => handleAnalysis('precipitation'));
-            document.getElementById('tempAnalysisButton').addEventListener('click', () => handleAnalysis('temperature'));
-            document.getElementById('calculateSpiButton').addEventListener('click', () => handleAnalysis('spi'));
-            document.getElementById('fireRiskButton').addEventListener('click', () => handleAnalysis('fireRisk'));
-            document.getElementById('clearDrawingButton').addEventListener('click', () => {
-                drawnItems.clearLayers();
-                updateStatsPanel('Dibujos limpiados.');
-            });
-            document.getElementById('resetButton').addEventListener('click', resetApp);
-            document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
-            document.getElementById('variableSelector').addEventListener('change', toggleAnalysisPanels);
-            document.getElementById('predictButton').addEventListener('click', () => {
-                if (currentChartData) {
-                    // Llamamos a una nueva función en nuestro conector de IA
-                    generatePrediction(currentChartData); 
-                }
-            });
-                        // Archivo: plataforma.html (dentro de setupEventListeners)
-
-            // ... (después de tus otros event listeners) ...
-
-            // --- Lógica para el Modal del Laboratorio de IA ---
-            const openLabButton = document.getElementById('openLabButton');
-            const labGenerateButton = document.getElementById('lab-generate-button');
-            labGenerateButton.addEventListener('click', handleLabCodeGeneration);
-            const labExecuteButton = document.getElementById('lab-execute-button');
-            labExecuteButton.addEventListener('click', handleLabCodeExecution);   
-            const labOverlay = document.getElementById('lab-overlay');
-            const labCloseButton = document.getElementById('lab-close-button');
-
-            openLabButton.addEventListener('click', () => {
-                labOverlay.classList.remove('hidden');
-            });
-
-            labCloseButton.addEventListener('click', () => {
-                labOverlay.classList.add('hidden');
-            });
-
-            // Cierra el modal si se hace clic en el fondo oscuro
-            labOverlay.addEventListener('click', (event) => {
-                if (event.target === labOverlay) {
-                    labOverlay.classList.add('hidden');
-                }
-            });
-        }
-
-        function toggleAnalysisPanels() {
-            const selectedVar = document.getElementById('variableSelector').value;
-            document.getElementById('precipAnalysisPanel').classList.toggle('hidden', selectedVar !== 'Precipitación Acumulada (mm)');
-            document.getElementById('tempAnalysisPanel').classList.toggle('hidden', selectedVar !== 'Temperatura del Aire (°C)');
-        }
-
-        function resetApp() {
-            drawnItems.clearLayers();
-            clearZoneCheckboxes();
-            const defaultCheckbox = zonaCheckboxes[Object.keys(zonas)[0]];
-            defaultCheckbox.checked = true;
-            handleZoneSelection(Object.keys(zonas)[0]);
-            
-            if (currentGEELayer) map.removeLayer(currentGEELayer);
-            legendControl.update(null);
-            updateStatsPanel('Selecciona opciones y carga datos.');
-            clearChart();
-        }
-
-        // --- Lógica de Análisis ---
-
-        window.handleAnalysis = async function(type, overrideRoi = null) {
-            // Para 'general', solo permitimos una zona.
-            if (type === 'general' && getActiveROIs().length > 1) {
-                 updateStatsPanel('Error: Para "Cargar Datos", selecciona solo una zona o dibuja una sola área.');
-                 return;
-            }
-
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            if (!startDate || !endDate) {
-                updateStatsPanel('Error: Por favor, selecciona un rango de fechas.');
-                return;
-            }
-
-            const activeROIs = overrideRoi ? [overrideRoi] : getActiveROIs();
-            if (activeROIs.length === 0) {
-                updateStatsPanel('Error: Selecciona al menos una zona o dibuja un área.');
-                return;
-            }
-            if (type === 'compare' && activeROIs.length < 2) {
-                updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
-                return;
-            }
-            
-            clearMapAndChart();
-            showLoading(true);
-
-            let action = '';
-            let params = {};
-            const selectedVar = document.getElementById('variableSelector').value;
-            const varInfo = varParams[selectedVar];
-
-            switch(type) {
-                case 'general':
-                    action = 'getGeneralData';
-                    params = { startDate, endDate, roi: activeROIs[0], varInfo };
-                    break;
-                case 'compare':
-                    action = 'getCompareData';
-                    params = { startDate, endDate, rois: activeROIs, varInfo };
-                    break;
-                case 'precipitation':
-                    action = 'getPrecipitationData';
-                    params = { startDate, endDate, roi: activeROIs[0], analysisType: document.getElementById('precipAnalysisSelector').value, aggregation: document.getElementById('precipAggregationSelector').value };
-                    break;
-                case 'temperature':
-                     action = 'getTemperatureData';
-                     params = { startDate, endDate, roi: activeROIs[0], analysisType: document.getElementById('tempAnalysisSelector').value };
-                    break;
-                case 'spi':
-                    action = 'getSpiData';
-                    params = { startDate, endDate, roi: activeROIs[0], timescale: parseInt(document.getElementById('spiTimescaleSelector').value) };
-                    break;
-                case 'fireRisk':
-                     action = 'getFireRiskData';
-                     params = { startDate, endDate, roi: activeROIs[0] };
-                    break;
-            }
-            
-            try {
-                const response = await callGeeApi(action, params);
-                legendControl.update(varInfo); 
-                if (response.mapId) {
-                    // Pasamos la URL y también el nombre de la variable para la etiqueta
-// LÍNEA CORREGIDA
-                    addGeeLayer(response.mapId.urlFormat, varInfo ? varInfo.bandName : 'Resultado del Análisis');                }
-                if (response.stats) {
-                    updateStatsPanel(response.stats);
-                }
-                if (response.chartData) {
-                    currentChartData = response.chartData; 
-                    document.getElementById('downloadCsvButton').disabled = false;
-                    drawChart(response.chartData, response.chartOptions);
-
-                }
-                if (response.chartData) {
-                    // ...
-                    drawChart(response.chartData, response.chartOptions);
-                    document.getElementById('predictButton').disabled = false; // Habilitamos el botón
-                }
-                if (type === 'fireRisk') {
-                    // Si es el mapa de incendios, llamamos a un especialista
-                    generateFireRiskAnalysis({
-                        stats: response.stats,
-                        roi: activeROIs.length > 0 ? activeROIs[0].name : "área seleccionada",
-                        startDate: startDate,
-                        endDate: endDate
-                    });
-                } else {
-                    // Para todos los demás casos, usamos el analista general
-                    generateAiAnalysis({
-                        stats: response.stats,
-                        chartData: response.chartData,
-                        chartOptions: response.chartOptions,
-                        variable: selectedVar,
-                        roi: activeROIs.length > 0 ? activeROIs[0].name : "área seleccionada",
-                        startDate: startDate,
-                        endDate: endDate
-                    });
-                }
-            } catch (error) {
-                console.error("Error en el análisis:", error);
-                updateStatsPanel(`Error: ${error.message}`);
-                legendControl.update(null);
-            } finally {
-                showLoading(false);
-            }
-        }
-
-        function getActiveROIs() {
-            const rois = [];
-            // Si hay dibujos, ellos tienen prioridad.
-            if (drawnItems.getLayers().length > 0) {
-                 drawnItems.getLayers().forEach((layer, i) => {
-                    rois.push({
-                        name: `Área Dibujada ${i + 1}`,
-                        geom: layer.toGeoJSON().geometry
-                    });
-                });
-                return rois;
-            }
-
-            // Si no, las zonas seleccionadas.
-            Object.keys(zonaCheckboxes).forEach(name => {
-                if (zonaCheckboxes[name].checked) {
-                    rois.push({
-                        name: name,
-                        geom: { type: 'Polygon', coordinates: zonas[name].geom }
-                    });
-                }
-            });
-            return rois;
-        }
-
-        // --- Comunicación con la API y Descarga ---
-        
-        async function callGeeApi(action, params) {
-            const response = await fetch('/api/gee', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, params })
-            });
-
-            const responseText = await response.text();
-            if (!response.ok) {
-                 console.error("Respuesta del servidor con error:", responseText);
-                 try {
-                     const errorJson = JSON.parse(responseText);
-                     throw new Error(errorJson.details || `El servidor respondió con un error ${response.status}.`);
-                 } catch (e) {
-                     throw new Error(`El servidor respondió con un error ${response.status}.`);
-                 }
-            }
-            
-            try {
-                 return JSON.parse(responseText);
-            } catch (e) {
-                 console.error("Error al parsear JSON:", e);
-                 console.error("Texto recibido del servidor:", responseText);
-                 throw new Error(`Respuesta inválida del servidor.`);
-            }
-        }
-        
-        function downloadCSV() {
-            if (!currentChartData || currentChartData.length < 2) {
-                alert('No hay datos en el gráfico para descargar.');
-                return;
-            }
-
-            let csvContent = "data:text/csv;charset=utf-8,";
-            
-            const escapeCSV = (field) => {
-                if (field === null || field === undefined) return '';
-                let fieldStr = String(field);
-                if (fieldStr.includes('"') || fieldStr.includes(',') || fieldStr.includes('\n')) {
-                    fieldStr = fieldStr.replace(/"/g, '""');
-                    return `"${fieldStr}"`;
-                }
-                return fieldStr;
-            };
-
-            currentChartData.forEach(rowArray => {
-                let row = rowArray.map(escapeCSV).join(",");
-                csvContent += row + "\r\n";
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "datos_climaticos.csv");
-            document.body.appendChild(link); 
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // --- Helpers de UI ---
-
-        function showLoading(isLoading) {
-            document.getElementById('loading-overlay').classList.toggle('hidden', !isLoading);
-        }
-
-        function updateStatsPanel(text) {
-            document.getElementById('stats-panel').textContent = text;
-        }
-
-        function clearMapAndChart() {
-            if (currentGEELayer) map.removeLayer(currentGEELayer);
-            legendControl.update(null);
-            clearChart();
-            currentChartData = null;
-            document.getElementById('downloadCsvButton').disabled = true;
-        }
-        
-        function clearChart() {
-            const chartPanel = document.getElementById('chart-panel');
-            chartPanel.innerHTML = '<span class="text-gray-300">El gráfico aparecerá aquí</span>';
-        }
-
-        function addGeeLayer(url, varName) {
-            // Si ya existe una capa de GEE, la eliminamos del mapa Y del control
-            if (currentGEELayer) {
-                map.removeLayer(currentGEELayer);
-                layerControl.removeLayer(currentGEELayer);
-            }
-
-            // Creamos la nueva capa de GEE
-            currentGEELayer = L.tileLayer(url, {
-                attribution: 'Google Earth Engine'
-            });
-
-            // La añadimos al mapa
-            currentGEELayer.addTo(map);
-
-            // Y LO MÁS IMPORTANTE: la añadimos al control de capas como un "Overlay"
-            // Esto crea el checkbox para activarla/desactivarla.
-            layerControl.addOverlay(currentGEELayer, `Capa: ${varName}`);
-            
-            // Habilitamos el slider de opacidad
-            document.getElementById('opacity-slider-container').style.display = 'block';
-            document.getElementById('opacity-slider').value = 1; // Reseteamos el valor a 100%
-        }
-        window.addGeeLayer = addGeeLayer;
-        
-        function drawChart(data, options) {
-            const chartPanel = document.getElementById('chart-panel');
-            if (!data || data.length < 2) {
-                clearChart();
-                updateStatsPanel('No hay datos suficientes para generar el gráfico.');
-                return;
-            }
-
-            chartPanel.innerHTML = '';
-
-            // CORRECCIÓN FINAL: Usar dataTable.addColumn para definir tipos explícitamente
-            const dataTable = new google.visualization.DataTable();
-            const headers = data[0];
-            dataTable.addColumn('date', headers[0]); // La primera columna es siempre una fecha.
-
-            for (let i = 1; i < headers.length; i++) {
-                dataTable.addColumn('number', headers[i]); // Las siguientes son siempre números.
-            }
-
-            const rows = data.slice(1).map(row => {
-                const date = new Date(row[0]);
-                // Si la fecha es inválida, no agregamos la fila.
-                if (isNaN(date.getTime())) return null;
-                const values = row.slice(1);
-                return [date, ...values];
-            }).filter(Boolean); // Filtra cualquier fila nula
-
-            if (rows.length > 0) {
-                 dataTable.addRows(rows);
-            } else {
-                clearChart();
-                return;
-            }
-            
-            const chartType = document.getElementById('chartTypeSelector').value;
-            let chart;
-            switch(chartType) {
-                case 'ColumnChart': chart = new google.visualization.ColumnChart(chartPanel); break;
-                case 'ScatterChart': chart = new google.visualization.ScatterChart(chartPanel); break;
-                case 'AreaChart': chart = new google.visualization.AreaChart(chartPanel); break;
-                default: chart = new google.visualization.LineChart(chartPanel);
-            }
-
-            const defaultOptions = {
-                backgroundColor: '#a04040',
-                titleTextStyle: { color: '#FFFFFF' },
-                legend: { textStyle: { color: '#FFFFFF' }, position: 'top' },
-                hAxis: { textStyle: { color: '#FFFFFF' }, titleTextStyle: { color: '#FFFFFF' } },
-                vAxis: { textStyle: { color: '#FFFFFF' }, titleTextStyle: { color: '#FFFFFF' } },
-                chartArea: { width: '85%', height: '75%' }
-            };
-
-            chart.draw(dataTable, {...defaultOptions, ...options});
-        }
-</script>
-
-<script src="ai-connector.js"></script> 
-
-<div id="lab-overlay" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[3000]">
-    <div id="lab-modal" class="bg-gray-800 rounded-lg shadow-xl p-6 w-11/12 max-w-2xl h-5/6 flex flex-col">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-2xl font-bold text-[var(--accent-color)]">Laboratorio de IA 🧪</h2>
-            <button id="lab-close-button" class="text-3xl font-bold hover:text-white">&times;</button>
-        </div>
-
-        <p class="text-gray-400 mb-2">Describe el análisis personalizado que deseas generar (en inglés o español).</p>
-        <textarea id="lab-prompt-input" class="w-full h-1/4 p-2 rounded bg-gray-900 border border-gray-600 text-white flex-shrink-0" placeholder="Ej: Genera un mapa NDVI promedio para el municipio de Calakmul durante marzo de 2024, usando imágenes Sentinel-2 sin nubes."></textarea>
-        <button id="lab-generate-button" class="w-full mt-3 p-2 font-bold bg-[var(--accent-color)] text-black rounded">Generar Código</button>
-        <button id="lab-execute-button" class="w-full mt-2 p-2 font-bold bg-blue-600 text-white rounded disabled:bg-gray-500" disabled>🚀 Ejecutar y Mostrar en Mapa</button>
-
-
-        <h3 class="text-lg font-bold mt-6 mb-2">Código GEE Generado:</h3>
-        <div id="lab-result-container" class="bg-gray-900 rounded p-1 flex-1 overflow-auto">
-            <pre><code id="lab-result-display" class="language-javascript text-sm"></code></pre>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+    
+    <script type="module">
+        import { initPlatform } from './platform-main.js';
+        document.addEventListener('DOMContentLoaded', initPlatform);
+    </script>
+    <script src="ai-connector.js"></script> 
 </body>
 </html>
