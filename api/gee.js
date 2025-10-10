@@ -41,7 +41,7 @@ function getSpiCollection(roi, timescale) {
         ee.List.sequence(0, referenceEnd.difference(referenceStart, 'month').subtract(1)).map(function(m) {
             const start = referenceStart.advance(m, 'month');
             const end = start.advance(1, 'month');
-            const total = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(start, end).filterBounds(roi).sum().select('precipitation');
+            const total = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(start, end).filterBounds(roi).sum().select('precipitation').clip(roi);
             return total.set('system:time_start', start.millis(), 'month', start.get('month'));
         })
     );
