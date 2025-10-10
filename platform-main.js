@@ -1,4 +1,4 @@
-// Archivo: platform-main.js
+// Archivo: platform-main.js (Versión Final Corregida)
 
 // --- VARIABLES GLOBALES ---
 let map, drawnItems, currentGEELayer, legendControl, layerControl, currentChart, currentChartData;
@@ -24,7 +24,6 @@ const zonas = {
 };
 const municipios = ["Calakmul", "Calkiní", "Campeche", "Candelaria", "Carmen", "Champotón", "Dzitbalché", "Escárcega", "Hecelchakán", "Hopelchén", "Palizada", "Seybaplaya", "Tenabo"];
 
-
 // --- INICIALIZACIÓN DE LA PLATAFORMA ---
 export function initPlatform() {
     google.charts.load('current', {'packages':['corechart']});
@@ -32,7 +31,6 @@ export function initPlatform() {
         initMap();
         populateSelectors();
         setupEventListeners();
-        // Seleccionar "Todo el Estado" por defecto al cargar
         const defaultCheckbox = zonaCheckboxes[Object.keys(zonas)[0]];
         if (defaultCheckbox) {
             defaultCheckbox.checked = true;
@@ -44,14 +42,11 @@ export function initPlatform() {
 function initMap() {
     const googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{ maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'], attribution: 'Google Satellite' });
     const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{ maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'], attribution: 'Google Hybrid' });
-
     map = L.map('map', { center: [19.84, -90.53], zoom: 9, layers: [googleHybrid] });
     drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
-
     const drawControl = new L.Control.Draw({ edit: { featureGroup: drawnItems }, draw: { polygon: true, polyline: false, rectangle: true, circle: false, marker: false, circlemarker: false }});
     map.addControl(drawControl);
-
     map.on(L.Draw.Event.CREATED, (e) => {
         drawnItems.addLayer(e.layer);
         clearZoneCheckboxes(false);
@@ -59,9 +54,7 @@ function initMap() {
         zoomToActiveLayers();
     });
     map.on(L.Draw.Event.EDITED, () => updateStatsPanel('Área editada. Vuelve a cargar los datos.'));
-    
     layerControl = L.control.layers({ "Híbrido": googleHybrid, "Satélite": googleSat }, {}).addTo(map);
-
     legendControl = L.control({position: 'bottomright'});
     legendControl.onAdd = function (map) { this._div = L.DomUtil.create('div', 'legend'); this.update(); return this._div; };
     legendControl.update = function (varInfo) {
@@ -84,7 +77,6 @@ function populateSelectors() {
         option.textContent = name;
         varSelector.appendChild(option);
     });
-
     const zonaPanel = document.getElementById('zonaSelectorPanel');
     Object.keys(zonas).forEach(name => {
         const id = `check-${name.replace(/\s/g, '')}`;
@@ -95,8 +87,6 @@ function populateSelectors() {
         checkbox.addEventListener('change', () => handleZoneSelection(name));
         zonaPanel.appendChild(div);
     });
-    
-    // Poblar dropdown del laboratorio de IA
     const labRegionSelector = document.getElementById('lab-region-selector');
     municipios.forEach(mun => {
         const option = document.createElement('option');
@@ -104,8 +94,6 @@ function populateSelectors() {
         option.textContent = mun;
         labRegionSelector.appendChild(option);
     });
-    
-    // Establecer fechas por defecto en el lab
     const today = new Date().toISOString().split('T')[0];
     const aMonthAgo = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0];
     document.getElementById('lab-start-date').value = aMonthAgo;
@@ -113,17 +101,12 @@ function populateSelectors() {
 }
 
 function setupEventListeners() {
-    // Menú deslizable en móviles
     const menuToggle = document.getElementById('menu-toggle');
     const controlPanel = document.getElementById('control-panel');
     const mainContent = document.querySelector('main');
     menuToggle.addEventListener('click', (e) => { e.stopPropagation(); controlPanel.classList.toggle('control-panel-hidden'); });
     mainContent.addEventListener('click', () => { if (!controlPanel.classList.contains('control-panel-hidden')) { controlPanel.classList.add('control-panel-hidden'); }});
-    
-    // Slider de opacidad
     document.getElementById('opacity-slider').addEventListener('input', e => { if (currentGEELayer) currentGEELayer.setOpacity(e.target.value); });
-    
-    // Botones de análisis
     document.getElementById('loadDataButton').addEventListener('click', () => handleAnalysis('general'));
     document.getElementById('compareButton').addEventListener('click', () => { zoomToActiveLayers(); handleAnalysis('compare'); });
     document.getElementById('precipAnalysisButton').addEventListener('click', () => handleAnalysis('precipitation'));
@@ -131,20 +114,14 @@ function setupEventListeners() {
     document.getElementById('calculateSpiButton').addEventListener('click', () => handleAnalysis('spi'));
     document.getElementById('fireRiskButton').addEventListener('click', () => handleAnalysis('fireRisk'));
     document.getElementById('predictButton').addEventListener('click', () => { if (currentChartData) window.generatePrediction(currentChartData); });
-    
-    // Herramientas
     document.getElementById('clearDrawingButton').addEventListener('click', () => { drawnItems.clearLayers(); updateStatsPanel('Dibujos limpiados.'); });
     document.getElementById('resetButton').addEventListener('click', resetApp);
     document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
     document.getElementById('downloadChartButton').addEventListener('click', downloadChart);
-    document.getElementById('downloadPdfButton').addEventListener('click', downloadPDF); // <-- Añade esta línea
+    document.getElementById('downloadPdfButton').addEventListener('click', downloadPDF);
     document.getElementById('variableSelector').addEventListener('change', toggleAnalysisPanels);
-
-    // Acciones de Análisis IA
     document.getElementById('copy-ai-button').addEventListener('click', copyAiAnalysis);
     document.getElementById('download-ai-button').addEventListener('click', downloadAiAnalysis);
-
-    // Lógica para el Modal del Laboratorio de IA
     const labOverlay = document.getElementById('lab-overlay');
     document.getElementById('openLabButton').addEventListener('click', () => labOverlay.classList.remove('hidden'));
     document.getElementById('lab-close-button').addEventListener('click', () => labOverlay.classList.add('hidden'));
@@ -173,7 +150,6 @@ function handleZoneSelection(selectedName) {
     }
     zoomToActiveLayers();
 }
-window.handleZoneSelection = handleZoneSelection; // Exponer globalmente
 
 function zoomToActiveLayers() {
     const layersToZoom = [...Object.values(zonaLayers), ...drawnItems.getLayers()];
@@ -194,8 +170,6 @@ function clearZoneCheckboxes(removeLayers = true) {
        });
     }
 }
-window.clearZoneCheckboxes = clearZoneCheckboxes; // Exponer globalmente
-
 
 function toggleAnalysisPanels() {
     const selectedVar = document.getElementById('variableSelector').value;
@@ -209,24 +183,20 @@ function resetApp() {
     const defaultCheckbox = zonaCheckboxes[Object.keys(zonas)[0]];
     defaultCheckbox.checked = true;
     handleZoneSelection(Object.keys(zonas)[0]);
-    
     if (currentGEELayer) map.removeLayer(currentGEELayer);
     legendControl.update(null);
     updateStatsPanel('Selecciona opciones y carga datos.');
     clearChartAndAi();
 }
 
-// --- LÓGICA DE ANÁLISIS ---
 async function handleAnalysis(type, overrideRoi = null) {
     if (type === 'general' && getActiveROIs().length > 1) {
         updateStatsPanel('Error: Para "Cargar Datos", selecciona solo una zona o dibuja una sola área.');
         return;
     }
-
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
     const activeROIs = overrideRoi ? [overrideRoi] : getActiveROIs();
-
     if (!startDate || !endDate || activeROIs.length === 0) {
         updateStatsPanel('Error: Asegúrate de seleccionar fechas y al menos una zona de interés.');
         return;
@@ -235,15 +205,12 @@ async function handleAnalysis(type, overrideRoi = null) {
         updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
         return;
     }
-    
     clearMapAndAi();
     showLoading(true);
-
     let action, params;
     const selectedVar = document.getElementById('variableSelector').value;
     const varInfo = varParams[selectedVar];
     const baseParams = { startDate, endDate, varInfo };
-
     switch(type) {
         case 'general': action = 'getGeneralData'; params = { ...baseParams, roi: activeROIs[0] }; break;
         case 'compare': action = 'getCompareData'; params = { ...baseParams, rois: activeROIs }; break;
@@ -252,27 +219,20 @@ async function handleAnalysis(type, overrideRoi = null) {
         case 'spi': action = 'getSpiData'; params = { ...baseParams, roi: activeROIs[0], timescale: parseInt(document.getElementById('spiTimescaleSelector').value) }; break;
         case 'fireRisk': action = 'getFireRiskData'; params = { ...baseParams, roi: activeROIs[0] }; break;
     }
-    
     try {
         const response = await callGeeApi(action, params);
         legendControl.update(response.visParams || varInfo); 
         if (response.mapId) addGeeLayer(response.mapId.urlFormat, varInfo?.bandName || 'Análisis');
         if (response.stats) updateStatsPanel(response.stats);
-
         if (response.chartData && response.chartData.length >= 2) {
-            // Si los datos son válidos, los guardamos y habilitamos todo.
             updateChartAndData(response.chartData, response.chartOptions);
-
         } else {
-            // Si no hay datos, limpiamos la UI y lo indicamos.
             clearChartAndAi();
-            drawChart(null); // Llamamos a drawChart con null para que muestre el mensaje de "no hay datos".
+            drawChart(null);
         }
-
         const aiData = { stats: response.stats, chartData: response.chartData, chartOptions: response.chartOptions, variable: selectedVar, roi: activeROIs[0]?.name || "área seleccionada", startDate, endDate };
         if (type === 'fireRisk') window.generateFireRiskAnalysis(aiData);
         else window.generateAiAnalysis(aiData);
-
     } catch (error) {
         console.error("Error en el análisis:", error);
         updateStatsPanel(`Error: ${error.message}`);
@@ -281,7 +241,6 @@ async function handleAnalysis(type, overrideRoi = null) {
         showLoading(false);
     }
 }
-window.handleAnalysis = handleAnalysis; // Exponer globalmente
 
 function getActiveROIs() {
     if (drawnItems.getLayers().length > 0) {
@@ -298,73 +257,6 @@ function getActiveROIs() {
         }));
 }
 
-// --- COMUNICACIÓN API Y DESCARGAS ---
-
-async function downloadPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'mm', 'a4');
-    showLoading(true);
-
-    try {
-        // --- 1. TÍTULO Y METADATOS ---
-        doc.setFontSize(18);
-        doc.text('Reporte de Análisis Climático', 105, 20, { align: 'center' });
-        doc.setFontSize(10);
-        doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`, 105, 26, { align: 'center' });
-        
-        const variable = document.getElementById('variableSelector').value || 'N/A';
-        const rois = getActiveROIs().map(r => r.name).join(', ') || 'N/A';
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-
-        doc.setFontSize(12);
-        doc.text('Parámetros del Análisis', 14, 40);
-        doc.setFontSize(10);
-        doc.text(`Variable: ${variable}`, 14, 46);
-        doc.text(`Zona(s) de Interés: ${rois}`, 14, 51);
-        doc.text(`Periodo: ${startDate} al ${endDate}`, 14, 56);
-
-        // --- 2. ESTADÍSTICAS ---
-        const statsText = document.getElementById('stats-panel').textContent;
-        doc.setFontSize(12);
-        doc.text('Resumen Estadístico', 14, 68);
-        doc.setFontSize(10);
-        const statsLines = doc.splitTextToSize(statsText, 180); // 180mm de ancho
-        doc.text(statsLines, 14, 74);
-        let currentY = 74 + (statsLines.length * 5) + 8; // Calcula la posición para el gráfico
-
-        // --- 3. GRÁFICO (como imagen) ---
-        const chartPanel = document.getElementById('chart-panel');
-        const canvas = await html2canvas(chartPanel, { backgroundColor: '#a04040' });
-        const imgData = canvas.toDataURL('image/png');
-        const imgProps = doc.getImageProperties(imgData);
-        const pdfWidth = 180;
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        doc.addImage(imgData, 'PNG', 15, currentY, pdfWidth, pdfHeight);
-        currentY += pdfHeight + 10;
-
-        // --- 4. ANÁLISIS CON IA (si existe) ---
-        const aiSummaryEl = document.getElementById('ai-summary');
-        if (aiSummaryEl && aiSummaryEl.textContent.trim() !== 'Esperando análisis...') {
-            doc.addPage();
-            doc.setFontSize(14);
-            doc.text('Análisis e Interpretación con IA', 105, 20, { align: 'center' });
-            doc.setFontSize(10);
-            const aiText = aiSummaryEl.innerText;
-            const aiLines = doc.splitTextToSize(aiText, 180);
-            doc.text(aiLines, 14, 30);
-        }
-
-        doc.save('reporte_climatico.pdf');
-
-    } catch (error) {
-        console.error("Error generando PDF:", error);
-        alert("No se pudo generar el PDF. Revisa la consola para más detalles.");
-    } finally {
-        showLoading(false);
-    }
-}
-
 async function callGeeApi(action, params) {
     const response = await fetch('/api/gee', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, params }) });
     const responseText = await response.text();
@@ -377,25 +269,23 @@ async function callGeeApi(action, params) {
 }
 
 function downloadCSV() {
-    console.log("INTENTANDO DESCARGAR:", currentChartData); // <-- AÑADE ESTA LÍNEA DE DEPURACIÓN
-
-    if (!currentChartData || currentChartData.length < 2) return;
-
+    console.log("INTENTANDO DESCARGAR:", currentChartData);
+    if (!currentChartData || currentChartData.length < 2) {
+        console.log("Descarga detenida porque no hay datos válidos.");
+        return;
+    }
     let csvContent = "data:text/csv;charset=utf-8,";
-    // Añadir estadísticas como cabecera
     const statsText = document.getElementById('stats-panel').textContent;
     csvContent += `#"Análisis Estructural de Datos Climáticos"\r\n`;
     statsText.split('\n').forEach(line => {
         csvContent += `#"${line.trim()}"\r\n`;
     });
     csvContent += "\r\n";
-    
     const escape = (field) => {
         let str = String(field ?? '');
         return (str.includes('"') || str.includes(',') || str.includes('\n')) ? `"${str.replace(/"/g, '""')}"` : str;
     };
     currentChartData.forEach(row => { csvContent += row.map(escape).join(",") + "\r\n"; });
-
     const link = document.createElement("a");
     link.href = encodeURI(csvContent);
     link.download = "reporte_climatico.csv";
@@ -408,6 +298,59 @@ function downloadChart() {
         link.href = currentChart.getImageURI();
         link.download = 'grafico_climatico.png';
         link.click();
+    }
+}
+
+async function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    showLoading(true);
+    try {
+        doc.setFontSize(18);
+        doc.text('Reporte de Análisis Climático', 105, 20, { align: 'center' });
+        doc.setFontSize(10);
+        doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`, 105, 26, { align: 'center' });
+        const variable = document.getElementById('variableSelector').value || 'N/A';
+        const rois = getActiveROIs().map(r => r.name).join(', ') || 'N/A';
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        doc.setFontSize(12);
+        doc.text('Parámetros del Análisis', 14, 40);
+        doc.setFontSize(10);
+        doc.text(`Variable: ${variable}`, 14, 46);
+        doc.text(`Zona(s) de Interés: ${rois}`, 14, 51);
+        doc.text(`Periodo: ${startDate} al ${endDate}`, 14, 56);
+        const statsText = document.getElementById('stats-panel').textContent;
+        doc.setFontSize(12);
+        doc.text('Resumen Estadístico', 14, 68);
+        doc.setFontSize(10);
+        const statsLines = doc.splitTextToSize(statsText, 180);
+        doc.text(statsLines, 14, 74);
+        let currentY = 74 + (statsLines.length * 5) + 8;
+        const chartPanel = document.getElementById('chart-panel');
+        const canvas = await html2canvas(chartPanel, { backgroundColor: '#a04040' });
+        const imgData = canvas.toDataURL('image/png');
+        const imgProps = doc.getImageProperties(imgData);
+        const pdfWidth = 180;
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        doc.addImage(imgData, 'PNG', 15, currentY, pdfWidth, pdfHeight);
+        currentY += pdfHeight + 10;
+        const aiSummaryEl = document.getElementById('ai-summary');
+        if (aiSummaryEl && aiSummaryEl.textContent.trim() !== 'Esperando análisis...') {
+            doc.addPage();
+            doc.setFontSize(14);
+            doc.text('Análisis e Interpretación con IA', 105, 20, { align: 'center' });
+            doc.setFontSize(10);
+            const aiText = aiSummaryEl.innerText;
+            const aiLines = doc.splitTextToSize(aiText, 180);
+            doc.text(aiLines, 14, 30);
+        }
+        doc.save('reporte_climatico.pdf');
+    } catch (error) {
+        console.error("Error generando PDF:", error);
+        alert("No se pudo generar el PDF. Revisa la consola para más detalles.");
+    } finally {
+        showLoading(false);
     }
 }
 
@@ -426,7 +369,6 @@ function downloadAiAnalysis() {
     URL.revokeObjectURL(link.href);
 }
 
-// --- HELPERS DE UI ---
 function showLoading(isLoading) { document.getElementById('loading-overlay').classList.toggle('hidden', !isLoading); }
 function updateStatsPanel(text) { document.getElementById('stats-panel').textContent = text; }
 
@@ -444,7 +386,7 @@ function clearChartAndAi() {
     document.getElementById('downloadCsvButton').disabled = true;
     document.getElementById('downloadChartButton').disabled = true;
     document.getElementById('predictButton').disabled = true;
-    document.getElementById('downloadPdfButton').disabled = true; // <-- Añade esta línea
+    document.getElementById('downloadPdfButton').disabled = true;
     document.getElementById('ai-analysis-panel').classList.add('hidden');
     document.getElementById('ai-actions-container').classList.add('hidden');
 }
@@ -459,47 +401,33 @@ function addGeeLayer(url, varName) {
     document.getElementById('opacity-slider-container').style.display = 'block';
     document.getElementById('opacity-slider').value = 1;
 }
-window.addGeeLayer = addGeeLayer; // Exponer globalmente
 
 function updateChartAndData(data, options) {
-    console.log("GUARDANDO DATOS:", data); // <-- AÑADE ESTA LÍNEA DE DEPURACIÓN
-
-    currentChartData = data; // <-- ¡ESTA ES LA LÍNEA CLAVE QUE GUARDA LOS DATOS!
-    drawChart(data, options); // Llama a la función original para dibujar
-
-    // Habilita los botones de descarga y predicción
+    console.log("GUARDANDO DATOS:", data);
+    currentChartData = data;
+    drawChart(data, options);
     document.getElementById('downloadCsvButton').disabled = false;
     document.getElementById('downloadChartButton').disabled = false;
     document.getElementById('predictButton').disabled = false;
-    document.getElementById('downloadPdfButton').disabled = false; // <-- Añade esta línea
-
+    document.getElementById('downloadPdfButton').disabled = false;
 }
-
-// UBICACIÓN: platform-main.js
 
 function drawChart(data, options) {
     const chartPanel = document.getElementById('chart-panel');
-    // ESTA ES LA ÚNICA PARTE QUE CAMBIA:
-    // Ya no llama a clearChartAndAi(), solo muestra un mensaje si no hay datos.
     if (!data || data.length < 2) {
         chartPanel.innerHTML = '<span class="text-gray-400">No hay datos suficientes para mostrar un gráfico.</span>';
         return;
     }
-
-    chartPanel.innerHTML = ''; // Limpia el panel para el nuevo gráfico
-
+    chartPanel.innerHTML = '';
     const dataTable = new google.visualization.DataTable();
     dataTable.addColumn('date', data[0][0]);
     for (let i = 1; i < data[0].length; i++) dataTable.addColumn('number', data[0][i]);
     const rows = data.slice(1).map(row => [new Date(row[0]), ...row.slice(1)]).filter(row => !isNaN(row[0].getTime()));
-    
-    // Validamos que después de procesar fechas, aún tengamos filas.
     if (rows.length === 0) {
         chartPanel.innerHTML = '<span class="text-gray-400">No hay datos válidos en el rango de fechas seleccionado.</span>';
         return;
     }
     dataTable.addRows(rows);
-
     const chartType = document.getElementById('chartTypeSelector').value;
     switch(chartType) {
         case 'ColumnChart': currentChart = new google.visualization.ColumnChart(chartPanel); break;
@@ -511,23 +439,12 @@ function drawChart(data, options) {
     currentChart.draw(dataTable, {...defaultOptions, ...options});
 }
 
-window.updateChartAndData = updateChartAndData; // <-- Exportamos la nueva función
+// --- EXPOSICIÓN DE FUNCIONES GLOBALES ---
 window.updateStatsPanel = updateStatsPanel;
 window.drawChart = drawChart;
-window.zonaCheckboxes = zonaCheckboxes; // <-- Añade esta línea
-window.zonas = zonas; // <-- Añade esta línea
-window.varParams = varParams; // <-- Añade esta línea
-window.resetApp = resetApp; // <-- Añade esta línea
-window.downloadCSV = downloadCSV; // <-- Añade esta línea
-window.downloadChart = downloadChart; // <-- Añade esta línea
-window.toggleAnalysisPanels = toggleAnalysisPanels; // <-- Añade esta línea
-window.showLoading = showLoading; // <-- Añade esta línea
-window.updateStatsPanel = updateStatsPanel; // <-- Añade esta línea
-window.clearMapAndAi = clearMapAndAi; // <-- Añade esta línea
-window.clearChartAndAi = clearChartAndAi; // <-- Añade esta línea
-window.getActiveROIs = getActiveROIs; // <-- Añade esta línea
-window.callGeeApi = callGeeApi; // <-- Añade esta línea
-window.currentGEELayer = currentGEELayer; // <-- Añade esta línea
-window.currentChartData = currentChartData; // <-- Añade esta línea
-window.currentChart = currentChart; // <-- Añade esta línea
-window.initPlatform = initPlatform; // <-- Añade esta línea
+window.updateChartAndData = updateChartAndData;
+window.zonaCheckboxes = zonaCheckboxes;
+window.handleZoneSelection = handleZoneSelection;
+window.clearZoneCheckboxes = clearZoneCheckboxes;
+window.handleAnalysis = handleAnalysis;
+window.addGeeLayer = addGeeLayer;
