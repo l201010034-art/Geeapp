@@ -58,8 +58,8 @@ function getSpiCollection(roi, timescale) {
     const monthlyStats = ee.ImageCollection.fromImages(
         ee.List.sequence(1, 12).map(function(m) {
             const sumsForMonth = movingWindowSums.filter(ee.Filter.eq('month', m));
-            const mean = sumsForMonth.mean();
-            const stdDev = sumsForMonth.reduce(ee.Reducer.stdDev());
+            const mean = sumsForMonth.mean().clip(roi);
+            const stdDev = sumsForMonth.reduce(ee.Reducer.stdDev()).clip(roi);
             const stdDevSafe = stdDev.where(stdDev.eq(0), 1);
             return mean.addBands(stdDevSafe).set('month', m);
         })
