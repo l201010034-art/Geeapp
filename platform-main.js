@@ -259,17 +259,14 @@ async function handleAnalysis(type, overrideRoi = null) {
         if (response.mapId) addGeeLayer(response.mapId.urlFormat, varInfo?.bandName || 'Análisis');
         if (response.stats) updateStatsPanel(response.stats);
 
-        if (response.chartData) {
-            // ANTES:
-            // currentChartData = response.chartData;
-            // document.getElementById('downloadCsvButton').disabled = false;
-            // document.getElementById('downloadChartButton').disabled = false;
-            // document.getElementById('predictButton').disabled = false;
-            // drawChart(response.chartData, response.chartOptions);
-
-            // AHORA (más limpio):
+        if (response.chartData && response.chartData.length >= 2) {
+            // Si los datos son válidos, los guardamos y habilitamos todo.
             updateChartAndData(response.chartData, response.chartOptions);
-}
+        } else {
+            // Si no hay datos, limpiamos la UI y lo indicamos.
+            clearChartAndAi();
+            drawChart(null); // Llamamos a drawChart con null para que muestre el mensaje de "no hay datos".
+        }
 
         const aiData = { stats: response.stats, chartData: response.chartData, chartOptions: response.chartOptions, variable: selectedVar, roi: activeROIs[0]?.name || "área seleccionada", startDate, endDate };
         if (type === 'fireRisk') window.generateFireRiskAnalysis(aiData);
@@ -473,19 +470,30 @@ function updateChartAndData(data, options) {
 
 }
 
+// UBICACIÓN: platform-main.js
+
 function drawChart(data, options) {
     const chartPanel = document.getElementById('chart-panel');
+    // ESTA ES LA ÚNICA PARTE QUE CAMBIA:
+    // Ya no llama a clearChartAndAi(), solo muestra un mensaje si no hay datos.
     if (!data || data.length < 2) {
-        clearChartAndAi();
+        chartPanel.innerHTML = '<span class="text-gray-400">No hay datos suficientes para mostrar un gráfico.</span>';
         return;
     }
-    chartPanel.innerHTML = '';
+
+    chartPanel.innerHTML = ''; // Limpia el panel para el nuevo gráfico
 
     const dataTable = new google.visualization.DataTable();
     dataTable.addColumn('date', data[0][0]);
     for (let i = 1; i < data[0].length; i++) dataTable.addColumn('number', data[0][i]);
     const rows = data.slice(1).map(row => [new Date(row[0]), ...row.slice(1)]).filter(row => !isNaN(row[0].getTime()));
-    if (rows.length > 0) dataTable.addRows(rows); else { clearChartAndAi(); return; }
+    
+    // Validamos que después de procesar fechas, aún tengamos filas.
+    if (rows.length === 0) {
+        chartPanel.innerHTML = '<span class="text-gray-400">No hay datos válidos en el rango de fechas seleccionado.</span>';
+        return;
+    }
+    dataTable.addRows(rows);
 
     const chartType = document.getElementById('chartTypeSelector').value;
     switch(chartType) {
