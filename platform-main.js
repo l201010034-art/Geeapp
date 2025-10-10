@@ -262,6 +262,7 @@ async function handleAnalysis(type, overrideRoi = null) {
         if (response.chartData && response.chartData.length >= 2) {
             // Si los datos son válidos, los guardamos y habilitamos todo.
             updateChartAndData(response.chartData, response.chartOptions);
+
         } else {
             // Si no hay datos, limpiamos la UI y lo indicamos.
             clearChartAndAi();
@@ -376,6 +377,8 @@ async function callGeeApi(action, params) {
 }
 
 function downloadCSV() {
+    console.log("INTENTANDO DESCARGAR:", currentChartData); // <-- AÑADE ESTA LÍNEA DE DEPURACIÓN
+
     if (!currentChartData || currentChartData.length < 2) return;
 
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -459,6 +462,8 @@ function addGeeLayer(url, varName) {
 window.addGeeLayer = addGeeLayer; // Exponer globalmente
 
 function updateChartAndData(data, options) {
+    console.log("GUARDANDO DATOS:", data); // <-- AÑADE ESTA LÍNEA DE DEPURACIÓN
+
     currentChartData = data; // <-- ¡ESTA ES LA LÍNEA CLAVE QUE GUARDA LOS DATOS!
     drawChart(data, options); // Llama a la función original para dibujar
 
