@@ -412,3 +412,20 @@ function drawChart(data, options) {
 }
 window.updateStatsPanel = updateStatsPanel;
 window.drawChart = drawChart;
+window.zonaCheckboxes = zonaCheckboxes; // <-- Añade esta línea
+window.zonas = zonas; // <-- Añade esta línea
+window.varParams = varParams; // <-- Añade esta línea
+window.resetApp = resetApp; // <-- Añade esta línea
+window.downloadCSV = downloadCSV; // <-- Añade esta línea
+window.downloadChart = downloadChart; // <-- Añade esta línea
+window.toggleAnalysisPanels = toggleAnalysisPanels; // <-- Añade esta línea
+window.showLoading = showLoading; // <-- Añade esta línea
+window.updateStatsPanel = updateStatsPanel; // <-- Añade esta línea
+window.clearMapAndAi = clearMapAndAi; // <-- Añade esta línea
+window.clearChartAndAi = clearChartAndAi; // <-- Añade esta línea
+window.getActiveROIs = getActiveROIs; // <-- Añade esta línea
+window.callGeeApi = callGeeApi; // <-- Añade esta línea
+window.currentGEELayer = currentGEELayer; // <-- Añade esta línea
+window.currentChartData = currentChartData; // <-- Añade esta línea
+window.currentChart = currentChart; // <-- Añade esta línea
+window.initPlatform = initPlatform; // <-- Añade esta línea
