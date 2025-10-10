@@ -156,8 +156,8 @@ async function handleLabCodeExecution() {
     const previewOverlay = document.getElementById('lab-preview-overlay');
     const previewText = document.getElementById('lab-preview-text');
 
-    if (!code || code.includes('//')) { alert("No hay código válido para ejecutar."); return; }
-
+// LÍNEA NUEVA - CORREGIDA
+    if (!code || code.trim().startsWith('//')) { alert("No hay código válido para ejecutar. Asegúrate de generar el código primero y de que no haya errores."); return; }
     executeButton.classList.add('hidden');
     previewOverlay.classList.remove('hidden');
     previewText.textContent = "Ejecutando en GEE y preparando previsualización...";
