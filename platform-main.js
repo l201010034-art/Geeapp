@@ -268,28 +268,44 @@ async function callGeeApi(action, params) {
     catch (e) { throw new Error(`Respuesta inválida del servidor.`); }
 }
 
+// UBICACIÓN: platform-main.js
+
 function downloadCSV() {
-    console.log("INTENTANDO DESCARGAR:", currentChartData);
+    // 1. Usa la variable global directamente, como en la versión antigua.
     if (!currentChartData || currentChartData.length < 2) {
-        console.log("Descarga detenida porque no hay datos válidos.");
+        alert('No hay datos en el gráfico para descargar.');
         return;
     }
+
     let csvContent = "data:text/csv;charset=utf-8,";
-    const statsText = document.getElementById('stats-panel').textContent;
-    csvContent += `#"Análisis Estructural de Datos Climáticos"\r\n`;
-    statsText.split('\n').forEach(line => {
-        csvContent += `#"${line.trim()}"\r\n`;
-    });
-    csvContent += "\r\n";
-    const escape = (field) => {
-        let str = String(field ?? '');
-        return (str.includes('"') || str.includes(',') || str.includes('\n')) ? `"${str.replace(/"/g, '""')}"` : str;
+    
+    // 2. Define una función para escapar caracteres especiales.
+    const escapeCSV = (field) => {
+        if (field === null || field === undefined) return '';
+        let fieldStr = String(field);
+        // Si el campo contiene comillas, comas o saltos de línea, lo encerramos en comillas.
+        if (fieldStr.includes('"') || fieldStr.includes(',') || fieldStr.includes('\n')) {
+            fieldStr = fieldStr.replace(/"/g, '""'); // Escapa las comillas dobles dentro del campo.
+            return `"${fieldStr}"`;
+        }
+        return fieldStr;
     };
-    currentChartData.forEach(row => { csvContent += row.map(escape).join(",") + "\r\n"; });
+
+    // 3. Convierte cada fila del arreglo de datos a una línea de CSV.
+    currentChartData.forEach(rowArray => {
+        let row = rowArray.map(escapeCSV).join(",");
+        csvContent += row + "\r\n";
+    });
+
+    // 4. Crea el enlace de descarga, lo añade al cuerpo, lo "cliquea" y lo elimina.
+    // Este método es el más compatible con todos los navegadores.
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.href = encodeURI(csvContent);
-    link.download = "reporte_climatico.csv";
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "reporte_datos_climaticos.csv");
+    document.body.appendChild(link); 
     link.click();
+    document.body.removeChild(link);
 }
 
 function downloadChart() {
@@ -378,11 +394,17 @@ function clearMapAndAi() {
     clearChartAndAi();
 }
 
+// UBICACIÓN: platform-main.js
+
 function clearChartAndAi() {
     const chartPanel = document.getElementById('chart-panel');
     chartPanel.innerHTML = '<span class="text-gray-300">El gráfico aparecerá aquí</span>';
-    currentChartData = null;
+    
+    // Limpiamos la variable global
+    currentChartData = null; 
     currentChart = null;
+    
+    // Deshabilitamos todos los botones de acción
     document.getElementById('downloadCsvButton').disabled = true;
     document.getElementById('downloadChartButton').disabled = true;
     document.getElementById('predictButton').disabled = true;
