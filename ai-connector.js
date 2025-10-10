@@ -258,10 +258,36 @@ function markdownToHtml(text) {
     return text?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('').replace(/<p>\*/g, '<ul>*').replace(/\* (.*?)(<br>|<\/p>)/g, '<li>$1</li>').replace(/<\/li><\/ul><\/p>/g, '</li></ul>');
 }
 
-function buildPrompt(data) {
-    const { stats, chartData, variable, roi, startDate, endDate } = data;
-    const chartSample = chartData ? `Los primeros 5 puntos de datos son: ${JSON.stringify(chartData.slice(0, 6))}` : "No hay datos de serie temporal.";
-    return `Eres un climatólogo experto en Campeche. Analiza los siguientes datos para un informe gubernamental. **Variable:** ${variable}. **Zona:** ${roi}. **Periodo:** ${startDate} a ${endDate}. **Estadísticas:** ${stats || "N/A"}. **Muestra de datos:** ${chartSample}. **Instrucciones:** Genera un resumen ejecutivo conciso (máx 3 párrafos). Enfócate en tendencias e implicaciones prácticas para Protección Civil, Desarrollo Agropecuario y **SEDECO**. Finaliza con una **Conclusión Clave** en negritas. Responde en texto simple.`;
+// UBICACIÓN: ai-connector.js
+
+function buildPredictionPrompt(chartData) {
+    const variableName = chartData[0][1];
+    
+    // --- LÍNEA CORREGIDA ---
+    // Usamos slice(1) para quitar el encabezado y luego slice(-15) en una copia segura.
+    // Esto evita que el arreglo original sea modificado.
+    const dataOnly = chartData.slice(1);
+    const recentDataSample = JSON.stringify(dataOnly.slice(-15));
+
+    return `
+        Eres un climatólogo experto en análisis de datos y modelado de tendencias para el estado de Campeche.
+        Tu tarea es analizar la siguiente serie temporal de datos climáticos y generar un pronóstico cualitativo a corto plazo (próximas 2-4 semanas).
+
+        **Datos de la Serie Temporal Reciente:**
+        - **Variable:** ${variableName}
+        - **Últimos 15 puntos de datos:** ${recentDataSample}
+
+        **Instrucciones para tu respuesta:**
+        1.  **Análisis de Tendencia:** Describe brevemente la tendencia observada en los datos más recientes. ¿Está aumentando, disminuyendo, es estable o es errática?
+        2.  **Pronóstico a Corto Plazo:** Basado en esta tendencia y en tu conocimiento general del clima de Campeche para la época del año, proyecta cómo es probable que se comporte esta variable en las próximas 2 a 4 semanas.
+        3.  **Implicaciones y Recomendaciones:** ¿Qué significa este pronóstico para los sectores clave?
+            - **Si la tendencia es negativa (ej. menos lluvia, más calor):** Advierte sobre los riesgos (estrés hídrico, riesgo de incendios, olas de calor) y sugiere acciones preventivas para Protección Civil y la Secretaría de Desarrollo Agropecuario.
+            - **Si la tendencia es positiva (ej. lluvias regulares, temperaturas moderadas):** Describe las condiciones favorables.
+            - **Si la tendencia es extrema (ej. lluvias muy intensas):** Advierte sobre posibles riesgos de inundaciones.
+
+        **Formato de Salida:**
+        Usa formato Markdown. Inicia con un titular claro como "**Pronóstico de Tendencia**". Usa negritas para resaltar los puntos clave.
+    `;
 }
 
 function buildConversationalPrompt(query) {
