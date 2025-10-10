@@ -137,6 +137,7 @@ function setupEventListeners() {
     document.getElementById('resetButton').addEventListener('click', resetApp);
     document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
     document.getElementById('downloadChartButton').addEventListener('click', downloadChart);
+    document.getElementById('downloadPdfButton').addEventListener('click', downloadPDF); // <-- Añade esta línea
     document.getElementById('variableSelector').addEventListener('change', toggleAnalysisPanels);
 
     // Acciones de Análisis IA
@@ -259,12 +260,16 @@ async function handleAnalysis(type, overrideRoi = null) {
         if (response.stats) updateStatsPanel(response.stats);
 
         if (response.chartData) {
-            currentChartData = response.chartData;
-            document.getElementById('downloadCsvButton').disabled = false;
-            document.getElementById('downloadChartButton').disabled = false;
-            document.getElementById('predictButton').disabled = false;
-            drawChart(response.chartData, response.chartOptions);
-        }
+            // ANTES:
+            // currentChartData = response.chartData;
+            // document.getElementById('downloadCsvButton').disabled = false;
+            // document.getElementById('downloadChartButton').disabled = false;
+            // document.getElementById('predictButton').disabled = false;
+            // drawChart(response.chartData, response.chartOptions);
+
+            // AHORA (más limpio):
+            updateChartAndData(response.chartData, response.chartOptions);
+}
 
         const aiData = { stats: response.stats, chartData: response.chartData, chartOptions: response.chartOptions, variable: selectedVar, roi: activeROIs[0]?.name || "área seleccionada", startDate, endDate };
         if (type === 'fireRisk') window.generateFireRiskAnalysis(aiData);
@@ -296,6 +301,72 @@ function getActiveROIs() {
 }
 
 // --- COMUNICACIÓN API Y DESCARGAS ---
+
+async function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    showLoading(true);
+
+    try {
+        // --- 1. TÍTULO Y METADATOS ---
+        doc.setFontSize(18);
+        doc.text('Reporte de Análisis Climático', 105, 20, { align: 'center' });
+        doc.setFontSize(10);
+        doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`, 105, 26, { align: 'center' });
+        
+        const variable = document.getElementById('variableSelector').value || 'N/A';
+        const rois = getActiveROIs().map(r => r.name).join(', ') || 'N/A';
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        doc.setFontSize(12);
+        doc.text('Parámetros del Análisis', 14, 40);
+        doc.setFontSize(10);
+        doc.text(`Variable: ${variable}`, 14, 46);
+        doc.text(`Zona(s) de Interés: ${rois}`, 14, 51);
+        doc.text(`Periodo: ${startDate} al ${endDate}`, 14, 56);
+
+        // --- 2. ESTADÍSTICAS ---
+        const statsText = document.getElementById('stats-panel').textContent;
+        doc.setFontSize(12);
+        doc.text('Resumen Estadístico', 14, 68);
+        doc.setFontSize(10);
+        const statsLines = doc.splitTextToSize(statsText, 180); // 180mm de ancho
+        doc.text(statsLines, 14, 74);
+        let currentY = 74 + (statsLines.length * 5) + 8; // Calcula la posición para el gráfico
+
+        // --- 3. GRÁFICO (como imagen) ---
+        const chartPanel = document.getElementById('chart-panel');
+        const canvas = await html2canvas(chartPanel, { backgroundColor: '#a04040' });
+        const imgData = canvas.toDataURL('image/png');
+        const imgProps = doc.getImageProperties(imgData);
+        const pdfWidth = 180;
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        doc.addImage(imgData, 'PNG', 15, currentY, pdfWidth, pdfHeight);
+        currentY += pdfHeight + 10;
+
+        // --- 4. ANÁLISIS CON IA (si existe) ---
+        const aiSummaryEl = document.getElementById('ai-summary');
+        if (aiSummaryEl && aiSummaryEl.textContent.trim() !== 'Esperando análisis...') {
+            doc.addPage();
+            doc.setFontSize(14);
+            doc.text('Análisis e Interpretación con IA', 105, 20, { align: 'center' });
+            doc.setFontSize(10);
+            const aiText = aiSummaryEl.innerText;
+            const aiLines = doc.splitTextToSize(aiText, 180);
+            doc.text(aiLines, 14, 30);
+        }
+
+        doc.save('reporte_climatico.pdf');
+
+    } catch (error) {
+        console.error("Error generando PDF:", error);
+        alert("No se pudo generar el PDF. Revisa la consola para más detalles.");
+    } finally {
+        showLoading(false);
+    }
+}
+
 async function callGeeApi(action, params) {
     const response = await fetch('/api/gee', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, params }) });
     const responseText = await response.text();
@@ -373,6 +444,7 @@ function clearChartAndAi() {
     document.getElementById('downloadCsvButton').disabled = true;
     document.getElementById('downloadChartButton').disabled = true;
     document.getElementById('predictButton').disabled = true;
+    document.getElementById('downloadPdfButton').disabled = true; // <-- Añade esta línea
     document.getElementById('ai-analysis-panel').classList.add('hidden');
     document.getElementById('ai-actions-container').classList.add('hidden');
 }
@@ -389,9 +461,24 @@ function addGeeLayer(url, varName) {
 }
 window.addGeeLayer = addGeeLayer; // Exponer globalmente
 
+function updateChartAndData(data, options) {
+    currentChartData = data; // <-- ¡ESTA ES LA LÍNEA CLAVE QUE GUARDA LOS DATOS!
+    drawChart(data, options); // Llama a la función original para dibujar
+
+    // Habilita los botones de descarga y predicción
+    document.getElementById('downloadCsvButton').disabled = false;
+    document.getElementById('downloadChartButton').disabled = false;
+    document.getElementById('predictButton').disabled = false;
+    document.getElementById('downloadPdfButton').disabled = false; // <-- Añade esta línea
+
+}
+
 function drawChart(data, options) {
     const chartPanel = document.getElementById('chart-panel');
-    if (!data || data.length < 2) { clearChartAndAi(); return; }
+    if (!data || data.length < 2) {
+        clearChartAndAi();
+        return;
+    }
     chartPanel.innerHTML = '';
 
     const dataTable = new google.visualization.DataTable();
@@ -410,6 +497,8 @@ function drawChart(data, options) {
     const defaultOptions = { backgroundColor: '#a04040', titleTextStyle: { color: '#FFFFFF' }, legend: { textStyle: { color: '#FFFFFF' }, position: 'top' }, hAxis: { textStyle: { color: '#FFFFFF' }, titleTextStyle: { color: '#FFFFFF' } }, vAxis: { textStyle: { color: '#FFFFFF' }, titleTextStyle: { color: '#FFFFFF' } }, chartArea: { width: '85%', height: '75%' } };
     currentChart.draw(dataTable, {...defaultOptions, ...options});
 }
+
+window.updateChartAndData = updateChartAndData; // <-- Exportamos la nueva función
 window.updateStatsPanel = updateStatsPanel;
 window.drawChart = drawChart;
 window.zonaCheckboxes = zonaCheckboxes; // <-- Añade esta línea

@@ -220,8 +220,15 @@ function applyLabResultToMap() {
         if (lastLabResult.stats) {
             window.updateStatsPanel(lastLabResult.stats);
         }
-        if (lastLabResult.chartData) {
-            window.drawChart(lastLabResult.chartData, lastLabResult.chartOptions);
+// UBICACIÓN: ai-connector.js (dentro de applyLabResultToMap)
+
+// ...
+            if (lastLabResult.chartData) {
+                // ANTES: window.drawChart(lastLabResult.chartData, lastLabResult.chartOptions);
+                // AHORA:
+                window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
+            }
+
             // Habilitar botones de descarga si es necesario
             document.getElementById('downloadCsvButton').disabled = false;
             document.getElementById('downloadChartButton').disabled = false;
@@ -233,7 +240,7 @@ function applyLabResultToMap() {
     document.getElementById('lab-execute-button').classList.remove('hidden');
     document.getElementById('lab-apply-button').classList.add('hidden');
     document.getElementById('lab-preview-overlay').classList.add('hidden');
-}
+
 
 function handleLabCopyCode() {
     const codeToCopy = document.getElementById('lab-result-display').textContent;

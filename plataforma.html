@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plataforma - Informe Climático de Campeche</title>
@@ -119,6 +121,8 @@
                     <button id="downloadCsvButton" class="w-full p-2 font-bold bg-green-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled title="Descargar datos del gráfico y estadísticas como CSV">Descargar Reporte</button>
                     <button id="downloadChartButton" class="w-full p-2 font-bold bg-blue-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled title="Descargar el gráfico actual como imagen PNG">Descargar Gráfico</button>
                 </div>
+                <button id="downloadPdfButton" class="w-full mt-2 p-2 font-bold bg-red-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled title="Generar un reporte completo en formato PDF">📄 Generar PDF</button>
+
             </div></details>
         </aside>
         
