@@ -334,99 +334,176 @@ function buildFireRiskPrompt(data) {
 
 // UBICACIÓN: ai-connector.js
 
-// UBICACIÓN: ai-connector.js
-
-// UBICACIÓN: ai-connector.js
-
+// REEMPLAZA la función buildGeeLabPrompt completa con esta:
 function buildGeeLabPrompt(request) {
-    const startDate = new Date(request.startDate);
-    const endDate = new Date(request.endDate);
-    const diffTime = Math.abs(endDate - startDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    const optimizationRule = diffDays > 365
-        ? `3. **Optimización por Tiempo (CRÍTICO):** El rango de fechas es largo (${diffDays} días). DEBES crear un compuesto temporal (ej. \`.median()\`) para la imagen del mapa (\`laImagenResultante\`).`
-        : `3. **Procesamiento Directo:** El rango de fechas es corto (${diffDays} días).`;
-
     let analysisSpecificInstructions = '';
-    // ... (todo el bloque switch que definimos antes se mantiene exactamente igual) ...
+    // ... (El bloque switch con las instrucciones para cada análisis se mantiene EXACTAMENTE IGUAL) ...
     switch (request.analysisType) {
         case 'NDVI':
             analysisSpecificInstructions = `
-    **Instrucciones Específicas para NDVI (Índice de Vegetación):**
-    A. **Dataset:** Usa 'COPERNICUS/S2_SR_HARMONIZED' (Sentinel-2).
-    B. **Cálculo:** Implementa el NDVI usando la fórmula (B8 - B4) / (B8 + B4). Nombra la banda resultante 'NDVI'.
-    C. **Máscara de Nubes:** Filtra la colección de imágenes por una cobertura de nubes menor al 20% usando 'CLOUDY_PIXEL_PERCENTAGE'.
-    D. **Variables de Salida:** El nombre de la banda para el gráfico debe ser 'NDVI' (\`bandNameForChart = 'NDVI'\`).`;
+    // A. Dataset: Sentinel-2 para análisis de vegetación.
+    var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+        .filterBounds(roi)
+        .filterDate(startDate, endDate)
+        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20));
+
+    // B. Cálculo: Implementar NDVI y crear una imagen compuesta.
+    var addNDVI = function(image) {
+      var ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI');
+      return image.addBands(ndvi);
+    };
+    collection = collection.map(addNDVI);
+    
+    // C. Variables de Salida
+    laImagenResultante = collection.select('NDVI').median();
+    collectionForChart = collection.select('NDVI');
+    bandNameForChart = 'NDVI';
+    visParams = {min: -0.2, max: 0.9, palette: ['blue', 'white', 'green']};`;
             break;
         case 'LST':
             analysisSpecificInstructions = `
-    **Instrucciones Específicas para LST (Temperatura Superficial):**
-    A. **Dataset:** Usa 'MODIS/061/MOD11A2' (Producto LST de 8 días).
-    B. **Procesamiento:** Selecciona la banda 'LST_Day_1km', aplica el factor de escala de 0.02, y convierte de Kelvin a Celsius restando 273.15. Nombra la banda resultante 'LST'.
-    C. **Variables de Salida:** El nombre de la banda para el gráfico debe ser 'LST' (\`bandNameForChart = 'LST'\`).`;
+    // A. Dataset: MODIS para Temperatura Superficial (LST).
+    var collection = ee.ImageCollection('MODIS/061/MOD11A2')
+        .filterBounds(roi)
+        .filterDate(startDate, endDate);
+
+    // B. Procesamiento: Seleccionar, escalar y convertir a Celsius.
+    var processLST = function(image) {
+      var lst = image.select('LST_Day_1km').multiply(0.02).subtract(273.15).rename('LST');
+      return image.addBands(lst);
+    };
+    collection = collection.map(processLST);
+
+    // C. Variables de Salida
+    laImagenResultante = collection.select('LST').median();
+    collectionForChart = collection.select('LST');
+    bandNameForChart = 'LST';
+    visParams = {min: 15, max: 45, palette: ['blue', 'cyan', 'yellow', 'red']};`;
             break;
+        // ... (Asegúrate de que TODOS tus casos del switch estén aquí)
         case 'NDWI':
             analysisSpecificInstructions = `
-    **Instrucciones Específicas para NDWI (Índice de Agua):**
-    A. **Dataset:** Usa 'COPERNICUS/S2_SR_HARMONIZED' (Sentinel-2).
-    B. **Cálculo:** Implementa el NDWI usando la fórmula (B3 - B8) / (B3 + B8) para delinear cuerpos de agua. Nombra la banda resultante 'NDWI'.
-    C. **Máscara de Nubes:** Filtra la colección de imágenes por una cobertura de nubes menor al 20%.
-    D. **Variables de Salida:** El nombre de la banda para el gráfico debe ser 'NDWI' (\`bandNameForChart = 'NDWI'\`).`;
+    // A. Dataset: Sentinel-2 para análisis de agua.
+    var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+        .filterBounds(roi)
+        .filterDate(startDate, endDate)
+        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20));
+
+    // B. Cálculo: Implementar NDWI.
+    var addNDWI = function(image) {
+      var ndwi = image.normalizedDifference(['B3', 'B8']).rename('NDWI');
+      return image.addBands(ndwi);
+    };
+    collection = collection.map(addNDWI);
+    
+    // C. Variables de Salida
+    laImagenResultante = collection.select('NDWI').median();
+    collectionForChart = collection.select('NDWI');
+    bandNameForChart = 'NDWI';
+    visParams = {min: -1, max: 1, palette: ['brown', 'white', 'blue']};`;
             break;
         case 'FIRE':
             analysisSpecificInstructions = `
-    **Instrucciones Específicas para Densidad de Incendios:**
-    A. **Dataset:** Usa la colección de puntos de incendios activos 'VIIRS/I-1/VNP14IMGML'.
-    B. **Procesamiento:** Filtra los puntos para quedarte solo con los de confianza alta (\`confidence === 'high'\`). Convierte estos puntos en una imagen de densidad (mapa de calor) usando \`reduceToImage()\` y un reductor de suma sobre un kernel Gaussiano (\`ee.Kernel.gaussian()\`).
-    C. **Variables de Salida:** La imagen resultante no tendrá serie temporal. Asigna \`collectionForChart = null;\` y \`bandNameForChart = null;\`.`;
+    // A. Dataset: Puntos de incendios activos VIIRS.
+    var fires = ee.FeatureCollection('VIIRS/I-1/VNP14IMGML')
+        .filterBounds(roi)
+        .filterDate(startDate, endDate)
+        .filter(ee.Filter.eq('confidence', 'high'));
+
+    // B. Procesamiento: Crear mapa de densidad.
+    laImagenResultante = fires.reduceToImage({
+        reducer: ee.Reducer.sum(),
+        geometry: roi,
+        scale: 1000
+    }).focal_max(ee.Number(3000), 'circle', 'meters');
+
+    // C. Variables de Salida (análisis solo visual)
+    collectionForChart = null;
+    bandNameForChart = null;
+    visParams = {min: 0, max: 1, palette: ['yellow', 'orange', 'red']};`;
             break;
         case 'FAI':
             analysisSpecificInstructions = `
-    **Instrucciones Específicas para FAI (Sargazo):**
-    A. **Dataset:** Usa 'COPERNICUS/S2_SR_HARMONIZED' (Sentinel-2).
-    B. **Máscara de Agua (OBLIGATORIO Y CRÍTICO):** Antes de cualquier otro paso, es fundamental aplicar una máscara de agua para eliminar todos los píxeles de tierra. Utiliza el dataset 'JRC/GSW1_4/GlobalSurfaceWater'. Selecciona la banda 'occurrence' y actualiza la máscara de cada imagen para procesar ÚNICAMENTE los píxeles con una probabilidad de agua superior al 50% (\`.updateMask(waterMask.gt(50))\`). Esto es vital para evitar falsos positivos.
-    C. **Cálculo de FAI:** Implementa el Índice de Algas Flotantes (FAI), diseñado para resaltar vegetación flotante. Nombra la banda resultante 'FAI'.
-    D. **Variables de Salida:** El nombre de la banda para el gráfico debe ser 'FAI' (\`bandNameForChart = 'FAI'\`).`;
+    // A. Dataset: Sentinel-2 para análisis de sargazo.
+    var waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence');
+    var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+        .filterBounds(roi)
+        .filterDate(startDate, endDate)
+        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30));
+
+    // B. Cálculo: Implementar FAI con máscara de agua.
+    var addFAI = function(image) {
+      image = image.updateMask(waterMask.gt(50));
+      var fai = image.expression(
+        'NIR - (RED + (SWIR - RED) * (865 - 665) / (1610 - 665))', {
+          'NIR': image.select('B8'),
+          'RED': image.select('B4'),
+          'SWIR': image.select('B11')
+        }).rename('FAI');
+      return image.addBands(fai);
+    };
+    collection = collection.map(addFAI);
+
+    // C. Variables de Salida
+    laImagenResultante = collection.select('FAI').max(); // Usar max() para resaltar mejor el sargazo
+    collectionForChart = collection.select('FAI');
+    bandNameForChart = 'FAI';
+    visParams = {min: -0.02, max: 0.1, palette: ['black', 'cyan', 'yellow', 'red']};`;
             break;
         case 'AIR_QUALITY':
             analysisSpecificInstructions = `
-    **Instrucciones Específicas para Calidad del Aire (NO2):**
-    A. **Dataset:** Usa 'COPERNICUS/S5P/NRTI/L3_NO2'.
-    B. **Procesamiento:** Selecciona la banda 'tropospheric_NO2_column_number_density'. Los valores ya están en mol/m^2.
-    C. **Variables de Salida:** El nombre de la banda para el gráfico debe ser 'tropospheric_NO2_column_number_density'.`;
+    // A. Dataset: Sentinel-5P para NO2.
+    var collection = ee.ImageCollection('COPERNICUS/S5P/NRTI/L3_NO2')
+        .filterBounds(roi)
+        .filterDate(startDate, endDate)
+        .select('tropospheric_NO2_column_number_density');
+
+    // B. Variables de Salida
+    laImagenResultante = collection.median();
+    collectionForChart = collection;
+    bandNameForChart = 'tropospheric_NO2_column_number_density';
+    visParams = {min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']};`;
             break;
         case 'HURRICANE':
             analysisSpecificInstructions = `
-    **Instrucciones Específicas para Visualizador de Huracanes:**
-    A. **Fondo de Satélite:** Carga la colección 'GOES-16/ABI-L1b-RadC'. Filtra por la fecha más reciente en el rango y crea un compuesto visual RGB.
-    B. **Datos de Trayectoria:** Carga la colección 'IBTrACS/v4'. Filtra las trayectorias que crucen el ROI y estén activas en el rango de fechas.
-    C. **Visualización de Trayectoria:** Convierte las características de la trayectoria (líneas y puntos) en una imagen usando \`.style()\` para dibujar las líneas y puntos sobre un fondo transparente. El grosor de la línea y el tamaño del punto pueden depender de la propiedad de velocidad del viento (\`usa_wind\`).
-    D. **Composición Final:** Usa \`.mosaic()\` para superponer la imagen de la trayectoria sobre la imagen del satélite GOES. Esta será \`laImagenResultante\`.
-    E. **Variables de Salida:** Este es un análisis visual. No generes un gráfico. Asigna \`collectionForChart = null;\` y \`bandNameForChart = null;\`.`;
+    // A. Fondo de Satélite GOES.
+    var goesImage = ee.ImageCollection('GOES-16/ABI-L1b-RadC')
+        .filterDate(ee.Date(endDate).advance(-1, 'day'), endDate)
+        .sort('system:time_start', false)
+        .first();
+    var rgb = goesImage.select(['C02', 'C03', 'C01']).multiply(ee.Image([0.0001, 0.0001, 0.0001]));
+
+    // B. Datos de Trayectoria IBTrACS.
+    var tracks = ee.FeatureCollection('IBTrACS/v4')
+        .filterBounds(roi)
+        .filterDate(startDate, endDate);
+    var styledTracks = tracks.style({color: 'red', width: 1, pointSize: 3});
+
+    // C. Composición Final
+    laImagenResultante = rgb.visualize({min:0, max:0.6}).blend(styledTracks);
+    
+    // D. Variables de Salida (análisis solo visual)
+    collectionForChart = null;
+    bandNameForChart = null;
+    visParams = {};`; // No se necesitan visParams para una imagen ya visualizada.
             break;
     }
-    
-    // ▼▼▼ ESTA ES LA SECCIÓN CORREGIDA ▼▼▼
-    return `Eres un desarrollador experto en Google Earth Engine (GEE). Tu tarea es crear un script de GEE optimizado que cumpla con la siguiente petición.
 
-    **Petición de Análisis:**
-    - **Tipo de Análisis:** "${request.analysisType}"
-    - **Región de Interés:** "${request.region}" 
-    - **Fecha de Inicio:** "${request.startDate}"
-    - **Fecha de Fin:** "${request.endDate}"
+    // ▼▼▼ PLANTILLA FINAL QUE SE ENVÍA A LA IA ▼▼▼
+    return `
+// Estas variables son inyectadas por el servidor y están listas para usar:
+// var roi, startDate, endDate;
 
-    **Reglas Estrictas de Formato y Optimización:**
-    1.  **Respuesta Única:** Responde ÚNICAMENTE con el bloque de código JavaScript. No incluyas explicaciones.
-    2.  **Variables de Salida:** Tu script DEBE definir estas tres variables: \`laImagenResultante\`, \`collectionForChart\`, y \`bandNameForChart\`. Si un análisis no genera gráfico (ej. Huracanes), asigna \`null\` a las variables del gráfico.
-    3.  **Definición de ROI:** La región de interés ya está definida para ti en una variable llamada \`roi\`. Úsala directamente en tus filtros y al final en \`.clip(roi)\`.
-    4.  **Fechas:** Las fechas de inicio y fin ya están definidas para ti en variables llamadas \`startDate\` y \`endDate\`. Úsalas directamente en tus filtros.
-    5.  **Finalización Obligatoria:** El script DEBE terminar con estas tres líneas exactas:
-        \`console.log(JSON.stringify({visParams: visParams}));\`
-        \`Map.centerObject(roi, 10);\`
-        \`Map.addLayer(laImagenResultante.clip(roi), visParams, 'Resultado del Laboratorio');\`
+// --- INICIO DE LA LÓGICA DE LA IA ---
+// El código debe definir estas 4 variables:
+var laImagenResultante, collectionForChart, bandNameForChart, visParams;
 
-    ${analysisSpecificInstructions}
-    
-    Ahora, genera el código completo basado en estas instrucciones.`;
+${analysisSpecificInstructions}
+// --- FIN DE LA LÓGICA DE LA IA ---
+
+// No modificar estas últimas tres líneas.
+console.log(JSON.stringify({visParams: visParams}));
+Map.centerObject(roi, 10);
+Map.addLayer(laImagenResultante.clip(roi), visParams, 'Resultado del Laboratorio');
+`;
 }

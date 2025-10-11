@@ -119,7 +119,9 @@ async function getOptimizedChartData(collection, roi, bandName, startDate, endDa
 }
 
 
-// --- Lógica de Ejecución de GEE (Ahora en su propia función) ---
+// UBICACIÓN: api/gee-lab.js
+
+// REEMPLAZA la función executeGeeCode completa con esta:
 async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
     // 1. Inicializar GEE
     await new Promise((resolve, reject) => {
@@ -130,72 +132,62 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
         );
     });
 
-    // 2. Preparar el Sandbox para capturar las variables
+    // 2. Preparar el Sandbox y las variables a inyectar
     const logs = [];
-    
     let eeRoi;
+
     if (roiParam === 'Golfo de México (Zona Campeche)') {
         eeRoi = ee.Geometry.Rectangle([-94, 18, -89, 22], null, false);
     } else if (roiParam === 'Línea Costera (Sonda de Campeche)') {
         eeRoi = ee.Geometry.Rectangle([-92.5, 18.5, -90.5, 21], null, false);
     } else {
-        // Es un nombre de municipio, lo traducimos a CVEGEO
         const cvegeo = getMunicipalityCvegeo(roiParam);
-        if (!cvegeo) {
-            throw new Error(`El nombre del municipio "${roiParam}" no es válido o no se reconoce.`);
-        }
+        if (!cvegeo) throw new Error(`El nombre del municipio "${roiParam}" no es válido.`);
         const municipios = ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024');
-        const feature = municipios.filter(ee.Filter.eq('CVEGEO', cvegeo)).first();
-        // Importante: .geometry() es una operación que se ejecutará en GEE, no necesitamos evaluarla aquí
-        eeRoi = feature.geometry();
+        eeRoi = municipios.filter(ee.Filter.eq('CVEGEO', cvegeo)).first().geometry();
     }
 
-
+    // ▼▼▼ CAMBIO CLAVE: DEFINIMOS EL CONTEXTO CON TODAS LAS VARIABLES ▼▼▼
     const executionContext = {
         ee: ee,
         console: { log: (message) => logs.push(message.toString()) },
+        Map: { centerObject: () => {}, addLayer: () => {} }, // Mock Map object
+        // Variables que la IA espera que existan:
         roi: eeRoi,
-        // Variables que esperamos que la IA defina
-        laImagenResultante: null,
-        collectionForChart: null,
-        bandNameForChart: null,
-        visParams: null,
-    };
-    executionContext.Map = {
-        centerObject: () => {},
-        addLayer: (img) => { 
-            // Capturamos la imagen que se añade al mapa
-            if (!executionContext.laImagenResultante) {
-                executionContext.laImagenResultante = img;
-            }
-        }
+        startDate: startDate,
+        endDate: endDate
     };
     const context = vm.createContext(executionContext);
 
-    // 3. Ejecutar el código en el sandbox
+    // 3. Ejecutar el código en el sandbox, que ahora tiene acceso a roi, startDate y endDate
     vm.runInContext(codeToExecute, context, { timeout: 60000 });
+    
+    // 4. Extraer las variables que la IA debió haber creado
+    const { laImagenResultante, collectionForChart, bandNameForChart, visParams } = context;
 
-    if (!context.laImagenResultante) {
-        throw new Error("El código no definió la variable 'laImagenResultante' o no llamó a Map.addLayer.");
+    if (!laImagenResultante) {
+        throw new Error("El código generado por la IA no definió la variable 'laImagenResultante'.");
+    }
+    if (!visParams) {
+        throw new Error("El código generado por la IA no definió la variable 'visParams'.");
     }
 
-    // 4. Obtener el Map ID para el frontend
-    const visParams = context.visParams || {};
+    // 5. Obtener el Map ID para el frontend
     const mapId = await new Promise((resolve, reject) => {
-        context.laImagenResultante.getMapId(visParams, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
+        laImagenResultante.getMapId(visParams, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
     });
 
-    // 5. ¡NUEVO! Calcular estadísticas y datos del gráfico si las variables existen
-    let stats = `Análisis visual para: ${context.bandNameForChart || 'Resultado del Laboratorio'}`;
+    // 6. Calcular estadísticas y datos del gráfico
+    let stats = `Análisis visual para: ${bandNameForChart || 'Resultado del Laboratorio'}`;
     let chartData = null;
 
-    if (context.collectionForChart && context.bandNameForChart) {
-        chartData = await getOptimizedChartData(context.collectionForChart, eeRoi, context.bandNameForChart, startDate, endDate);
-        const imageForStats = context.laImagenResultante.select(context.bandNameForChart);
-        stats = await getStats(imageForStats, eeRoi, context.bandNameForChart, '', 'Resultado del Laboratorio');
+    if (collectionForChart && bandNameForChart) {
+        chartData = await getOptimizedChartData(collectionForChart, eeRoi, bandNameForChart, startDate, endDate);
+        const imageForStats = laImagenResultante.select(bandNameForChart);
+        stats = await getStats(imageForStats, eeRoi, bandNameForChart, '', 'Resultado del Laboratorio');
     }
 
-    return { mapId, visParams, stats, chartData, chartOptions: { title: `Serie Temporal para ${context.bandNameForChart}` } };
+    return { mapId, visParams, stats, chartData, chartOptions: { title: `Serie Temporal para ${bandNameForChart}` } };
 }
 
 
@@ -226,7 +218,7 @@ export default async function handler(req, res) {
            }
             // --- MODO 2: EJECUTAR CÓDIGO CON CICLO DE DEPURACIÓN ---
             let codeToRun = codeToExecute;
-            const MAX_ATTEMPTS = 2;
+            const MAX_ATTEMPTS = 4;
             let lastError = null;
 
             for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
