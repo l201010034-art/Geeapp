@@ -336,6 +336,8 @@ function buildFireRiskPrompt(data) {
 
 // UBICACIÓN: ai-connector.js
 
+// UBICACIÓN: ai-connector.js
+
 function buildGeeLabPrompt(request) {
     const startDate = new Date(request.startDate);
     const endDate = new Date(request.endDate);
@@ -346,8 +348,8 @@ function buildGeeLabPrompt(request) {
         ? `3. **Optimización por Tiempo (CRÍTICO):** El rango de fechas es largo (${diffDays} días). DEBES crear un compuesto temporal (ej. \`.median()\`) para la imagen del mapa (\`laImagenResultante\`).`
         : `3. **Procesamiento Directo:** El rango de fechas es corto (${diffDays} días).`;
 
-    // --- LÓGICA DE INSTRUCCIONES EXPERTAS ---
     let analysisSpecificInstructions = '';
+    // ... (todo el bloque switch que definimos antes se mantiene exactamente igual) ...
     switch (request.analysisType) {
         case 'NDVI':
             analysisSpecificInstructions = `
@@ -404,31 +406,27 @@ function buildGeeLabPrompt(request) {
     E. **Variables de Salida:** Este es un análisis visual. No generes un gráfico. Asigna \`collectionForChart = null;\` y \`bandNameForChart = null;\`.`;
             break;
     }
+    
+    // ▼▼▼ ESTA ES LA SECCIÓN CORREGIDA ▼▼▼
+    return `Eres un desarrollador experto en Google Earth Engine (GEE). Tu tarea es crear un script de GEE optimizado que cumpla con la siguiente petición.
 
-    return `Eres un desarrollador experto en GEE. Tu tarea es crear un script optimizado que genere TRES variables finales: 'laImagenResultante' (para el mapa), 'collectionForChart' (para el gráfico) y 'bandNameForChart' (un string con el nombre de la banda a graficar).
+    **Petición de Análisis:**
+    - **Tipo de Análisis:** "${request.analysisType}"
+    - **Región de Interés:** "${request.region}" 
+    - **Fecha de Inicio:** "${request.startDate}"
+    - **Fecha de Fin:** "${request.endDate}"
 
-    **Reglas Estrictas de Optimización y Formato:**
-    1.  **Formato de Respuesta:** Responde ÚNICAMENTE con el bloque de código JavaScript.
-    2.  **Filtrado Eficiente:** Siempre filtra la colección por ROI, fecha y metadatos (ej. nubosidad < 20%) al principio.
-    \${optimizationRule}
-    4.  **Variables de Salida OBLIGATORIAS:**
-        - \`laImagenResultante\`: Un \`ee.Image\` para el mapa. Puede ser un compuesto (ej. median()) si el periodo es largo.
-        - \`collectionForChart\`: Un \`ee.ImageCollection\` con los valores listos para graficar, o \`null\` si el análisis es solo visual.
-        - \`bandNameForChart\`: Un string con el nombre de la banda principal a graficar, o \`null\` si no hay gráfico.
-    5.  **Uso de \`.clip()\`:** Aplica \`.clip(roi)\` a \`laImagenResultante\` justo antes de la visualización.
-    6.  **Estructura de Finalización OBLIGATORIA:** El script DEBE terminar con estas 3 líneas, en este orden exacto:
+    **Reglas Estrictas de Formato y Optimización:**
+    1.  **Respuesta Única:** Responde ÚNICAMENTE con el bloque de código JavaScript. No incluyas explicaciones.
+    2.  **Variables de Salida:** Tu script DEBE definir estas tres variables: \`laImagenResultante\`, \`collectionForChart\`, y \`bandNameForChart\`. Si un análisis no genera gráfico (ej. Huracanes), asigna \`null\` a las variables del gráfico.
+    3.  **Definición de ROI:** La región de interés ya está definida para ti en una variable llamada \`roi\`. Úsala directamente en tus filtros y al final en \`.clip(roi)\`.
+    4.  **Fechas:** Las fechas de inicio y fin ya están definidas para ti en variables llamadas \`startDate\` y \`endDate\`. Úsalas directamente en tus filtros.
+    5.  **Finalización Obligatoria:** El script DEBE terminar con estas tres líneas exactas:
         \`console.log(JSON.stringify({visParams: visParams}));\`
         \`Map.centerObject(roi, 10);\`
-        \`Map.addLayer(laImagenResultante, visParams, 'Nombre de Capa');\`
-    7.  **ROI (Región de Interés):** Usa el asset 'projects/residenciaproject-443903/assets/municipios_mexico_2024'. Filtra con 'CVEGEO' = '\${request.region}'.
+        \`Map.addLayer(laImagenResultante.clip(roi), visParams, 'Resultado del Laboratorio');\`
 
-    \${analysisSpecificInstructions}
-
-    **Petición Estructurada a Procesar:**
-    - Tipo de Análisis: "\${request.analysisType}"
-    - Región: "\${request.region}"
-    - Fecha de Inicio: "\${request.startDate}"
-    - Fecha de Fin: "\${request.endDate}"
-
-    **Tu Respuesta (solo código JavaScript optimizado):**`;
+    ${analysisSpecificInstructions}
+    
+    Ahora, genera el código completo basado en estas instrucciones.`;
 }

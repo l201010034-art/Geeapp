@@ -4,6 +4,20 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import ee from '@google/earthengine';
 import vm from 'vm';
 
+// ... después de las importaciones
+function getMunicipalityCvegeo(municipalityName) {
+    const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const normalizedInput = normalize(municipalityName);
+    const cvegeoMap = {
+        'calakmul': '04010', 'calkini': '04001', 'campeche': '04002', 'candelaria': '04011',
+        'carmen': '04003', 'champoton': '04004', 'dzitbalche': '04013', 'escarcega': '04008',
+        'hecelchakan': '04005', 'hopelchen': '04006', 'palizada': '04007', 'seybaplaya': '04012',
+        'tenabo': '04009'
+    };
+    return cvegeoMap[normalizedInput] || null;
+}
+// El resto del archivo continúa...
+
 // --- Capa 1: Diccionario de Auto-Correcciones Preventivas ---
 const commonFixes = {
     // Error común: Dataset de fronteras obsoleto
@@ -125,9 +139,17 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
     } else if (roiParam === 'Línea Costera (Sonda de Campeche)') {
         eeRoi = ee.Geometry.Rectangle([-92.5, 18.5, -90.5, 21], null, false);
     } else {
+        // Es un nombre de municipio, lo traducimos a CVEGEO
+        const cvegeo = getMunicipalityCvegeo(roiParam);
+        if (!cvegeo) {
+            throw new Error(`El nombre del municipio "${roiParam}" no es válido o no se reconoce.`);
+        }
         const municipios = ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024');
-        eeRoi = municipios.filter(ee.Filter.eq('CVEGEO', roiParam)).first().geometry();
+        const feature = municipios.filter(ee.Filter.eq('CVEGEO', cvegeo)).first();
+        // Importante: .geometry() es una operación que se ejecutará en GEE, no necesitamos evaluarla aquí
+        eeRoi = feature.geometry();
     }
+
 
     const executionContext = {
         ee: ee,
