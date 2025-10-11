@@ -169,7 +169,6 @@ async function executeGeeCode(codeToExecute, roi, startDate, endDate) {
     return { mapId, visParams, stats, chartData, chartOptions: { title: `Serie Temporal para ${context.bandNameForChart}` } };
 }
 
-// ... (el resto del archivo handler no cambia) ...
 
 // --- Manejador Principal de la API ---
 export default async function handler(req, res) {

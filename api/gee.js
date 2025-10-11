@@ -251,7 +251,7 @@ async function handleCompareData({ rois, varInfo, startDate, endDate, eeRoi }) {
         else if (varInfo.dataset === 'CHIRPS') collection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(startDate,endDate).filterBounds(eeRoi).map(processChirps);
     }
 
-    const chartData = await getOptimizedChartData(collection.select(varInfo.bandName), rois, varInfo.bandName, startDate, endDate);
+    const chartData = await getOptimizedChartData(collection.select(varInfo.bandName), rois, varInfo.bandName, startDate, endDate, eeRoi);
     
     return { 
         stats: `Comparando ${rois.length} zonas. Ver el gráfico para los resultados.`,
@@ -344,7 +344,7 @@ async function handleSpiData({ roi, timescale, startDate, endDate, eeRoi }) {
     const visParams = { min: -2.5, max: 2.5, palette: ['#d73027', '#f46d43', '#fdae61', '#cccccc', '#abd9e9', '#74add1', '#4575b4'] };
     const mapId = await getMapId(spiLatestImage.clip(eeRoi), visParams);
     
-    const chartData = await getOptimizedChartData(spiForPeriod, [roi], 'SPI', startDate, endDate);
+    const chartData = await getOptimizedChartData(spiForPeriod, [roi], 'SPI', startDate, endDate, eeRoi);
 
     return { mapId, stats: `Mostrando el mapa SPI más reciente para el periodo.`, chartData, chartOptions: { title: `SPI de ${timescale} meses para ${roi.name}` }};
 }
@@ -545,4 +545,4 @@ async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
             }
         });
     });
-} // <--- ESTA LLAVE FALTABA
+}

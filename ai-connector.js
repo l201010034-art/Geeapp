@@ -216,30 +216,31 @@ function applyLabResultToMap() {
             window.legendControl.update(legendInfo);
         }
 
-        // ¡NUEVO! Usamos las funciones globales para poblar los paneles de análisis
+        // Usamos las funciones globales para poblar los paneles de análisis
         if (lastLabResult.stats) {
             window.updateStatsPanel(lastLabResult.stats);
         }
-// UBICACIÓN: ai-connector.js (dentro de applyLabResultToMap)
-
-// ...
-            if (lastLabResult.chartData) {
-                // ANTES: window.drawChart(lastLabResult.chartData, lastLabResult.chartOptions);
-                // AHORA:
-                window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
-            }
-
-            // Habilitar botones de descarga si es necesario
-            document.getElementById('downloadCsvButton').disabled = false;
-            document.getElementById('downloadChartButton').disabled = false;
-        } else if (window.legendControl) {
-            window.legendControl.update(null);
+    
+        if (lastLabResult.chartData) {
+            window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
         }
+
+        // Habilitar botones de descarga si es necesario
+        document.getElementById('downloadCsvButton').disabled = false;
+        document.getElementById('downloadChartButton').disabled = false;
+
+    // --- CORRECCIÓN ---
+    // La llave de cierre '}' que estaba aquí fue movida.
+    // Ahora el 'else if' se conecta correctamente con el 'if' principal.
+    } else if (window.legendControl) {
+        window.legendControl.update(null);
     }
-    // Resetear estado del modal del lab
+    
+    // Resetear estado del modal del lab (esto se ejecuta siempre)
     document.getElementById('lab-execute-button').classList.remove('hidden');
     document.getElementById('lab-apply-button').classList.add('hidden');
     document.getElementById('lab-preview-overlay').classList.add('hidden');
+}
 
 
 function handleLabCopyCode() {
