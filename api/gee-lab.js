@@ -186,7 +186,7 @@ export default async function handler(req, res) {
     try {
         const { prompt, codeToExecute, roi, startDate, endDate } = req.body;
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
         if (prompt) {
             // --- MODO 1: GENERAR CÓDIGO ---
