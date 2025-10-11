@@ -97,20 +97,44 @@ function aggregateCollection(collection, unit, reducer, startDate, endDate) {
 // === LÓGICA DE BÚSQUEDA DE MUNICIPIOS ====================================================
 // =========================================================================================
 
+// =========================================================================================
+// === LÓGICA DE BÚSQUEDA DE MUNICIPIOS (VERSIÓN CORREGIDA Y ROBUSTA) =======================
+// =========================================================================================
+
 function getMunicipalityGeometry(municipalityName) {
-    // 1. Usa el ID de tu asset personal que subiste.
+    // Lista oficial de nombres tal como están en tu asset de GEE
+    const officialNames = [
+        "Calakmul", "Calkiní", "Campeche", "Candelaria", "Carmen", "Champotón",
+        "Dzitbalché", "Escárcega", "Hecelchakán", "Hopelchén", "Palizada",
+        "Seybaplaya", "Tenabo"
+    ];
+
+    // Función para normalizar strings (quitar acentos y convertir a minúsculas)
+    const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+    const normalizedInput = normalize(municipalityName);
+    
+    // Encontrar el nombre oficial que coincide con la entrada normalizada del usuario
+    const officialName = officialNames.find(name => normalize(name) === normalizedInput);
+
+    if (!officialName) {
+        // Si después de normalizar no se encuentra ninguna coincidencia, la geometría será nula
+        return null;
+    }
+    
+    // --- El resto de la función sigue igual, pero ahora usa el nombre oficial ---
     const MI_ASSET_ID = 'projects/residenciaproject-443903/assets/municipios_mexico_2024';
     const municipios = ee.FeatureCollection(MI_ASSET_ID);
 
-    // 2. Filtramos usando las columnas correctas: CVE_ENT para el estado y NOMGEO para el municipio.
     const campecheMunicipality = municipios.filter(ee.Filter.and(
-        ee.Filter.eq('CVE_ENT', '04'), // Usamos el código de estado '04' para Campeche
-        ee.Filter.eq('NOMGEO', municipalityName) // Usamos la columna del nombre geográfico
+        ee.Filter.eq('CVE_ENT', '04'),
+        ee.Filter.eq('NOMGEO', officialName) // ¡Usamos el nombre oficial y corregido!
     ));
     
     const feature = ee.Feature(campecheMunicipality.first());
     return ee.Algorithms.If(feature, feature.geometry(), null);
 }
+
 
 // =========================================================================================
 // === MANEJADOR PRINCIPAL DE LA API (VERSIÓN CORREGIDA) ===================================
