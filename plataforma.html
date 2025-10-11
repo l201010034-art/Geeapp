@@ -170,6 +170,7 @@
             <div class="flex-1 flex gap-4 overflow-hidden">
                 <div class="w-1/3 flex flex-col space-y-4">
                     <h3 class="text-lg font-semibold">1. Construye tu Análisis</h3>
+                    
                     <div>
                         <label for="lab-analysis-type" class="block mb-1 text-sm font-medium text-gray-300">Tipo de Análisis</label>
                         <select id="lab-analysis-type" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
@@ -182,19 +183,31 @@
                             <option value="HURRICANE">Visualizador de Huracanes (GOES & IBTrACS)</option>
                         </select>
                     </div>
-                    <div>
-                        <label for="lab-region-selector" class="block mb-1 text-sm font-medium text-gray-300">Región</label>
-                        <select id="lab-region-selector" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white"></select>
+
+                    <div id="lab-step-region" class="hidden">
+                        <label for="lab-region-selector-municipalities" class="block mb-1 text-sm font-medium text-gray-300">Región de Interés</label>
+                        
+                        <select id="lab-region-selector-municipalities" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
+                            </select>
+
+                        <select id="lab-region-selector-marine" class="hidden w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
+                            <option value="Línea Costera (Sonda de Campeche)">Línea Costera (Sonda de Campeche)</option>
+                            <option value="Golfo de México (Zona Campeche)">Golfo de México (Zona Campeche)</option>
+                        </select>
                     </div>
-                    <div>
+
+                    <div id="lab-step-dates" class="hidden">
                         <label class="block mb-1 text-sm font-medium text-gray-300">Rango de Fechas</label>
                         <input type="date" id="lab-start-date" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white" aria-label="Fecha de inicio para laboratorio">
                         <input type="date" id="lab-end-date" class="w-full mt-2 p-2 rounded bg-gray-900 border border-gray-600 text-white" aria-label="Fecha de fin para laboratorio">
                     </div>
-                    <button id="lab-generate-button" class="w-full mt-3 p-2 font-bold bg-[var(--accent-color)] text-black rounded">Generar Código</button>
-                    <hr class="border-gray-600">
-                     <button id="lab-execute-button" class="w-full p-2 font-bold bg-blue-600 text-white rounded disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>🚀 Previsualizar y Ejecutar</button>
-                     <button id="lab-apply-button" class="hidden w-full p-2 font-bold bg-green-600 text-white rounded">Cerrar y Aplicar al Mapa</button>
+
+                    <div id="lab-step-actions" class="hidden">
+                        <button id="lab-generate-button" class="w-full mt-3 p-2 font-bold bg-[var(--accent-color)] text-black rounded">Generar Código</button>
+                        <hr class="border-gray-600 mt-4">
+                        <button id="lab-execute-button" class="w-full mt-4 p-2 font-bold bg-blue-600 text-white rounded disabled:bg-gray-500 disabled:cursor-not-allowed" disabled>🚀 Previsualizar y Ejecutar</button>
+                        <button id="lab-apply-button" class="hidden w-full mt-2 p-2 font-bold bg-green-600 text-white rounded">Cerrar y Aplicar al Mapa</button>
+                    </div>
                 </div>
     
                 <div class="w-2/3 flex flex-col">

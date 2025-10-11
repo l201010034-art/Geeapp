@@ -87,7 +87,7 @@ function populateSelectors() {
         checkbox.addEventListener('change', () => handleZoneSelection(name));
         zonaPanel.appendChild(div);
     });
-    const labRegionSelector = document.getElementById('lab-region-selector');
+    const labRegionSelector = document.getElementById('lab-region-selector-municipalities'); // Apuntar al nuevo selector
     municipios.forEach(mun => {
         const option = document.createElement('option');
         option.value = mun;
@@ -128,6 +128,11 @@ function setupEventListeners() {
     const labOverlay = document.getElementById('lab-overlay');
     document.getElementById('openLabButton').addEventListener('click', () => labOverlay.classList.remove('hidden'));
     document.getElementById('lab-close-button').addEventListener('click', () => labOverlay.classList.add('hidden'));
+        // ▼▼▼ AÑADE ESTAS LÍNEAS ▼▼▼
+    document.getElementById('lab-analysis-type').addEventListener('change', handleLabAnalysisChange);
+    // Inicializar la UI del laboratorio al cargar
+    handleLabAnalysisChange();
+    // ▲▲▲ FIN DE LÍNEAS AÑADIDAS ▲▲▲
     labOverlay.addEventListener('click', (event) => { if (event.target === labOverlay) labOverlay.classList.add('hidden'); });
     document.getElementById('lab-generate-button').addEventListener('click', window.handleLabCodeGeneration);
     document.getElementById('lab-execute-button').addEventListener('click', window.handleLabCodeExecution);
@@ -474,6 +479,54 @@ function drawChart(data, options) {
     }
     const defaultOptions = { backgroundColor: '#a04040', titleTextStyle: { color: '#FFFFFF' }, legend: { textStyle: { color: '#FFFFFF' }, position: 'top' }, hAxis: { textStyle: { color: '#FFFFFF' }, titleTextStyle: { color: '#FFFFFF' } }, vAxis: { textStyle: { color: '#FFFFFF' }, titleTextStyle: { color: '#FFFFFF' } }, chartArea: { width: '85%', height: '75%' } };
     currentChart.draw(dataTable, {...defaultOptions, ...options});
+}
+
+// Función para manejar la lógica de la UI del Laboratorio de IA
+function handleLabAnalysisChange() {
+    const analysisType = document.getElementById('lab-analysis-type').value;
+    const regionStep = document.getElementById('lab-step-region');
+    const datesStep = document.getElementById('lab-step-dates');
+    const actionsStep = document.getElementById('lab-step-actions');
+    const munSelector = document.getElementById('lab-region-selector-municipalities');
+    const marSelector = document.getElementById('lab-region-selector-marine');
+    const labStartDate = document.getElementById('lab-start-date');
+    const labEndDate = document.getElementById('lab-end-date');
+    const today = new Date().toISOString().split('T')[0];
+
+    // Ocultar selectores específicos por defecto
+    munSelector.classList.add('hidden');
+    marSelector.classList.add('hidden');
+
+    // Mostrar los contenedores de los siguientes pasos
+    regionStep.classList.remove('hidden');
+    datesStep.classList.remove('hidden');
+    actionsStep.classList.remove('hidden');
+
+    // Lógica para mostrar el selector correcto y pre-configurar fechas
+    switch (analysisType) {
+        case 'FAI': // Sargazo
+        case 'HURRICANE': // Huracanes
+            marSelector.classList.remove('hidden');
+            // Sugerir un rango de fechas reciente, ideal para estos análisis
+            const aMonthAgo = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0];
+            labStartDate.value = aMonthAgo;
+            labEndDate.value = today;
+            break;
+
+        // Casos por defecto para análisis terrestres
+        case 'NDVI':
+        case 'LST':
+        case 'NDWI':
+        case 'FIRE':
+        case 'AIR_QUALITY':
+        default:
+            munSelector.classList.remove('hidden');
+            // Sugerir un rango de un año, típico para análisis de tendencias
+            const aYearAgo = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
+            labStartDate.value = aYearAgo;
+            labEndDate.value = today;
+            break;
+    }
 }
 
 // --- EXPOSICIÓN DE FUNCIONES GLOBALES ---

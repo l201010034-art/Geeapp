@@ -111,7 +111,13 @@ async function handleLabCodeGeneration() {
     // Construir el prompt estructurado desde los controles
     const structuredRequest = {
         analysisType: document.getElementById('lab-analysis-type').value,
-        region: document.getElementById('lab-region-selector').value,
+        region: (() => {
+            const munSelector = document.getElementById('lab-region-selector-municipalities');
+            return !munSelector.classList.contains('hidden')
+                ? munSelector.value
+                : document.getElementById('lab-region-selector-marine').value;
+        })(),
+        // ▲▲▲ FIN DE LA LÓGICA ▲▲▲
         startDate: document.getElementById('lab-start-date').value,
         endDate: document.getElementById('lab-end-date').value
     };

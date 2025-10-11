@@ -123,17 +123,31 @@ async function executeGeeCode(codeToExecute, roi, startDate, endDate) {
 
     // 2. Preparar el Sandbox para capturar las variables
     const logs = [];
-    const executionContext = {
-        capturedImage: null,
-        ee: ee,
-        console: { log: (message) => logs.push(message.toString()) },
-        // Variables que esperamos que la IA defina
-        laImagenResultante: null,
-        collectionForChart: null,
-        bandNameForChart: null,
-        visParams: null,
-        roi: roi.type === 'Polygon' ? ee.Geometry.Polygon(roi.coordinates) : ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024').filter(ee.Filter.eq('NOMGEO', roi)).geometry()
-    };
+let eeRoi;
+if (roi === 'Golfo de México (Zona Campeche)') {
+    eeRoi = ee.Geometry.Rectangle([-94, 18, -89, 22], null, false);
+} else if (roi === 'Línea Costera (Sonda de Campeche)') {
+    eeRoi = ee.Geometry.Rectangle([-92.5, 18.5, -90.5, 21], null, false);
+} else if (roi && typeof roi === 'object' && roi.type === 'Polygon') {
+    // Esto es para futuras geometrías dibujadas por el usuario
+    eeRoi = ee.Geometry.Polygon(roi.coordinates);
+} else {
+    // Si no es una zona marina, asumimos que es un CVEGEO de municipio
+    const municipios = ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024');
+    const feature = ee.Feature(municipios.filter(ee.Filter.eq('CVEGEO', roi)).first());
+    eeRoi = feature.geometry(); // ee.Algorithms.If es manejado por GEE, no necesitamos evaluarlo aquí
+}
+
+const executionContext = {
+    capturedImage: null,
+    ee: ee,
+    console: { log: (message) => logs.push(message.toString()) },
+    laImagenResultante: null,
+    collectionForChart: null,
+    bandNameForChart: null,
+    visParams: null,
+    roi: eeRoi // Pasamos el objeto de geometría de GEE ya construido
+};
     executionContext.Map = {
         centerObject: () => {},
         addLayer: (img) => { executionContext.capturedImage = img; return img; }
