@@ -100,19 +100,30 @@ function aggregateCollection(collection, unit, reducer, startDate, endDate) {
 // =========================================================================================
 // === LÓGICA DE BÚSQUEDA DE MUNICIPIOS (VERSIÓN CORREGIDA Y ROBUSTA) =======================
 // =========================================================================================
-
-// REEMPLAZA la función getMunicipalityGeometry con esta:
-function getOfficialMunicipalityName(municipalityName) {
-    const officialNames = [
-        "Calakmul", "Calkiní", "Campeche", "Candelaria", "Carmen", "Champotón",
-        "Dzitbalché", "Escárcega", "Hecelchakán", "Hopelchén", "Palizada",
-        "Seybaplaya", "Tenabo"
-    ];
+// REEMPLAZA la función getOfficialMunicipalityName con esta:
+function getMunicipalityCvegeo(municipalityName) {
     const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const normalizedInput = normalize(municipalityName);
-    return officialNames.find(name => normalize(name) === normalizedInput);
-}
 
+    // Mapeo de nombres normalizados a su CVEGEO oficial
+    const cvegeoMap = {
+        'calkini': '04001',
+        'campeche': '04002',
+        'carmen': '04003',
+        'champoton': '04004',
+        'hecelchakan': '04005',
+        'hopelchen': '04006',
+        'palizada': '04007',
+        'escarcega': '04008',
+        'tenabo': '04009',
+        'calakmul': '04010',
+        'candelaria': '04011',
+        'seybaplaya': '04012',
+        'dzitbalche': '04013'
+    };
+
+    return cvegeoMap[normalizedInput] || null;
+}
 
 // =========================================================================================
 // === MANEJADOR PRINCIPAL DE LA API (VERSIÓN CORREGIDA) ===================================
@@ -135,7 +146,7 @@ export default async function handler(req, res) {
             throw new Error('Solicitud incorrecta: Falta "action" o "params".');
         }
 
-        // ▼▼▼ ESTE ES EL NUEVO BLOQUE DE CÓDIGO ▼▼▼
+        // ▼▼▼ REEMPLAZA EL BLOQUE DE LÓGICA DEL ROI DENTRO DEL HANDLER CON ESTO ▼▼▼
         let eeRoi;
         const roiParam = params.roi || (params.rois ? params.rois[0] : null);
 
@@ -145,28 +156,24 @@ export default async function handler(req, res) {
         } else if (roiParam && roiParam.geom) {
             eeRoi = ee.Geometry(roiParam.geom);
         } else if (roiParam && roiParam.zona_type === 'municipio') {
-            const officialName = getOfficialMunicipalityName(roiParam.zona_name);
-            if (!officialName) {
-                throw new Error(`El nombre del municipio "${roiParam.zona_name}" no es válido o no está en la lista.`);
+            const cvegeo = getMunicipalityCvegeo(roiParam.zona_name);
+            if (!cvegeo) {
+                throw new Error(`El nombre del municipio "${roiParam.zona_name}" no es válido o no se reconoce.`);
             }
 
             const municipios = ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024');
-            const campecheMunicipality = municipios.filter(ee.Filter.and(
-                ee.Filter.eq('CVE_ENT', '04'),
-                ee.Filter.eq('NOMGEO', officialName)
-            ));
 
-            // Forzamos a GEE a que nos diga cuántos municipios encontró (debería ser 1)
+            // El filtro ahora es por el identificador único, mucho más fiable
+            const campecheMunicipality = municipios.filter(ee.Filter.eq('CVEGEO', cvegeo));
+
             const size = await new Promise((resolve, reject) => {
                 campecheMunicipality.size().evaluate((val, err) => err ? reject(err) : resolve(val));
             });
 
             if (size === 0) {
-                // Si GEE no encontró nada, lanzamos un error específico
-                throw new Error(`El municipio "${officialName}" no se pudo encontrar en el asset de GEE con el filtro CVE_ENT='04'. Revisa los datos de tu asset.`);
+                throw new Error(`No se encontró el municipio con CVEGEO "${cvegeo}" en tu asset. Verifica que el asset y los códigos CVEGEO sean correctos.`);
             }
 
-            // Si lo encontró, ahora sí podemos obtener la geometría de forma segura
             eeRoi = campecheMunicipality.first().geometry();
 
         } else {
