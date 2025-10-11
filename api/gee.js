@@ -101,38 +101,16 @@ function aggregateCollection(collection, unit, reducer, startDate, endDate) {
 // === LÓGICA DE BÚSQUEDA DE MUNICIPIOS (VERSIÓN CORREGIDA Y ROBUSTA) =======================
 // =========================================================================================
 
-function getMunicipalityGeometry(municipalityName) {
-    // Lista oficial de nombres tal como están en tu asset de GEE
+// REEMPLAZA la función getMunicipalityGeometry con esta:
+function getOfficialMunicipalityName(municipalityName) {
     const officialNames = [
         "Calakmul", "Calkiní", "Campeche", "Candelaria", "Carmen", "Champotón",
         "Dzitbalché", "Escárcega", "Hecelchakán", "Hopelchén", "Palizada",
         "Seybaplaya", "Tenabo"
     ];
-
-    // Función para normalizar strings (quitar acentos y convertir a minúsculas)
     const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
     const normalizedInput = normalize(municipalityName);
-    
-    // Encontrar el nombre oficial que coincide con la entrada normalizada del usuario
-    const officialName = officialNames.find(name => normalize(name) === normalizedInput);
-
-    if (!officialName) {
-        // Si después de normalizar no se encuentra ninguna coincidencia, la geometría será nula
-        return null;
-    }
-    
-    // --- El resto de la función sigue igual, pero ahora usa el nombre oficial ---
-    const MI_ASSET_ID = 'projects/residenciaproject-443903/assets/municipios_mexico_2024';
-    const municipios = ee.FeatureCollection(MI_ASSET_ID);
-
-    const campecheMunicipality = municipios.filter(ee.Filter.and(
-        ee.Filter.eq('CVE_ENT', '04'),
-        ee.Filter.eq('NOMGEO', officialName) // ¡Usamos el nombre oficial y corregido!
-    ));
-    
-    const feature = ee.Feature(campecheMunicipality.first());
-    return ee.Algorithms.If(feature, feature.geometry(), null);
+    return officialNames.find(name => normalize(name) === normalizedInput);
 }
 
 
@@ -157,8 +135,7 @@ export default async function handler(req, res) {
             throw new Error('Solicitud incorrecta: Falta "action" o "params".');
         }
 
-        // --- LÓGICA CORREGIDA Y CENTRALIZADA PARA DETERMINAR EL ÁREA DE ANÁLISIS ---
-        // --- LÓGICA CORREGIDA Y CENTRALIZADA PARA DETERMINAR EL ÁREA DE ANÁLISIS (v2) ---
+        // ▼▼▼ ESTE ES EL NUEVO BLOQUE DE CÓDIGO ▼▼▼
         let eeRoi;
         const roiParam = params.roi || (params.rois ? params.rois[0] : null);
 
@@ -168,34 +145,34 @@ export default async function handler(req, res) {
         } else if (roiParam && roiParam.geom) {
             eeRoi = ee.Geometry(roiParam.geom);
         } else if (roiParam && roiParam.zona_type === 'municipio') {
-            const geometryObject = getMunicipalityGeometry(roiParam.zona_name);
-
-            // Await a promise that evaluates the GEE object.
-            const evaluatedGeometry = await new Promise((resolve, reject) => {
-                if (!geometryObject) {
-                    // This handles cases where the name isn't in the normalized list.
-                    return resolve(null);
-                }
-                // Tell GEE to evaluate the object and return the result.
-                geometryObject.evaluate((geometry, error) => {
-                    if (error) {
-                        return reject(new Error(`GEE error while evaluating geometry: ${error}`));
-                    }
-                    resolve(geometry);
-                });
-            });
-
-            if (!evaluatedGeometry) {
-                // Now this check works because we are checking the actual result from GEE.
-                throw new Error(`El municipio "${roiParam.zona_name}" no se pudo encontrar en el asset de GEE. Verifique que el nombre sea correcto.`);
+            const officialName = getOfficialMunicipalityName(roiParam.zona_name);
+            if (!officialName) {
+                throw new Error(`El nombre del municipio "${roiParam.zona_name}" no es válido o no está en la lista.`);
             }
 
-            // Re-create a GEE geometry object from the evaluated JSON result.
-            eeRoi = ee.Geometry(evaluatedGeometry);
+            const municipios = ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024');
+            const campecheMunicipality = municipios.filter(ee.Filter.and(
+                ee.Filter.eq('CVE_ENT', '04'),
+                ee.Filter.eq('NOMGEO', officialName)
+            ));
+
+            // Forzamos a GEE a que nos diga cuántos municipios encontró (debería ser 1)
+            const size = await new Promise((resolve, reject) => {
+                campecheMunicipality.size().evaluate((val, err) => err ? reject(err) : resolve(val));
+            });
+
+            if (size === 0) {
+                // Si GEE no encontró nada, lanzamos un error específico
+                throw new Error(`El municipio "${officialName}" no se pudo encontrar en el asset de GEE con el filtro CVE_ENT='04'. Revisa los datos de tu asset.`);
+            }
+
+            // Si lo encontró, ahora sí podemos obtener la geometría de forma segura
+            eeRoi = campecheMunicipality.first().geometry();
 
         } else {
             throw new Error('Formato de Región de Interés (ROI) no reconocido o ausente.');
         }
+        // --- FIN DEL NUEVO BLOQUE ---
 
         // CORRECCIÓN CLAVE: Añadimos la geometría procesada a los parámetros
         params.eeRoi = eeRoi;
