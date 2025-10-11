@@ -464,29 +464,35 @@ function buildGeeLabPrompt(request) {
     bandNameForChart = 'tropospheric_NO2_column_number_density';
     visParams = {min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']};`;
             break;
+        // UBICACIÓN: ai-connector.js, dentro del switch en buildGeeLabPrompt
+
+// ...
         case 'HURRICANE':
             analysisSpecificInstructions = `
-    // A. Fondo de Satélite GOES.
-    var goesImage = ee.ImageCollection('GOES-16/ABI-L1b-RadC')
-        .filterDate(ee.Date(endDate).advance(-1, 'day'), endDate)
+    // A. Fondo de Satélite GOES: Usamos la imagen más reciente en el rango de fechas del producto MCMIPC (ya es una imagen a color).
+    var goesImage = ee.ImageCollection('NOAA/GOES/16/MCMIPC')
+        .filterDate(ee.Date(endDate).advance(-1, 'day'), ee.Date(endDate))
         .sort('system:time_start', false)
         .first();
-    var rgb = goesImage.select(['C02', 'C03', 'C01']).multiply(ee.Image([0.0001, 0.0001, 0.0001]));
 
     // B. Datos de Trayectoria IBTrACS.
-    var tracks = ee.FeatureCollection('IBTrACS/v4')
+    var tracks = ee.FeatureCollection('NOAA/IBTrACS/v4')
         .filterBounds(roi)
         .filterDate(startDate, endDate);
-    var styledTracks = tracks.style({color: 'red', width: 1, pointSize: 3});
 
-    // C. Composición Final
-    laImagenResultante = rgb.visualize({min:0, max:0.6}).blend(styledTracks);
+    // C. Visualización: Convertimos la trayectoria en una imagen para superponerla.
+    var styledTracks = tracks.style({color: 'FF0000', width: 2, pointSize: 4}); // Usamos color hexadecimal
+
+    // D. Composición Final: Superponemos la trayectoria sobre la imagen del satélite.
+    // El producto MCMIPC ya está visualizado, por lo que solo lo seleccionamos y lo mezclamos.
+    laImagenResultante = goesImage.select(['R', 'G', 'B']).blend(styledTracks);
     
-    // D. Variables de Salida (análisis solo visual)
+    // E. Variables de Salida (análisis solo visual)
     collectionForChart = null;
     bandNameForChart = null;
-    visParams = {};`; // No se necesitan visParams para una imagen ya visualizada.
+    visParams = {min: 0, max: 255}; // visParams para una imagen RGB de 8 bits.`;
             break;
+// ...
     }
 
     // ▼▼▼ PLANTILLA FINAL QUE SE ENVÍA A LA IA ▼▼▼
