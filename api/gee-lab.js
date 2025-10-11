@@ -23,38 +23,30 @@ function getMunicipalityCvegeo(municipalityName) {
 // --- Capa 1: Diccionario de Auto-Correcciones Preventivas (Versión Definitiva) ---
 const commonFixes = {
     // --- HURACANES Y CLIMA ---
-    // Corregido gracias a tu feedback: Forzar el uso del dataset oficial de trayectorias.
     "'IBTrACS/v4'": "'NOAA/IBTrACS/v4'",
-    // Corregido gracias a tu feedback: El producto GOES-16 RadC (radiancia) es difícil de visualizar.
-    // Forzamos el uso de MCMIPC (Cloud and Moisture Imagery), que es un producto RGB ya procesado y listo para usar.
     "'GOES-16/ABI-L1b-RadC'": "'NOAA/GOES/16/MCMIPC'",
-    // Corregido gracias a tu feedback: Usar la ruta completa y oficial para el dataset HURDAT2 del Atlántico.
     "'NOAA/hurdat2/v2'": "'NOAA/NHC/HURDAT2/atlantic'",
+    "'NOAA/CDR/OISST/V2.1'":"'NOAA/CDR/OISST/V2_1'",
+    "'NOAA/OISST/V2.1/AVHRR-ONLY'":"'NOAA/CDR/AVHRR/SR/V5'",
 
     // --- INCENDIOS ---
-    // MODIS (MCD14ML) es la colección de incendios antigua. FIRMS es el sucesor moderno.
     "'MODIS/061/MCD14ML'": "'FIRMS'",
     "'MODIS/MCD14ML'": "'FIRMS'",
 
     // --- TEMPERATURA SUPERFICIAL (LST) ---
-    // La Colección 6 de MODIS (006) fue reemplazada por la Colección 6.1 (061) con mejores calibraciones.
     "'MODIS/006/MOD11A2'": "'MODIS/061/MOD11A2'",
     "'MODIS/006/MOD11A1'": "'MODIS/061/MOD11A1'",
 
     // --- NDVI, FAI Y SUPERFICIE TERRESTRE ---
-    // Landsat 8/9 Collection 1 está obsoleta. La Collection 2 es la actual y tiene mejor procesamiento atmosférico.
     "'LANDSAT/LC08/C01/T1_SR'": "'LANDSAT/LC08/C02/T1_L2'",
     "'LANDSAT/LC09/C01/T1_SR'": "'LANDSAT/LC09/C02/T1_L2'",
-    // La colección Sentinel-2 'SR' (Surface Reflectance) fue reemplazada por la versión 'HARMONIZED' para consistencia entre satélites.
     "'COPERNICUS/S2_SR'": "'COPERNICUS/S2_SR_HARMONIZED'",
 
     // --- CALIDAD DEL AIRE ---
-    // Para análisis históricos, es mejor usar los datos 'OFFL' (Offline), que tienen mayor calidad, que los 'NRTI' (Near Real-Time).
     "'COPERNICUS/S5P/NRTI/L3_NO2'": "'COPERNICUS/S5P/OFFL/L3_NO2'",
     "'COPERNICUS/S5P/NRTI/L3_O3'": "'COPERNICUS/S5P/OFFL/L3_O3'", // También para Ozono
 
     // --- FRONTERAS Y DATOS VECTORIALES ---
-    // El dataset LSIB (Large Scale International Boundary Polygon) simple está obsoleto.
     "'USDOS/LSIB_simple/2017'": "'USDOS/LSIB/2017'",
 };
 
