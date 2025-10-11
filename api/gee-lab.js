@@ -24,6 +24,7 @@ const commonFixes = {
     "'USDOS/LSIB_simple/2017'": "'USDOS/LSIB/2017'",
     // Error común: Dataset de incendios MODIS obsoleto, VIIRS es el sucesor
     "'MODIS/061/MCD14ML'": "'VIIRS/I-1/VNP14IMGML'",
+    "'NOAA/GOES/16/ABI-L2-MCMIPC'":"'NOAA/GOES/16/MCMIPC'",
 };
 
 function autoCorrectCode(code) {
