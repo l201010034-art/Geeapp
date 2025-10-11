@@ -310,8 +310,6 @@ function buildFireRiskPrompt(data) {
 
 // UBICACIÓN: ai-connector.js
 
-// UBICACIÓN: ai-connector.js
-
 function buildGeeLabPrompt(request) {
     const startDate = new Date(request.startDate);
     const endDate = new Date(request.endDate);
@@ -322,7 +320,6 @@ function buildGeeLabPrompt(request) {
         ? `3. **Optimización por Tiempo (CRÍTICO):** El rango de fechas es largo (${diffDays} días). DEBES crear un compuesto temporal (ej. \`.median()\`) para la imagen del mapa (\`laImagenResultante\`).`
         : `3. **Procesamiento Directo:** El rango de fechas es corto (${diffDays} días).`;
 
-    // --- ESTA ES LA LÓGICA QUE FALTABA ---
     let analysisSpecificInstructions = '';
     if (request.analysisType === 'FAI') {
         analysisSpecificInstructions = `
@@ -333,7 +330,6 @@ function buildGeeLabPrompt(request) {
     D. **Variables de Salida:** El nombre de la banda para el análisis debe ser 'FAI' (ej. \`bandNameForChart = 'FAI'\`).
         `;
     }
-    // --- FIN DE LA LÓGICA FALTANTE ---
 
     return `Eres un desarrollador experto en GEE. Tu tarea es crear un script optimizado que genere TRES variables finales: 'laImagenResultante' (para el mapa), 'collectionForChart' (para el gráfico) y 'bandNameForChart' (un string con el nombre de la banda a graficar).
 

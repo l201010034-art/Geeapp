@@ -158,6 +158,7 @@ export default async function handler(req, res) {
         }
 
         // --- LÓGICA CORREGIDA Y CENTRALIZADA PARA DETERMINAR EL ÁREA DE ANÁLISIS ---
+        // --- LÓGICA CORREGIDA Y CENTRALIZADA PARA DETERMINAR EL ÁREA DE ANÁLISIS (v2) ---
         let eeRoi;
         const roiParam = params.roi || (params.rois ? params.rois[0] : null);
 
@@ -167,10 +168,31 @@ export default async function handler(req, res) {
         } else if (roiParam && roiParam.geom) {
             eeRoi = ee.Geometry(roiParam.geom);
         } else if (roiParam && roiParam.zona_type === 'municipio') {
-            eeRoi = getMunicipalityGeometry(roiParam.zona_name);
-            if (!eeRoi) {
-                throw new Error(`El municipio "${roiParam.zona_name}" no fue encontrado.`);
+            const geometryObject = getMunicipalityGeometry(roiParam.zona_name);
+
+            // Await a promise that evaluates the GEE object.
+            const evaluatedGeometry = await new Promise((resolve, reject) => {
+                if (!geometryObject) {
+                    // This handles cases where the name isn't in the normalized list.
+                    return resolve(null);
+                }
+                // Tell GEE to evaluate the object and return the result.
+                geometryObject.evaluate((geometry, error) => {
+                    if (error) {
+                        return reject(new Error(`GEE error while evaluating geometry: ${error}`));
+                    }
+                    resolve(geometry);
+                });
+            });
+
+            if (!evaluatedGeometry) {
+                // Now this check works because we are checking the actual result from GEE.
+                throw new Error(`El municipio "${roiParam.zona_name}" no se pudo encontrar en el asset de GEE. Verifique que el nombre sea correcto.`);
             }
+
+            // Re-create a GEE geometry object from the evaluated JSON result.
+            eeRoi = ee.Geometry(evaluatedGeometry);
+
         } else {
             throw new Error('Formato de Región de Interés (ROI) no reconocido o ausente.');
         }
