@@ -464,14 +464,13 @@ function buildGeeLabPrompt(request) {
     bandNameForChart = 'tropospheric_NO2_column_number_density';
     visParams = {min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']};`;
             break;
-        // UBICACIÓN: ai-connector.js, dentro del switch en buildGeeLabPrompt
-
 // ...
         case 'HURRICANE':
             analysisSpecificInstructions = `
-    // A. Fondo de Satélite GOES: Usamos la imagen más reciente en el rango de fechas del producto MCMIPC (ya es una imagen a color).
+    // A. Fondo de Satélite GOES: Usamos la imagen más reciente en el rango de fechas.
+    // Este producto ya es una imagen a color (RGB).
     var goesImage = ee.ImageCollection('NOAA/GOES/16/MCMIPC')
-        .filterDate(ee.Date(endDate).advance(-1, 'day'), ee.Date(endDate))
+        .filterDate(ee.Date(endDate).advance(-24, 'hour'), ee.Date(endDate))
         .sort('system:time_start', false)
         .first();
 
@@ -480,18 +479,26 @@ function buildGeeLabPrompt(request) {
         .filterBounds(roi)
         .filterDate(startDate, endDate);
 
-    // C. Visualización: Convertimos la trayectoria en una imagen para superponerla.
-    var styledTracks = tracks.style({color: 'FF0000', width: 2, pointSize: 4}); // Usamos color hexadecimal
+    // C. Visualización de la trayectoria: Convertimos las líneas y puntos en una imagen.
+    var styledTracks = tracks.style({
+      color: 'FF0000',      // Color rojo para la línea
+      width: 2,             // Grosor de 2 píxeles
+      pointSize: 4,         // Tamaño de los puntos
+      fillColor: 'FF000030' // Relleno semitransparente
+    });
 
     // D. Composición Final: Superponemos la trayectoria sobre la imagen del satélite.
-    // El producto MCMIPC ya está visualizado, por lo que solo lo seleccionamos y lo mezclamos.
-    laImagenResultante = goesImage.select(['R', 'G', 'B']).blend(styledTracks);
+    // Usamos .select() con los nombres de banda correctos y .blend() para combinar.
+    laImagenResultante = goesImage
+        .select(['vis-red', 'vis-green', 'vis-blue'])
+        .blend(styledTracks);
     
-    // E. Variables de Salida (análisis solo visual)
+    // E. Variables de Salida (este es un análisis solo visual, sin gráfico).
     collectionForChart = null;
     bandNameForChart = null;
-    visParams = {min: 0, max: 255}; // visParams para una imagen RGB de 8 bits.`;
+    visParams = {min: 0, max: 255, gamma: 1.3}; // Parámetros de visualización para una imagen RGB de 8 bits con un ajuste de gamma.`;
             break;
+
 // ...
     }
 
