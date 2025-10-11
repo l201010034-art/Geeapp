@@ -104,6 +104,9 @@ function setupEventListeners() {
     const menuToggle = document.getElementById('menu-toggle');
     const controlPanel = document.getElementById('control-panel');
     const mainContent = document.querySelector('main');
+    const sliderContainer = document.getElementById('opacity-slider-container');
+    L.DomEvent.disableClickPropagation(sliderContainer);
+    L.DomEvent.disableScrollPropagation(sliderContainer);
     menuToggle.addEventListener('click', (e) => { e.stopPropagation(); controlPanel.classList.toggle('control-panel-hidden'); });
     mainContent.addEventListener('click', () => { if (!controlPanel.classList.contains('control-panel-hidden')) { controlPanel.classList.add('control-panel-hidden'); }});
     document.getElementById('opacity-slider').addEventListener('input', e => { if (currentGEELayer) currentGEELayer.setOpacity(e.target.value); });
