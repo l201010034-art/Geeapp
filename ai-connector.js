@@ -465,40 +465,78 @@ function buildGeeLabPrompt(request) {
     visParams = {min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']};`;
             break;
 // ...
+// UBICACIÓN: ai-connector.js, dentro del switch en buildGeeLabPrompt
+
+// ... (otros casos como NDVI, LST, etc.)
+
         case 'HURRICANE':
             analysisSpecificInstructions = `
-    // A. Fondo de Satélite GOES: Usamos la imagen más reciente en el rango de fechas.
-    // Este producto ya es una imagen a color (RGB).
+    // --- Visualizador de Huracanes Avanzado ---
+
+    // A. CAPA BASE: TEMPERATURA SUPERFICIAL DEL MAR (SST)
+    // Usamos el dataset diario de NOAA para obtener un mapa de calor del océano.
+    var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1')
+        .filterDate(startDate, endDate)
+        .select(['sst'])
+        .median() // Usamos la mediana para un valor estable en el tiempo
+        .multiply(0.01); // Aplicar factor de escala a Celsius
+
+    var sstVis = {
+      min: 20,
+      max: 32,
+      palette: ['#000080', '#0000FF', '#00FFFF', '#FFFF00', '#FF0000', '#800000']
+    };
+    var sstLayer = sst.visualize(sstVis);
+
+    // B. CAPA DE NUBES: SATÉLITE GOES
+    // Buscamos la imagen de nubes más reciente y clara dentro del rango de fechas.
     var goesImage = ee.ImageCollection('NOAA/GOES/16/MCMIPC')
         .filterDate(ee.Date(endDate).advance(-24, 'hour'), ee.Date(endDate))
         .sort('system:time_start', false)
         .first();
 
-    // B. Datos de Trayectoria IBTrACS.
+    // Creamos una capa RGB con las bandas correctas: 'vis-red', 'vis-green', 'vis-blue'.
+    var goesRgb = goesImage.select(['vis-red', 'vis-green', 'vis-blue']).visualize({
+      min: 0,
+      max: 255,
+      gamma: 1.3
+    });
+
+    // C. CAPA DE TRAYECTORIA: IBTrACS con estilo por categoría
     var tracks = ee.FeatureCollection('NOAA/IBTrACS/v4')
         .filterBounds(roi)
         .filterDate(startDate, endDate);
 
-    // C. Visualización de la trayectoria: Convertimos las líneas y puntos en una imagen.
-    var styledTracks = tracks.style({
-      color: 'FF0000',      // Color rojo para la línea
-      width: 2,             // Grosor de 2 píxeles
-      pointSize: 4,         // Tamaño de los puntos
-      fillColor: 'FF000030' // Relleno semitransparente
-    });
+    // Función para pintar las trayectorias según la velocidad del viento (escala Saffir-Simpson)
+    var paintTracks = function(features, color, width) {
+      return ee.Image().byte().paint({
+        featureCollection: features,
+        color: 1, // Usamos 1 como un valor temporal para pintar
+        width: width
+      }).visualize({palette: color});
+    };
 
-    // D. Composición Final: Superponemos la trayectoria sobre la imagen del satélite.
-    // Usamos .select() con los nombres de banda correctos y .blend() para combinar.
-    laImagenResultante = goesImage
-        .select(['vis-red', 'vis-green', 'vis-blue'])
-        .blend(styledTracks);
-    
-    // E. Variables de Salida (este es un análisis solo visual, sin gráfico).
+    // Filtramos y pintamos cada categoría por separado
+    var cat5 = paintTracks(tracks.filter(ee.Filter.gt('usa_wind', 136)), 'FF00FF', 6); // Cat 5 (Magenta)
+    var cat4 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 136), ee.Filter.gt('usa_wind', 112))), 'FF0000', 5); // Cat 4 (Rojo)
+    var cat3 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 112), ee.Filter.gt('usa_wind', 95))), 'FF8C00', 4); // Cat 3 (Naranja)
+    var cat2 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 95), ee.Filter.gt('usa_wind', 82))), 'FFFF00', 3); // Cat 2 (Amarillo)
+    var cat1 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 82), ee.Filter.gt('usa_wind', 63))), '00FF00', 2); // Cat 1 (Verde)
+    var ts = paintTracks(tracks.filter(ee.Filter.lte('usa_wind', 63)), '00FFFF', 1); // Tormenta/Depresión (Cyan)
+
+    // D. COMPOSICIÓN FINAL DE CAPAS
+    // Combinamos todas las capas en una sola imagen final.
+    laImagenResultante = ee.ImageCollection([
+      sstLayer,      // Fondo de temperatura del mar
+      goesRgb,       // Nubes del satélite
+      ts, cat1, cat2, cat3, cat4, cat5 // Trayectorias por categoría
+    ]).mosaic();
+
+    // E. VARIABLES DE SALIDA (análisis solo visual, sin gráfico).
     collectionForChart = null;
     bandNameForChart = null;
-    visParams = {min: 0, max: 255, gamma: 1.3}; // Parámetros de visualización para una imagen RGB de 8 bits con un ajuste de gamma.`;
+    visParams = {}; // visParams vacío porque la imagen ya está visualizada.`;
             break;
-
 // ...
     }
 
