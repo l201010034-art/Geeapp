@@ -236,7 +236,9 @@ function applyLabResultToMap() {
             window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
         }
         if (window.legendControl) {
-            const legendInfo = { bandName: 'Resultado Lab', unit: '', ...lastLabResult.visParams };
+            // ANTES: const legendInfo = { bandName: 'Resultado Lab', unit: '', ...lastLabResult.visParams };
+            // AHORA (reemplaza la línea anterior con esta):
+            const legendInfo = lastLabResult.visParams; // Usamos el objeto completo que viene del backend
             window.legendControl.update(legendInfo);
         }
 
@@ -338,11 +340,12 @@ function buildFireRiskPrompt(data) {
 
 // UBICACIÓN: ai-connector.js
 
+// UBICACIÓN: ai-connector.js
+
+// Reemplaza la función buildGeeLabPrompt completa
 function buildGeeLabPrompt(request) {
     let analysisLogic = '';
     
-    // Este switch contiene el "conocimiento experto". Cada caso es un bloque de código GEE
-    // probado, optimizado y que usa los datasets más recientes.
     switch (request.analysisType) {
         case 'NDVI':
             analysisLogic = `
@@ -352,7 +355,7 @@ collection = collection.map(addNDVI);
 laImagenResultante = collection.select('NDVI').median();
 collectionForChart = collection.select('NDVI');
 bandNameForChart = 'NDVI';
-visParams = {min: -0.2, max: 0.9, palette: ['blue', 'white', 'green']};`;
+visParams = {bandName: 'Índice de Vegetación', unit: 'NDVI', min: -0.2, max: 0.9, palette: ['blue', 'white', 'green']};`;
             break;
         case 'LST':
             analysisLogic = `
@@ -362,7 +365,7 @@ collection = collection.map(processLST);
 laImagenResultante = collection.select('LST').median();
 collectionForChart = collection.select('LST');
 bandNameForChart = 'LST';
-visParams = {min: 15, max: 45, palette: ['blue', 'cyan', 'yellow', 'red']};`;
+visParams = {bandName: 'Temp. Superficial', unit: '°C', min: 15, max: 45, palette: ['blue', 'cyan', 'yellow', 'red']};`;
             break;
         case 'NDWI':
             analysisLogic = `
@@ -372,7 +375,7 @@ collection = collection.map(addNDWI);
 laImagenResultante = collection.select('NDWI').median();
 collectionForChart = collection.select('NDWI');
 bandNameForChart = 'NDWI';
-visParams = {min: -1, max: 1, palette: ['brown', 'white', 'blue']};`;
+visParams = {bandName: 'Índice de Agua', unit: 'NDWI', min: -1, max: 1, palette: ['brown', 'white', 'blue']};`;
             break;
         case 'FIRE':
             analysisLogic = `
@@ -380,7 +383,7 @@ var fires = ee.ImageCollection('FIRMS').filterBounds(roi).filterDate(startDate, 
 laImagenResultante = fires.reduce(ee.Reducer.max()).focal_max({radius: 3000, units: 'meters'});
 collectionForChart = null;
 bandNameForChart = null;
-visParams = {min: 330, max: 360, palette: ['yellow', 'orange', 'red', 'purple']};`;
+visParams = {bandName: 'Puntos de Calor (Incendios)', unit: 'Temp. de Brillo (K)', min: 330, max: 360, palette: ['yellow', 'orange', 'red', 'purple']};`;
             break;
         case 'FAI':
             analysisLogic = `
@@ -395,7 +398,7 @@ collection = collection.map(addFAI);
 laImagenResultante = collection.select('FAI').max();
 collectionForChart = collection.select('FAI');
 bandNameForChart = 'FAI';
-visParams = {min: -0.05, max: 0.2, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']};`;
+visParams = {bandName: 'Índice de Algas Flotantes', unit: 'FAI', min: -0.05, max: 0.2, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']};`;
             break;
         case 'AIR_QUALITY':
             analysisLogic = `
@@ -403,13 +406,12 @@ var collection = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2').filterBounds(r
 laImagenResultante = collection.median();
 collectionForChart = collection;
 bandNameForChart = 'tropospheric_NO2_column_number_density';
-visParams = {min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']};`;
+visParams = {bandName: 'Dióxido de Nitrógeno (NO2)', unit: 'mol/m²', min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']};`;
             break;
         case 'HURRICANE':
             analysisLogic = `
 var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1').filterDate(startDate, endDate).select(['sst']).median().multiply(0.01);
-var sstVis = {min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']};
-var sstLayer = sst.visualize(sstVis);
+var sstLayer = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
 var goesImage = ee.ImageCollection('NOAA/GOES/16/MCMIPC').filterDate(ee.Date(endDate).advance(-24, 'hour'), ee.Date(endDate)).sort('system:time_start', false).first();
 var goesRgb = goesImage.select(['vis-red', 'vis-green', 'vis-blue']).visualize({min: 0, max: 255, gamma: 1.3});
 var tracks = ee.FeatureCollection('NOAA/IBTrACS/v4').filterBounds(roi).filterDate(startDate, endDate);
@@ -423,10 +425,23 @@ var ts = paintTracks(tracks.filter(ee.Filter.lte('usa_wind', 63)), '00FFFF', 1);
 laImagenResultante = ee.ImageCollection([sstLayer, goesRgb, ts, cat1, cat2, cat3, cat4, cat5]).mosaic();
 collectionForChart = null;
 bandNameForChart = null;
-visParams = {};`;
+visParams = {
+  description: \`
+    <div class="legend-title">Visualizador de Huracanes</div>
+    <div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
+    <div class="legend-scale-bar" style="background: linear-gradient(to right, #000080, #00FFFF, #FFFF00, #FF0000);"></div>
+    <div class="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
+    <div style="font-size: 11px; margin-top: 4px;"><strong>Categoría (Saffir-Simpson)</strong></div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF00FF; margin-right: 5px;"></div> Cat. 5</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF0000; margin-right: 5px;"></div> Cat. 4</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF8C00; margin-right: 5px;"></div> Cat. 3</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FFFF00; margin-right: 5px;"></div> Cat. 2</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #00FF00; margin-right: 5px;"></div> Cat. 1</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #00FFFF; margin-right: 5px;"></div> Torm./Dep.</div>
+  \`
+};`;
             break;
     }
-    
     // Este prompt es 100% a prueba de fallos de sintaxis.
     return `Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
     // ${request.analysisType}

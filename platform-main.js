@@ -58,7 +58,13 @@ function initMap() {
     legendControl = L.control({position: 'bottomright'});
     legendControl.onAdd = function (map) { this._div = L.DomUtil.create('div', 'legend'); this.update(); return this._div; };
     legendControl.update = function (varInfo) {
-        if (varInfo) {
+            if (varInfo) {
+        // ▼▼▼ LÓGICA AÑADIDA ▼▼▼
+        // Si el objeto de visualización tiene una descripción HTML personalizada, úsala.
+        if (varInfo.description) {
+            this._div.innerHTML = varInfo.description;
+            return;
+        }
             const hasPalette = varInfo.palette && Array.isArray(varInfo.palette);
             const gradient = hasPalette ? `linear-gradient(to right, ${varInfo.palette.join(', ')})` : `linear-gradient(to right, black, white)`;
             const unit = varInfo.unit || '';
