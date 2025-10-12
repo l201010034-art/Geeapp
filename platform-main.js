@@ -137,19 +137,24 @@ function populateSelectors() {
     document.getElementById('lab-end-date').value = today;
 }
 
+// UBICACIÓN: platform-main.js
+// REEMPLAZA la función setupEventListeners completa con esta versión.
+
 function setupEventListeners() {
     const menuToggle = document.getElementById('menu-toggle');
     const controlPanel = document.getElementById('control-panel');
     const mainContent = document.querySelector('main');
     const sliderContainer = document.getElementById('opacity-slider-container');
+    const labOverlay = document.getElementById('lab-overlay');
+
+    // Manejo del panel lateral
     L.DomEvent.disableClickPropagation(sliderContainer);
     L.DomEvent.disableScrollPropagation(sliderContainer);
     menuToggle.addEventListener('click', (e) => { e.stopPropagation(); controlPanel.classList.toggle('control-panel-hidden'); });
     mainContent.addEventListener('click', () => { if (!controlPanel.classList.contains('control-panel-hidden')) { controlPanel.classList.add('control-panel-hidden'); }});
+    
+    // Controles principales
     document.getElementById('opacity-slider').addEventListener('input', e => { if (currentGEELayer) currentGEELayer.setOpacity(e.target.value); });
-
-    document.getElementById('lab-fetch-hurricanes-button').addEventListener('click', window.fetchHurricaneList);
-
     document.getElementById('loadDataButton').addEventListener('click', () => handleAnalysis('general'));
     document.getElementById('compareButton').addEventListener('click', () => { zoomToActiveLayers(); handleAnalysis('compare'); });
     document.getElementById('precipAnalysisButton').addEventListener('click', () => handleAnalysis('precipitation'));
@@ -165,18 +170,26 @@ function setupEventListeners() {
     document.getElementById('variableSelector').addEventListener('change', toggleAnalysisPanels);
     document.getElementById('copy-ai-button').addEventListener('click', copyAiAnalysis);
     document.getElementById('download-ai-button').addEventListener('click', downloadAiAnalysis);
-    const labOverlay = document.getElementById('lab-overlay');
+
+    // --- LÓGICA CORREGIDA PARA EL LABORATORIO DE IA ---
     document.getElementById('openLabButton').addEventListener('click', () => labOverlay.classList.remove('hidden'));
     document.getElementById('lab-close-button').addEventListener('click', () => labOverlay.classList.add('hidden'));
-        // ▼▼▼ AÑADE ESTAS LÍNEAS ▼▼▼
-    document.getElementById('lab-analysis-type').addEventListener('change', handleLabAnalysisChange);
-    // Inicializar la UI del laboratorio al cargar
-    handleLabAnalysisChange();
-    // ▲▲▲ FIN DE LÍNEAS AÑADIDAS ▲▲▲
     labOverlay.addEventListener('click', (event) => { if (event.target === labOverlay) labOverlay.classList.add('hidden'); });
-    document.getElementById('lab-generate-button').addEventListener('click', window.handleLabCodeGeneration);
+    
+    // Controles dinámicos del laboratorio
+    document.getElementById('lab-analysis-type').addEventListener('change', handleLabAnalysisChange);
+    handleLabAnalysisChange(); // Llama una vez para configurar la UI inicial
+
+    // Botones de acción del laboratorio
+    document.getElementById('lab-fetch-hurricanes-button').addEventListener('click', window.fetchHurricaneList);
+    
+    // ¡ESTA ES LA LÍNEA MÁS IMPORTANTE Y LA QUE FALTABA!
+    // Conecta el botón "Ejecutar Análisis" a su función correspondiente.
     document.getElementById('lab-execute-button').addEventListener('click', window.handleLabExecution);
-    document.getElementById('lab-copy-code-button').addEventListener('click', window.handleLabCopyCode);
+    
+    // El botón de copiar código ya no existe, por lo que se elimina su listener.
+    // El botón 'lab-generate-button' tampoco existe ya.
+    
     document.getElementById('lab-apply-button').addEventListener('click', () => {
         window.applyLabResultToMap();
         labOverlay.classList.add('hidden');
