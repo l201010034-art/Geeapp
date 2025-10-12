@@ -594,5 +594,22 @@ async function handleHurricaneList({ year }) {
     });
 }
 
-// Expón la nueva función
+// --- NUEVO CÓDIGO SUGERIDO ---
+async function fetchHurricaneList() {
+    const year = document.getElementById('lab-hurricane-year').value;
+    const selector = document.getElementById('lab-hurricane-selector');
+    selector.innerHTML = '<option>Cargando...</option>';
+    try {
+        const { hurricaneList } = await handleHurricaneList({ year });
+        selector.innerHTML = '';
+        hurricaneList.forEach(storm => {
+            const option = document.createElement('option');
+            option.value = storm.sid;
+            option.textContent = storm.name;
+            selector.appendChild(option);
+        });
+    } catch (error) {
+        selector.innerHTML = `<option>Error: ${error.message}</option>`;
+    }
+}
 window.fetchHurricaneList = fetchHurricaneList;
