@@ -467,11 +467,18 @@ function showLoading(isLoading, analysisType = 'general') {
                 "Generando el producto final..."
             ];
         }
+        else if (analysisType === 'lab') {
+            messages = [
+                "Accediendo al Laboratorio de IA...",
+                "Configurando el entorno de análisis en el servidor...",
+                "Ejecutando el módulo de análisis especializado...",
+                "Compilando resultados para la previsualización...",
+                "¡Análisis completado!"
+            ];
+        }
 
-        // Simplemente le pedimos al módulo que se muestre
         Loader.show(messages);
     } else {
-        // Y aquí le pedimos que se oculte
         Loader.hide();
     }
 }
@@ -623,3 +630,4 @@ window.downloadPDF = downloadPDF;
 window.copyAiAnalysis = copyAiAnalysis;
 window.downloadAiAnalysis = downloadAiAnalysis;
 window.handleLabAnalysisChange = handleLabAnalysisChange;
+window.showLoading = showLoading;
