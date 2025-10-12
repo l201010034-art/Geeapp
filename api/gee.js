@@ -146,6 +146,17 @@ export default async function handler(req, res) {
             throw new Error('Solicitud incorrecta: Falta "action" o "params".');
         }
 
+                // --- CORRECCIÓN CLAVE ---
+        // Se manejan primero las acciones que NO necesitan un ROI geográfico.
+        if (action === 'getHurricaneList') {
+            const responseData = await handleHurricaneList(params);
+            // Se envía la respuesta y se detiene la ejecución para evitar el error de ROI.
+            return res.status(200).json(responseData);
+        }
+        // --- FIN DE LA CORRECCIÓN ---
+
+
+
         // ▼▼▼ REEMPLAZA EL BLOQUE DE LÓGICA DEL ROI DENTRO DEL HANDLER CON ESTO ▼▼▼
         let eeRoi;
         const roiParam = params.roi || (params.rois ? params.rois[0] : null);
@@ -194,9 +205,6 @@ export default async function handler(req, res) {
             case 'getTemperatureData': responseData = await handleTemperatureData({...params, eeRoi}); break;
             case 'getSpiData': responseData = await handleSpiData({...params, eeRoi}); break;
             case 'getFireRiskData': responseData = await handleFireRiskData({...params, eeRoi}); break;
-            case 'getHurricaneList':
-                responseData = await handleHurricaneList({...params });
-                break;
             default: throw new Error(`Action '${action}' not recognized.`);
         }
 
