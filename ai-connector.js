@@ -336,98 +336,100 @@ function buildFireRiskPrompt(data) {
 
 // UBICACIÓN: ai-connector.js
 
+// UBICACIÓN: ai-connector.js
+
 function buildGeeLabPrompt(request) {
     let analysisLogic = '';
     
-    // El switch sigue conteniendo el código experto y optimizado
+    // Este switch contiene el "conocimiento experto". Cada caso es un bloque de código GEE
+    // probado, optimizado y que usa los datasets más recientes.
     switch (request.analysisType) {
         case 'NDVI':
             analysisLogic = `
-    var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED').filterBounds(roi).filterDate(startDate, endDate).filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20));
-    var addNDVI = function(image) { return image.addBands(image.normalizedDifference(['B8', 'B4']).rename('NDVI')); };
-    collection = collection.map(addNDVI);
-    laImagenResultante = collection.select('NDVI').median();
-    collectionForChart = collection.select('NDVI');
-    bandNameForChart = 'NDVI';
-    visParams = {min: -0.2, max: 0.9, palette: ['blue', 'white', 'green']};`;
+var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED').filterBounds(roi).filterDate(startDate, endDate).filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20));
+var addNDVI = function(image) { return image.addBands(image.normalizedDifference(['B8', 'B4']).rename('NDVI')); };
+collection = collection.map(addNDVI);
+laImagenResultante = collection.select('NDVI').median();
+collectionForChart = collection.select('NDVI');
+bandNameForChart = 'NDVI';
+visParams = {min: -0.2, max: 0.9, palette: ['blue', 'white', 'green']};`;
             break;
         case 'LST':
             analysisLogic = `
-    var collection = ee.ImageCollection('MODIS/061/MOD11A2').filterBounds(roi).filterDate(startDate, endDate);
-    var processLST = function(image) { return image.addBands(image.select('LST_Day_1km').multiply(0.02).subtract(273.15).rename('LST')); };
-    collection = collection.map(processLST);
-    laImagenResultante = collection.select('LST').median();
-    collectionForChart = collection.select('LST');
-    bandNameForChart = 'LST';
-    visParams = {min: 15, max: 45, palette: ['blue', 'cyan', 'yellow', 'red']};`;
+var collection = ee.ImageCollection('MODIS/061/MOD11A2').filterBounds(roi).filterDate(startDate, endDate);
+var processLST = function(image) { return image.addBands(image.select('LST_Day_1km').multiply(0.02).subtract(273.15).rename('LST')); };
+collection = collection.map(processLST);
+laImagenResultante = collection.select('LST').median();
+collectionForChart = collection.select('LST');
+bandNameForChart = 'LST';
+visParams = {min: 15, max: 45, palette: ['blue', 'cyan', 'yellow', 'red']};`;
             break;
-        // ... (el resto de los casos se mantienen igual que en la versión anterior) ...
         case 'NDWI':
             analysisLogic = `
-    var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED').filterBounds(roi).filterDate(startDate, endDate).filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20));
-    var addNDWI = function(image) { return image.addBands(image.normalizedDifference(['B3', 'B8']).rename('NDWI')); };
-    collection = collection.map(addNDWI);
-    laImagenResultante = collection.select('NDWI').median();
-    collectionForChart = collection.select('NDWI');
-    bandNameForChart = 'NDWI';
-    visParams = {min: -1, max: 1, palette: ['brown', 'white', 'blue']};`;
+var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED').filterBounds(roi).filterDate(startDate, endDate).filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20));
+var addNDWI = function(image) { return image.addBands(image.normalizedDifference(['B3', 'B8']).rename('NDWI')); };
+collection = collection.map(addNDWI);
+laImagenResultante = collection.select('NDWI').median();
+collectionForChart = collection.select('NDWI');
+bandNameForChart = 'NDWI';
+visParams = {min: -1, max: 1, palette: ['brown', 'white', 'blue']};`;
             break;
         case 'FIRE':
             analysisLogic = `
-    var fires = ee.ImageCollection('FIRMS').filterBounds(roi).filterDate(startDate, endDate).select('T21');
-    laImagenResultante = fires.reduce(ee.Reducer.max()).focal_max({radius: 3000, units: 'meters'});
-    collectionForChart = null;
-    bandNameForChart = null;
-    visParams = {min: 330, max: 360, palette: ['yellow', 'orange', 'red', 'purple']};`;
+var fires = ee.ImageCollection('FIRMS').filterBounds(roi).filterDate(startDate, endDate).select('T21');
+laImagenResultante = fires.reduce(ee.Reducer.max()).focal_max({radius: 3000, units: 'meters'});
+collectionForChart = null;
+bandNameForChart = null;
+visParams = {min: 330, max: 360, palette: ['yellow', 'orange', 'red', 'purple']};`;
             break;
         case 'FAI':
             analysisLogic = `
-    var waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence');
-    var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED').filterBounds(roi).filterDate(startDate, endDate).filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 50));
-    var addFAI = function(image) {
-      var imageWithMask = image.updateMask(waterMask.gt(80));
-      var fai = imageWithMask.expression('NIR - (RED + (SWIR - RED) * (842 - 665) / (1610 - 665))', {'NIR': imageWithMask.select('B8'), 'RED': imageWithMask.select('B4'), 'SWIR': imageWithMask.select('B11')}).rename('FAI');
-      return image.addBands(fai);
-    };
-    collection = collection.map(addFAI);
-    laImagenResultante = collection.select('FAI').max();
-    collectionForChart = collection.select('FAI');
-    bandNameForChart = 'FAI';
-    visParams = {min: -0.05, max: 0.2, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']};`;
+var waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence');
+var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED').filterBounds(roi).filterDate(startDate, endDate).filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 50));
+var addFAI = function(image) {
+  var imageWithMask = image.updateMask(waterMask.gt(80));
+  var fai = imageWithMask.expression('NIR - (RED + (SWIR - RED) * (842 - 665) / (1610 - 665))', {'NIR': imageWithMask.select('B8'), 'RED': imageWithMask.select('B4'), 'SWIR': imageWithMask.select('B11')}).rename('FAI');
+  return image.addBands(fai);
+};
+collection = collection.map(addFAI);
+laImagenResultante = collection.select('FAI').max();
+collectionForChart = collection.select('FAI');
+bandNameForChart = 'FAI';
+visParams = {min: -0.05, max: 0.2, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']};`;
             break;
         case 'AIR_QUALITY':
             analysisLogic = `
-    var collection = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2').filterBounds(roi).filterDate(startDate, endDate).select('tropospheric_NO2_column_number_density');
-    laImagenResultante = collection.median();
-    collectionForChart = collection;
-    bandNameForChart = 'tropospheric_NO2_column_number_density';
-    visParams = {min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']};`;
+var collection = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2').filterBounds(roi).filterDate(startDate, endDate).select('tropospheric_NO2_column_number_density');
+laImagenResultante = collection.median();
+collectionForChart = collection;
+bandNameForChart = 'tropospheric_NO2_column_number_density';
+visParams = {min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']};`;
             break;
         case 'HURRICANE':
             analysisLogic = `
-    var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1').filterDate(startDate, endDate).select(['sst']).median().multiply(0.01);
-    var sstVis = {min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']};
-    var sstLayer = sst.visualize(sstVis);
-    var goesImage = ee.ImageCollection('NOAA/GOES/16/MCMIPC').filterDate(ee.Date(endDate).advance(-24, 'hour'), ee.Date(endDate)).sort('system:time_start', false).first();
-    var goesRgb = goesImage.select(['vis-red', 'vis-green', 'vis-blue']).visualize({min: 0, max: 255, gamma: 1.3});
-    var tracks = ee.FeatureCollection('NOAA/IBTrACS/v4').filterBounds(roi).filterDate(startDate, endDate);
-    var paintTracks = function(features, color, width) { return ee.Image().byte().paint({featureCollection: features, color: 1, width: width}).visualize({palette: color}); };
-    var cat5 = paintTracks(tracks.filter(ee.Filter.gt('usa_wind', 136)), 'FF00FF', 6);
-    var cat4 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 136), ee.Filter.gt('usa_wind', 112))), 'FF0000', 5);
-    var cat3 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 112), ee.Filter.gt('usa_wind', 95))), 'FF8C00', 4);
-    var cat2 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 95), ee.Filter.gt('usa_wind', 82))), 'FFFF00', 3);
-    var cat1 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 82), ee.Filter.gt('usa_wind', 63))), '00FF00', 2);
-    var ts = paintTracks(tracks.filter(ee.Filter.lte('usa_wind', 63)), '00FFFF', 1);
-    laImagenResultante = ee.ImageCollection([sstLayer, goesRgb, ts, cat1, cat2, cat3, cat4, cat5]).mosaic();
-    collectionForChart = null;
-    bandNameForChart = null;
-    visParams = {};`;
+var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1').filterDate(startDate, endDate).select(['sst']).median().multiply(0.01);
+var sstVis = {min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']};
+var sstLayer = sst.visualize(sstVis);
+var goesImage = ee.ImageCollection('NOAA/GOES/16/MCMIPC').filterDate(ee.Date(endDate).advance(-24, 'hour'), ee.Date(endDate)).sort('system:time_start', false).first();
+var goesRgb = goesImage.select(['vis-red', 'vis-green', 'vis-blue']).visualize({min: 0, max: 255, gamma: 1.3});
+var tracks = ee.FeatureCollection('NOAA/IBTrACS/v4').filterBounds(roi).filterDate(startDate, endDate);
+var paintTracks = function(features, color, width) { return ee.Image().byte().paint({featureCollection: features, color: 1, width: width}).visualize({palette: color}); };
+var cat5 = paintTracks(tracks.filter(ee.Filter.gt('usa_wind', 136)), 'FF00FF', 6);
+var cat4 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 136), ee.Filter.gt('usa_wind', 112))), 'FF0000', 5);
+var cat3 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 112), ee.Filter.gt('usa_wind', 95))), 'FF8C00', 4);
+var cat2 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 95), ee.Filter.gt('usa_wind', 82))), 'FFFF00', 3);
+var cat1 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 82), ee.Filter.gt('usa_wind', 63))), '00FF00', 2);
+var ts = paintTracks(tracks.filter(ee.Filter.lte('usa_wind', 63)), '00FFFF', 1);
+laImagenResultante = ee.ImageCollection([sstLayer, goesRgb, ts, cat1, cat2, cat3, cat4, cat5]).mosaic();
+collectionForChart = null;
+bandNameForChart = null;
+visParams = {};`;
             break;
     }
     
-    // El prompt ahora es SÚPER simple. La IA no tiene casi nada que interpretar.
-    return `Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
-\`\`\`javascript
-${analysisLogic}
-\`\`\``;
+    // Este prompt es 100% a prueba de fallos de sintaxis.
+    return `// Solicitud para el análisis: ${request.analysisType}
+// Región: ${request.region}
+// Fechas: ${request.startDate} a ${request.endDate}
+${analysisLogic}`;
 }
