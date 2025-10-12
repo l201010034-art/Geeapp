@@ -175,7 +175,7 @@ function setupEventListeners() {
     // ▲▲▲ FIN DE LÍNEAS AÑADIDAS ▲▲▲
     labOverlay.addEventListener('click', (event) => { if (event.target === labOverlay) labOverlay.classList.add('hidden'); });
     document.getElementById('lab-generate-button').addEventListener('click', window.handleLabCodeGeneration);
-    document.getElementById('lab-execute-button').addEventListener('click', window.handleLabCodeExecution);
+    document.getElementById('lab-execute-button').addEventListener('click', window.handleLabExecution);
     document.getElementById('lab-copy-code-button').addEventListener('click', window.handleLabCopyCode);
     document.getElementById('lab-apply-button').addEventListener('click', () => {
         window.applyLabResultToMap();
