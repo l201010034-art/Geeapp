@@ -342,10 +342,22 @@ function buildFireRiskPrompt(data) {
 
 // UBICACIÓN: ai-connector.js
 
-// Reemplaza la función buildGeeLabPrompt completa
+// UBICACIÓN: ai-connector.js
+// Reemplaza la función buildGeeLabPrompt completa con esta versión corregida.
+
 function buildGeeLabPrompt(request) {
     let analysisLogic = '';
     
+    // Función auxiliar para crear el HTML de la leyenda de forma consistente
+    const createLegendHtml = (title, palette, min, max) => {
+        const gradient = `linear-gradient(to right, ${palette.join(', ')})`;
+        return `
+    <div class="legend-title">${title}</div>
+    <div class="legend-scale-bar" style="background: ${gradient};"></div>
+    <div class="legend-labels"><span>${min}</span><span>${max}</span></div>
+  `;
+    };
+
     switch (request.analysisType) {
         case 'NDVI':
             analysisLogic = `
@@ -355,7 +367,10 @@ collection = collection.map(addNDVI);
 laImagenResultante = collection.select('NDVI').median();
 collectionForChart = collection.select('NDVI');
 bandNameForChart = 'NDVI';
-visParams = {bandName: 'Índice de Vegetación', unit: 'NDVI', min: -0.2, max: 0.9, palette: ['blue', 'white', 'green']};`;
+visParams = {
+  min: -0.2, max: 0.9, palette: ['blue', 'white', 'green'],
+  description: \`${createLegendHtml('Índice de Vegetación (NDVI)', ['blue', 'white', 'green'], -0.2, 0.9)}\`
+};`;
             break;
         case 'LST':
             analysisLogic = `
@@ -365,7 +380,10 @@ collection = collection.map(processLST);
 laImagenResultante = collection.select('LST').median();
 collectionForChart = collection.select('LST');
 bandNameForChart = 'LST';
-visParams = {bandName: 'Temp. Superficial', unit: '°C', min: 15, max: 45, palette: ['blue', 'cyan', 'yellow', 'red']};`;
+visParams = {
+  min: 15, max: 45, palette: ['blue', 'cyan', 'yellow', 'red'],
+  description: \`${createLegendHtml('Temp. Superficial (°C)', ['blue', 'cyan', 'yellow', 'red'], 15, 45)}\`
+};`;
             break;
         case 'NDWI':
             analysisLogic = `
@@ -375,7 +393,10 @@ collection = collection.map(addNDWI);
 laImagenResultante = collection.select('NDWI').median();
 collectionForChart = collection.select('NDWI');
 bandNameForChart = 'NDWI';
-visParams = {bandName: 'Índice de Agua', unit: 'NDWI', min: -1, max: 1, palette: ['brown', 'white', 'blue']};`;
+visParams = {
+  min: -1, max: 1, palette: ['brown', 'white', 'blue'],
+  description: \`${createLegendHtml('Índice de Agua (NDWI)', ['brown', 'white', 'blue'], -1, 1)}\`
+};`;
             break;
         case 'FIRE':
             analysisLogic = `
@@ -383,7 +404,10 @@ var fires = ee.ImageCollection('FIRMS').filterBounds(roi).filterDate(startDate, 
 laImagenResultante = fires.reduce(ee.Reducer.max()).focal_max({radius: 3000, units: 'meters'});
 collectionForChart = null;
 bandNameForChart = null;
-visParams = {bandName: 'Puntos de Calor (Incendios)', unit: 'Temp. de Brillo (K)', min: 330, max: 360, palette: ['yellow', 'orange', 'red', 'purple']};`;
+visParams = {
+  min: 330, max: 360, palette: ['yellow', 'orange', 'red', 'purple'],
+  description: \`${createLegendHtml('Puntos de Calor (Temp. Brillo K)', ['yellow', 'orange', 'red', 'purple'], 330, 360)}\`
+};`;
             break;
         case 'FAI':
             analysisLogic = `
@@ -398,7 +422,10 @@ collection = collection.map(addFAI);
 laImagenResultante = collection.select('FAI').max();
 collectionForChart = collection.select('FAI');
 bandNameForChart = 'FAI';
-visParams = {bandName: 'Índice de Algas Flotantes', unit: 'FAI', min: -0.05, max: 0.2, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']};`;
+visParams = {
+  min: -0.05, max: 0.2, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
+  description: \`${createLegendHtml('Índice de Algas Flotantes (FAI)', ['#000080', '#00FFFF', '#FFFF00', '#FF0000'], -0.05, 0.2)}\`
+};`;
             break;
         case 'AIR_QUALITY':
             analysisLogic = `
@@ -406,9 +433,13 @@ var collection = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2').filterBounds(r
 laImagenResultante = collection.median();
 collectionForChart = collection;
 bandNameForChart = 'tropospheric_NO2_column_number_density';
-visParams = {bandName: 'Dióxido de Nitrógeno (NO2)', unit: 'mol/m²', min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']};`;
+visParams = {
+  min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red'],
+  description: \`${createLegendHtml('Dióxido de Nitrógeno (mol/m²)', ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red'], 0, '0.0003')}\`
+};`;
             break;
         case 'HURRICANE':
+            // Este caso ya usaba el método correcto, se mantiene igual.
             analysisLogic = `
 var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1').filterDate(startDate, endDate).select(['sst']).median().multiply(0.01);
 var sstLayer = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
@@ -443,7 +474,8 @@ visParams = {
             break;
     }
     // Este prompt es 100% a prueba de fallos de sintaxis.
-    return `Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
+    return ` Funciones como Map.addLayer, Map.centerObject, Map.setCenter, o similares no son compatibles para el entorno actual, siempre sustituye esas funciones con codigo valido para el entorno actual y Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
+
     // ${request.analysisType}
     // ${request.region}
     // ${request.startDate} a ${request.endDate}
