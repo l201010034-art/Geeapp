@@ -528,13 +528,14 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
 // REEMPLAZA la función getOptimizedChartData completa.
 
 async function getOptimizedChartData(collection, rois, bandName, startDate, endDate, eeRoi) {
-    // ... (la lógica inicial de la función para agregar por semana/mes se mantiene igual) ...
     const eeStartDate = ee.Date(startDate);
     const eeEndDate = ee.Date(endDate);
     
     const dateDiffDays = await new Promise((resolve, reject) => {
         eeEndDate.difference(eeStartDate, 'day').evaluate((val, err) => err ? reject(err) : resolve(val));
     });
+
+    let collectionToProcess = collection;
 
     if (dateDiffDays > 120) {
         let aggregateUnit = 'week';
@@ -545,72 +546,25 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
         const dateDiff = eeEndDate.difference(eeStartDate, aggregateUnit);
         const dateList = ee.List.sequence(0, dateDiff.subtract(1));
         
-        const imageListWithNulls = dateList.map(offset => {
+        const aggregatedImages = dateList.map(offset => {
             const start = eeStartDate.advance(ee.Number(offset), aggregateUnit);
             const end = start.advance(1, aggregateUnit);
             const filtered = collection.filterDate(start, end);
             return ee.Algorithms.If(
                 filtered.size().gt(0),
-                filtered.mean().rename(bandName).set('system:time_start', start.millis()),
+                filtered.mean().set('system:time_start', start.millis()),
                 null
             );
         });
-        
-        collection = ee.ImageCollection.fromImages(imageListWithNulls.removeAll([null]));
+        collectionToProcess = ee.ImageCollection.fromImages(aggregatedImages.removeAll([null]));
     }
     
     const scale = 5000;
-
     if (rois.length > 1) {
         const fc = ee.FeatureCollection(rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name })));
-        return getChartDataByRegion(collection, fc, bandName, scale);
+        return getChartDataByRegion(collectionToProcess, fc, bandName, scale);
     } else {
-        return getChartData(collection, eeRoi, bandName, scale);
-    }
-}
-
-// UBICACIÓN: /api/gee.js
-// REEMPLAZA la función getOptimizedChartData completa.
-
-async function getOptimizedChartData(collection, rois, bandName, startDate, endDate, eeRoi) {
-    // ... (la lógica inicial de la función para agregar por semana/mes se mantiene igual) ...
-    const eeStartDate = ee.Date(startDate);
-    const eeEndDate = ee.Date(endDate);
-    
-    const dateDiffDays = await new Promise((resolve, reject) => {
-        eeEndDate.difference(eeStartDate, 'day').evaluate((val, err) => err ? reject(err) : resolve(val));
-    });
-
-    if (dateDiffDays > 120) {
-        let aggregateUnit = 'week';
-        if (dateDiffDays > 730) { 
-            aggregateUnit = 'month';
-        }
-        
-        const dateDiff = eeEndDate.difference(eeStartDate, aggregateUnit);
-        const dateList = ee.List.sequence(0, dateDiff.subtract(1));
-        
-        const imageListWithNulls = dateList.map(offset => {
-            const start = eeStartDate.advance(ee.Number(offset), aggregateUnit);
-            const end = start.advance(1, aggregateUnit);
-            const filtered = collection.filterDate(start, end);
-            return ee.Algorithms.If(
-                filtered.size().gt(0),
-                filtered.mean().rename(bandName).set('system:time_start', start.millis()),
-                null
-            );
-        });
-        
-        collection = ee.ImageCollection.fromImages(imageListWithNulls.removeAll([null]));
-    }
-    
-    const scale = 5000;
-
-    if (rois.length > 1) {
-        const fc = ee.FeatureCollection(rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name })));
-        return getChartDataByRegion(collection, fc, bandName, scale);
-    } else {
-        return getChartData(collection, eeRoi, bandName, scale);
+        return getChartData(collectionToProcess, eeRoi, bandName, scale);
     }
 }
 

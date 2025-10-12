@@ -53,15 +53,22 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
     });
 }
 
+// UBICACIÓN: /api/gee-lab.js
+// REEMPLAZA la función getOptimizedChartData completa.
+
 async function getOptimizedChartData(collection, roi, bandName, startDate, endDate) {
-    // ... [código de getOptimizedChartData sin cambios]
     const eeStartDate = ee.Date(startDate);
     const eeEndDate = ee.Date(endDate);
     
+    // Calcula la diferencia de días para decidir si se necesita agregar.
     const dateDiffDays = await new Promise((resolve, reject) => {
         eeEndDate.difference(eeStartDate, 'day').evaluate((val, err) => err ? reject(err) : resolve(val));
     });
 
+    let collectionToProcess = collection;
+
+    // Si el rango es grande, creamos una colección agregada.
+    // Esta es la clave para evitar el exceso de memoria.
     if (dateDiffDays > 120) {
         let aggregateUnit = 'week';
         if (dateDiffDays > 730) { 
@@ -71,41 +78,45 @@ async function getOptimizedChartData(collection, roi, bandName, startDate, endDa
         const dateDiff = eeEndDate.difference(eeStartDate, aggregateUnit);
         const dateList = ee.List.sequence(0, dateDiff.subtract(1));
         
-        const imageListWithNulls = dateList.map(offset => {
+        const aggregatedImages = dateList.map(offset => {
             const start = eeStartDate.advance(ee.Number(offset), aggregateUnit);
             const end = start.advance(1, aggregateUnit);
             const filtered = collection.filterDate(start, end);
+            
+            // Creamos una imagen promedio para el intervalo, solo si hay datos.
             return ee.Algorithms.If(
                 filtered.size().gt(0),
-                filtered.mean().rename(bandName).set('system:time_start', start.millis()),
+                filtered.mean().set('system:time_start', start.millis()),
                 null
             );
         });
         
-        collection = ee.ImageCollection.fromImages(imageListWithNulls.removeAll([null]));
+        // La nueva colección es mucho más pequeña (semanal o mensual).
+        collectionToProcess = ee.ImageCollection.fromImages(aggregatedImages.removeAll([null]));
     }
     
+    // Ahora, mapeamos sobre la colección optimizada (diaria, semanal o mensual).
     return new Promise((resolve, reject) => {
-        const series = collection.map(image => {
-            const value = image.reduceRegion({
+        const series = collectionToProcess.map(image => {
+            const value = image.select(bandName).reduceRegion({
                 reducer: ee.Reducer.mean(),
                 geometry: roi,
-                scale: 5000,
+                scale: 5000, // Usamos una escala grande para eficiencia
                 bestEffort: true
             }).get(bandName);
             return ee.Feature(null, { 'system:time_start': image.get('system:time_start'), 'value': value });
         });
 
         series.evaluate((fc, error) => {
-            if (error) {
-                return reject(new Error('Error al evaluar los datos del gráfico: ' + error));
-            }
+            if (error) return reject(new Error('Error al evaluar los datos del gráfico: ' + error));
+            
             const header = [['Fecha', bandName]];
             const rows = fc.features
                 .filter(f => f.properties.value !== null && f.properties.value !== undefined)
                 .filter(f => f.properties['system:time_start'])
                 .map(f => [new Date(f.properties['system:time_start']).toISOString(), f.properties.value])
                 .sort((a,b) => new Date(a[0]) - new Date(b[0]));
+                
             resolve(header.concat(rows));
         });
     });
