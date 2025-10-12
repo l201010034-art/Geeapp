@@ -95,25 +95,20 @@ function aggregateCollection(collection, unit, reducer, startDate, endDate) {
 // UBICACIÓN: /api/gee.js
 // REEMPLAZA la función handleHurricaneList completa
 
-async function handleHurricaneList({ year, scope }) {
+async function handleHurricaneList({ year }) { // Se elimina el parámetro 'scope'
     if (!year) {
         throw new Error("El año es un parámetro requerido.");
     }
 
     const collection = ee.FeatureCollection('NOAA/IBTrACS/v4');
-    const hurricanesInYear = collection.filter(ee.Filter.eq('SEASON', year));
-    let filteredCollection = hurricanesInYear;
-
-    if (scope === 'Mexico') {
-        const mexicoAsset = ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024');
-        const mexicoBoundary = mexicoAsset.union().first().geometry();
-        filteredCollection = hurricanesInYear.filterBounds(mexicoBoundary);
-    }
     
-    const stormSids = filteredCollection.aggregate_array('SID').distinct();
+    // Filtramos directamente por año, sin filtros geográficos adicionales.
+    const hurricanesInYear = collection.filter(ee.Filter.eq('SEASON', year));
+    
+    const stormSids = hurricanesInYear.aggregate_array('SID').distinct();
 
     const stormInfo = ee.FeatureCollection(stormSids.map(function(sid) {
-        const firstPoint = filteredCollection.filter(ee.Filter.eq('SID', sid)).first();
+        const firstPoint = hurricanesInYear.filter(ee.Filter.eq('SID', sid)).first();
         return ee.Feature(null, {
             'sid': firstPoint.get('SID'),
             'name': firstPoint.get('name')
@@ -128,15 +123,8 @@ async function handleHurricaneList({ year, scope }) {
             
             const hurricaneList = fc.features
                 .map(f => f.properties)
-                // 1. Filtramos los huracanes que no tienen nombre o se llaman 'UNNAMED'.
                 .filter(storm => storm.name && storm.name !== 'UNNAMED')
-                
-                // --- CORRECCIÓN CLAVE ---
-                // 2. Hacemos que la función de ordenamiento sea segura.
-                // Si por alguna razón 'a.name' o 'b.name' es nulo, lo tratamos como un string vacío ('')
-                // para evitar el error 'localeCompare of undefined'.
                 .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-                // --- FIN DE LA CORRECCIÓN ---
 
             if (hurricaneList.length === 0) {
                 return reject(new Error(`No se encontraron huracanes con nombre para el año ${year}.`));

@@ -541,14 +541,12 @@ visParams = {
     ${analysisLogic}`;
 }
 
-// UBICACIÓN: ai-connector.js (puedes añadirla al final del archivo)
-
 // UBICACIÓN: ai-connector.js
 // REEMPLAZA la función fetchHurricaneList completa
 
 async function fetchHurricaneList() {
     const year = document.getElementById('lab-hurricane-year').value;
-    const scope = document.getElementById('lab-hurricane-scope').value;
+    // Se elimina la variable 'scope'
     const button = document.getElementById('lab-fetch-hurricanes-button');
     const selectorContainer = document.getElementById('lab-hurricane-selector-container');
     const selector = document.getElementById('lab-hurricane-selector');
@@ -569,29 +567,25 @@ async function fetchHurricaneList() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'getHurricaneList',
-                params: { year: parseInt(year), scope }
+                // El parámetro 'scope' se elimina del cuerpo de la petición.
+                params: { year: parseInt(year) }
             })
         });
 
         const result = await response.json();
         if (!response.ok) throw new Error(result.details || "Error en el servidor.");
 
-        // --- CORRECCIÓN CLAVE ---
-        // La respuesta ahora se llama 'hurricaneList' y es un array de objetos.
         if (result.hurricaneList && result.hurricaneList.length > 0) {
             result.hurricaneList.forEach(storm => {
                 const option = document.createElement('option');
-                // El valor interno será el SID (fiable).
                 option.value = storm.sid;
-                // El texto que ve el usuario es el Nombre (amigable).
                 option.textContent = storm.name;
                 selector.appendChild(option);
             });
             selectorContainer.classList.remove('hidden');
         } else {
-             alert(`No se encontraron huracanes para ${year} en ${scope}.`);
+             alert(`No se encontraron huracanes para ${year}.`);
         }
-        // --- FIN DE LA CORRECCIÓN ---
 
     } catch (error) {
         console.error("Error al buscar huracanes:", error);
