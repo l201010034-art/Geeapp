@@ -334,27 +334,27 @@ function buildFireRiskPrompt(data) {
 
 // UBICACIÓN: ai-connector.js
 
-// REEMPLAZA la función buildGeeLabPrompt completa con esta:
 function buildGeeLabPrompt(request) {
     let analysisSpecificInstructions = '';
-    // ... (El bloque switch con las instrucciones para cada análisis se mantiene EXACTAMENTE IGUAL) ...
+    
+    // Este switch contiene el "conocimiento experto". Cada caso es un bloque de código GEE
+    // probado, optimizado y que usa los datasets más recientes.
     switch (request.analysisType) {
         case 'NDVI':
             analysisSpecificInstructions = `
-    // A. Dataset: Sentinel-2 para análisis de vegetación.
+    // Análisis de Índice de Vegetación (NDVI) con Sentinel-2
     var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
         .filterBounds(roi)
         .filterDate(startDate, endDate)
         .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20));
 
-    // B. Cálculo: Implementar NDVI y crear una imagen compuesta.
     var addNDVI = function(image) {
       var ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI');
       return image.addBands(ndvi);
     };
     collection = collection.map(addNDVI);
     
-    // C. Variables de Salida
+    // Optimización: Usar la mediana de la colección para evitar timeouts con rangos de tiempo largos.
     laImagenResultante = collection.select('NDVI').median();
     collectionForChart = collection.select('NDVI');
     bandNameForChart = 'NDVI';
@@ -362,41 +362,37 @@ function buildGeeLabPrompt(request) {
             break;
         case 'LST':
             analysisSpecificInstructions = `
-    // A. Dataset: MODIS para Temperatura Superficial (LST).
+    // Análisis de Temperatura Superficial Terrestre (LST) con MODIS
     var collection = ee.ImageCollection('MODIS/061/MOD11A2')
         .filterBounds(roi)
         .filterDate(startDate, endDate);
 
-    // B. Procesamiento: Seleccionar, escalar y convertir a Celsius.
     var processLST = function(image) {
       var lst = image.select('LST_Day_1km').multiply(0.02).subtract(273.15).rename('LST');
       return image.addBands(lst);
     };
     collection = collection.map(processLST);
 
-    // C. Variables de Salida
+    // Optimización: Usar la mediana para una imagen representativa.
     laImagenResultante = collection.select('LST').median();
     collectionForChart = collection.select('LST');
     bandNameForChart = 'LST';
     visParams = {min: 15, max: 45, palette: ['blue', 'cyan', 'yellow', 'red']};`;
             break;
-        // ... (Asegúrate de que TODOS tus casos del switch estén aquí)
         case 'NDWI':
             analysisSpecificInstructions = `
-    // A. Dataset: Sentinel-2 para análisis de agua.
+    // Análisis de Índice de Agua de Diferencia Normalizada (NDWI) con Sentinel-2
     var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
         .filterBounds(roi)
         .filterDate(startDate, endDate)
         .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20));
 
-    // B. Cálculo: Implementar NDWI.
     var addNDWI = function(image) {
       var ndwi = image.normalizedDifference(['B3', 'B8']).rename('NDWI');
       return image.addBands(ndwi);
     };
     collection = collection.map(addNDWI);
     
-    // C. Variables de Salida
     laImagenResultante = collection.select('NDWI').median();
     collectionForChart = collection.select('NDWI');
     bandNameForChart = 'NDWI';
@@ -404,157 +400,91 @@ function buildGeeLabPrompt(request) {
             break;
         case 'FIRE':
             analysisSpecificInstructions = `
-    // A. Dataset: Puntos de incendios activos VIIRS.
-    var fires = ee.FeatureCollection('VIIRS/I-1/VNP14IMGML')
+    // Análisis de Densidad de Incendios con datos FIRMS (VIIRS y MODIS)
+    var fires = ee.ImageCollection('FIRMS')
         .filterBounds(roi)
         .filterDate(startDate, endDate)
-        .filter(ee.Filter.eq('confidence', 'high'));
+        .select('T21'); // T21 es la banda de brillo en FIRMS
 
-    // B. Procesamiento: Crear mapa de densidad.
-    laImagenResultante = fires.reduceToImage({
-        reducer: ee.Reducer.sum(),
-        geometry: roi,
-        scale: 1000
-    }).focal_max(ee.Number(3000), 'circle', 'meters');
+    // Creamos un mapa de calor (kernel de densidad) de los puntos de incendio.
+    laImagenResultante = fires.reduce(ee.Reducer.max()).focal_max({radius: 3000, units: 'meters'});
 
-    // C. Variables de Salida (análisis solo visual)
-    collectionForChart = null;
+    collectionForChart = null; // No hay serie temporal para un mapa de densidad.
     bandNameForChart = null;
-    visParams = {min: 0, max: 1, palette: ['yellow', 'orange', 'red']};`;
+    visParams = {min: 330, max: 360, palette: ['yellow', 'orange', 'red', 'purple']};`;
             break;
         case 'FAI':
             analysisSpecificInstructions = `
-    // A. Dataset: Sentinel-2 para análisis de sargazo.
+    // Análisis de Índice de Algas Flotantes (FAI) para Sargazo con Sentinel-2
     var waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence');
     var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
         .filterBounds(roi)
         .filterDate(startDate, endDate)
-        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 30));
+        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 50)); // Más tolerante a nubes sobre el mar
 
-    // B. Cálculo: Implementar FAI con máscara de agua.
     var addFAI = function(image) {
-      image = image.updateMask(waterMask.gt(50));
-      var fai = image.expression(
-        'NIR - (RED + (SWIR - RED) * (865 - 665) / (1610 - 665))', {
-          'NIR': image.select('B8'),
-          'RED': image.select('B4'),
-          'SWIR': image.select('B11')
+      var imageWithMask = image.updateMask(waterMask.gt(80)); // Máscara de agua estricta
+      var fai = imageWithMask.expression(
+        'NIR - (RED + (SWIR - RED) * (842 - 665) / (1610 - 665))', {
+          'NIR': imageWithMask.select('B8'), 'RED': imageWithMask.select('B4'), 'SWIR': imageWithMask.select('B11')
         }).rename('FAI');
       return image.addBands(fai);
     };
     collection = collection.map(addFAI);
 
-    // C. Variables de Salida
-    laImagenResultante = collection.select('FAI').max(); // Usar max() para resaltar mejor el sargazo
+    // Optimización: Usar max() resalta mejor las detecciones de sargazo que .median().
+    laImagenResultante = collection.select('FAI').max();
     collectionForChart = collection.select('FAI');
     bandNameForChart = 'FAI';
-    visParams = {min: -0.02, max: 0.1, palette: ['black', 'cyan', 'yellow', 'red']};`;
+    visParams = {min: -0.05, max: 0.2, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']};`;
             break;
         case 'AIR_QUALITY':
             analysisSpecificInstructions = `
-    // A. Dataset: Sentinel-5P para NO2.
-    var collection = ee.ImageCollection('COPERNICUS/S5P/NRTI/L3_NO2')
+    // Análisis de Calidad del Aire (NO2) con Sentinel-5P Offline (mayor calidad)
+    var collection = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2')
         .filterBounds(roi)
         .filterDate(startDate, endDate)
         .select('tropospheric_NO2_column_number_density');
 
-    // B. Variables de Salida
     laImagenResultante = collection.median();
     collectionForChart = collection;
     bandNameForChart = 'tropospheric_NO2_column_number_density';
     visParams = {min: 0, max: 0.0003, palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']};`;
             break;
-// ...
-// UBICACIÓN: ai-connector.js, dentro del switch en buildGeeLabPrompt
-
-// ... (otros casos como NDVI, LST, etc.)
-
         case 'HURRICANE':
             analysisSpecificInstructions = `
-    // --- Visualizador de Huracanes Avanzado ---
-
-    // A. CAPA BASE: TEMPERATURA SUPERFICIAL DEL MAR (SST)
-    // Usamos el dataset diario de NOAA para obtener un mapa de calor del océano.
-    var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1')
-        .filterDate(startDate, endDate)
-        .select(['sst'])
-        .median() // Usamos la mediana para un valor estable en el tiempo
-        .multiply(0.01); // Aplicar factor de escala a Celsius
-
-    var sstVis = {
-      min: 20,
-      max: 32,
-      palette: ['#000080', '#0000FF', '#00FFFF', '#FFFF00', '#FF0000', '#800000']
-    };
+    // Visualizador de Huracanes Avanzado con SST, GOES y Trayectorias IBTrACS
+    var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1').filterDate(startDate, endDate).select(['sst']).median().multiply(0.01);
+    var sstVis = {min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']};
     var sstLayer = sst.visualize(sstVis);
 
-    // B. CAPA DE NUBES: SATÉLITE GOES
-    // Buscamos la imagen de nubes más reciente y clara dentro del rango de fechas.
-    var goesImage = ee.ImageCollection('NOAA/GOES/16/MCMIPC')
-        .filterDate(ee.Date(endDate).advance(-24, 'hour'), ee.Date(endDate))
-        .sort('system:time_start', false)
-        .first();
+    var goesImage = ee.ImageCollection('NOAA/GOES/16/MCMIPC').filterDate(ee.Date(endDate).advance(-24, 'hour'), ee.Date(endDate)).sort('system:time_start', false).first();
+    var goesRgb = goesImage.select(['vis-red', 'vis-green', 'vis-blue']).visualize({min: 0, max: 255, gamma: 1.3});
 
-    // Creamos una capa RGB con las bandas correctas: 'vis-red', 'vis-green', 'vis-blue'.
-    var goesRgb = goesImage.select(['vis-red', 'vis-green', 'vis-blue']).visualize({
-      min: 0,
-      max: 255,
-      gamma: 1.3
-    });
+    var tracks = ee.FeatureCollection('NOAA/IBTrACS/v4').filterBounds(roi).filterDate(startDate, endDate);
+    var paintTracks = function(features, color, width) { return ee.Image().byte().paint({featureCollection: features, color: 1, width: width}).visualize({palette: color}); };
+    var cat5 = paintTracks(tracks.filter(ee.Filter.gt('usa_wind', 136)), 'FF00FF', 6);
+    var cat4 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 136), ee.Filter.gt('usa_wind', 112))), 'FF0000', 5);
+    var cat3 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 112), ee.Filter.gt('usa_wind', 95))), 'FF8C00', 4);
+    var cat2 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 95), ee.Filter.gt('usa_wind', 82))), 'FFFF00', 3);
+    var cat1 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 82), ee.Filter.gt('usa_wind', 63))), '00FF00', 2);
+    var ts = paintTracks(tracks.filter(ee.Filter.lte('usa_wind', 63)), '00FFFF', 1);
 
-    // C. CAPA DE TRAYECTORIA: IBTrACS con estilo por categoría
-    var tracks = ee.FeatureCollection('NOAA/IBTrACS/v4')
-        .filterBounds(roi)
-        .filterDate(startDate, endDate);
-
-    // Función para pintar las trayectorias según la velocidad del viento (escala Saffir-Simpson)
-    var paintTracks = function(features, color, width) {
-      return ee.Image().byte().paint({
-        featureCollection: features,
-        color: 1, // Usamos 1 como un valor temporal para pintar
-        width: width
-      }).visualize({palette: color});
-    };
-
-    // Filtramos y pintamos cada categoría por separado
-    var cat5 = paintTracks(tracks.filter(ee.Filter.gt('usa_wind', 136)), 'FF00FF', 6); // Cat 5 (Magenta)
-    var cat4 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 136), ee.Filter.gt('usa_wind', 112))), 'FF0000', 5); // Cat 4 (Rojo)
-    var cat3 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 112), ee.Filter.gt('usa_wind', 95))), 'FF8C00', 4); // Cat 3 (Naranja)
-    var cat2 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 95), ee.Filter.gt('usa_wind', 82))), 'FFFF00', 3); // Cat 2 (Amarillo)
-    var cat1 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 82), ee.Filter.gt('usa_wind', 63))), '00FF00', 2); // Cat 1 (Verde)
-    var ts = paintTracks(tracks.filter(ee.Filter.lte('usa_wind', 63)), '00FFFF', 1); // Tormenta/Depresión (Cyan)
-
-    // D. COMPOSICIÓN FINAL DE CAPAS
-    // Combinamos todas las capas en una sola imagen final.
-    laImagenResultante = ee.ImageCollection([
-      sstLayer,      // Fondo de temperatura del mar
-      goesRgb,       // Nubes del satélite
-      ts, cat1, cat2, cat3, cat4, cat5 // Trayectorias por categoría
-    ]).mosaic();
-
-    // E. VARIABLES DE SALIDA (análisis solo visual, sin gráfico).
+    laImagenResultante = ee.ImageCollection([sstLayer, goesRgb, ts, cat1, cat2, cat3, cat4, cat5]).mosaic();
     collectionForChart = null;
     bandNameForChart = null;
-    visParams = {}; // visParams vacío porque la imagen ya está visualizada.`;
+    visParams = {};`;
             break;
-// ...
     }
 
-    // ▼▼▼ PLANTILLA FINAL QUE SE ENVÍA A LA IA ▼▼▼
-    return `
-// Estas variables son inyectadas por el servidor y están listas para usar:
-// var roi, startDate, endDate;
-
-// --- INICIO DE LA LÓGICA DE LA IA ---
-// El código debe definir estas 4 variables:
-var laImagenResultante, collectionForChart, bandNameForChart, visParams;
+    // El prompt final es ahora una plantilla simple para que la IA solo inserte el bloque de código.
+    return `// Las variables 'roi', 'startDate', y 'endDate' son inyectadas por el servidor.
+// La tarea es definir las variables 'laImagenResultante', 'collectionForChart', 'bandNameForChart', y 'visParams'.
 
 ${analysisSpecificInstructions}
-// --- FIN DE LA LÓGICA DE LA IA ---
 
-// No modificar estas últimas tres líneas.
+// El código finaliza con estas líneas obligatorias. No las modifiques.
 console.log(JSON.stringify({visParams: visParams}));
 Map.centerObject(roi, 10);
-Map.addLayer(laImagenResultante.clip(roi), visParams, 'Resultado del Laboratorio');
-`;
+Map.addLayer(laImagenResultante.clip(roi), visParams, 'Resultado del Laboratorio');`;
 }
