@@ -1,4 +1,5 @@
 // Archivo: platform-main.js (Versión Final Corregida)
+import { Loader } from './intelligent-loader.js';
 
 // --- VARIABLES GLOBALES ---
 let map, drawnItems, currentGEELayer, legendControl, layerControl, currentChart, currentChartData;
@@ -446,7 +447,34 @@ function downloadAiAnalysis() {
     URL.revokeObjectURL(link.href);
 }
 
-function showLoading(isLoading) { document.getElementById('loading-overlay').classList.toggle('hidden', !isLoading); }
+function showLoading(isLoading, analysisType = 'general') {
+    if (isLoading) {
+        // Mensajes por defecto
+        let messages = [
+            "Estableciendo conexión segura con Google Earth Engine...",
+            "Consultando catálogos de imágenes satelitales...",
+            "Filtrando y procesando los datos para la región...",
+            "Generando el mapa de resultados...",
+            "Compilando las estadísticas finales..."
+        ];
+        
+        // Mensajes personalizados para análisis específicos
+        if (analysisType === 'fireRisk') {
+            messages = [
+                "Accediendo a datos de temperatura y sequía...",
+                "Modelando las condiciones de riesgo de incendio...",
+                "Clasificando el nivel de riesgo en el mapa...",
+                "Generando el producto final..."
+            ];
+        }
+
+        // Simplemente le pedimos al módulo que se muestre
+        Loader.show(messages);
+    } else {
+        // Y aquí le pedimos que se oculte
+        Loader.hide();
+    }
+}
 function updateStatsPanel(text) { document.getElementById('stats-panel').textContent = text; }
 
 function clearMapAndAi() {

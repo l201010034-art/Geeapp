@@ -240,10 +240,13 @@
         </div>
     </div>
     
-    <script type="module">
-        import { initPlatform } from './platform-main.js';
-        document.addEventListener('DOMContentLoaded', initPlatform);
-    </script>
-    <script src="ai-connector.js"></script> 
+    <script type="module" src="intelligent-loader.js"></script> 
+        
+        <script type="module">
+            import { initPlatform } from './platform-main.js';
+            document.addEventListener('DOMContentLoaded', initPlatform);
+        </script>
+        <script src="ai-connector.js"></script> 
+
 </body>
 </html>
