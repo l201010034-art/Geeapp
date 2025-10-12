@@ -229,45 +229,52 @@ async function handleLabCodeExecution() {
     }
 }
 
+// REEMPLAZA la función applyLabResultToMap completa con esta versión:
+
 function applyLabResultToMap() {
     if (lastLabResult) {
-        // Lógica existente para el mapa y la leyenda
+        // 1. Añadir la capa de GEE al mapa
         if (lastLabResult.mapId) {
             window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
         }
-        if (window.legendControl) {
-            // ANTES: const legendInfo = { bandName: 'Resultado Lab', unit: '', ...lastLabResult.visParams };
-            // AHORA (reemplaza la línea anterior con esta):
-            const legendInfo = lastLabResult.visParams; // Usamos el objeto completo que viene del backend
+
+        // 2. --- LÓGICA DE LEYENDA CORREGIDA Y ROBUSTA ---
+        if (window.legendControl && lastLabResult.visParams) {
+            // Creamos un objeto de leyenda base y seguro.
+            const legendInfo = {
+                // Proporciona valores predeterminados para el título.
+                bandName: 'Resultado del Laboratorio',
+                unit: '',
+                // Copia todas las propiedades del resultado del laboratorio (min, max, palette, description).
+                ...lastLabResult.visParams
+            };
+
+            // La función de actualización ahora tiene todo lo que necesita para funcionar en cualquier caso.
             window.legendControl.update(legendInfo);
         }
 
-        // Usamos las funciones globales para poblar los paneles de análisis
+        // 3. Actualizar los paneles de estadísticas y gráficos (sin cambios aquí)
         if (lastLabResult.stats) {
             window.updateStatsPanel(lastLabResult.stats);
         }
-    
         if (lastLabResult.chartData) {
             window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
         }
 
-        // Habilitar botones de descarga si es necesario
+        // 4. Habilitar botones de descarga
         document.getElementById('downloadCsvButton').disabled = false;
         document.getElementById('downloadChartButton').disabled = false;
 
-    // --- CORRECCIÓN ---
-    // La llave de cierre '}' que estaba aquí fue movida.
-    // Ahora el 'else if' se conecta correctamente con el 'if' principal.
     } else if (window.legendControl) {
+        // Limpia la leyenda si no hay resultados
         window.legendControl.update(null);
     }
     
-    // Resetear estado del modal del lab (esto se ejecuta siempre)
+    // 5. Restablecer el estado del modal del laboratorio (sin cambios aquí)
     document.getElementById('lab-execute-button').classList.remove('hidden');
     document.getElementById('lab-apply-button').classList.add('hidden');
     document.getElementById('lab-preview-overlay').classList.add('hidden');
 }
-
 
 function handleLabCopyCode() {
     const codeToCopy = document.getElementById('lab-result-display').textContent;
