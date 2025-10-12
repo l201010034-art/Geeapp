@@ -95,14 +95,13 @@ function aggregateCollection(collection, unit, reducer, startDate, endDate) {
 // UBICACIÓN: /api/gee.js
 // REEMPLAZA la función handleHurricaneList completa
 
-async function handleHurricaneList({ year }) { // Se elimina el parámetro 'scope'
+async function handleHurricaneList({ year }) {
     if (!year) {
         throw new Error("El año es un parámetro requerido.");
     }
 
     const collection = ee.FeatureCollection('NOAA/IBTrACS/v4');
     
-    // Filtramos directamente por año, sin filtros geográficos adicionales.
     const hurricanesInYear = collection.filter(ee.Filter.eq('SEASON', year));
     
     const stormSids = hurricanesInYear.aggregate_array('SID').distinct();
@@ -111,7 +110,8 @@ async function handleHurricaneList({ year }) { // Se elimina el parámetro 'scop
         const firstPoint = hurricanesInYear.filter(ee.Filter.eq('SID', sid)).first();
         return ee.Feature(null, {
             'sid': firstPoint.get('SID'),
-            'name': firstPoint.get('name')
+            // CORREGIDO: Se usa 'NAME' en mayúsculas para obtener el nombre.
+            'name': firstPoint.get('NAME') 
         });
     }));
 
@@ -123,7 +123,9 @@ async function handleHurricaneList({ year }) { // Se elimina el parámetro 'scop
             
             const hurricaneList = fc.features
                 .map(f => f.properties)
-                .filter(storm => storm.name && storm.name !== 'UNNAMED')
+                // CORREGIDO: Se filtra por storm.name y se compara con 'UNNAMED'.
+                .filter(storm => storm.name && storm.name !== 'UNNAMED') 
+                // CORREGIDO: Se ordena por storm.name.
                 .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
             if (hurricaneList.length === 0) {

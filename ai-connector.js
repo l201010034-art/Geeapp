@@ -541,58 +541,6 @@ visParams = {
     ${analysisLogic}`;
 }
 
-// UBICACIÓN: /api/gee.js
-// REEMPLAZA la función handleHurricaneList completa
-
-async function handleHurricaneList({ year }) {
-    if (!year) {
-        throw new Error("El año es un parámetro requerido.");
-    }
-
-    const collection = ee.FeatureCollection('NOAA/IBTrACS/v4');
-    
-    // 1. Filtramos todos los puntos de la temporada correcta.
-    const hurricanesInYear = collection.filter(ee.Filter.eq('SEASON', year));
-    
-    // 2. Obtenemos una lista de todos los nombres únicos que no sean 'UNNAMED'.
-    // Esto es más directo y fiable.
-    const distinctNames = hurricanesInYear
-        .filter(ee.Filter.neq('name', 'UNNAMED'))
-        .aggregate_array('name')
-        .distinct();
-
-    // 3. Para cada nombre, obtenemos su SID correspondiente.
-    const stormInfo = ee.FeatureCollection(distinctNames.map(function(name) {
-        // Obtenemos el primer punto de ese huracán para extraer el SID.
-        var firstPoint = hurricanesInYear.filter(ee.Filter.eq('name', name)).first();
-        // Creamos un objeto con el SID y el Nombre.
-        return ee.Feature(null, {
-            'sid': firstPoint.get('SID'),
-            'name': name
-        });
-    }));
-
-    return new Promise((resolve, reject) => {
-        // 4. Evaluamos la lista de objetos {sid, name}.
-        stormInfo.evaluate((fc, error) => {
-            if (error) {
-                return reject(new Error("Error al obtener la lista de huracanes: " + error));
-            }
-            
-            // 5. Procesamos la lista final en el servidor para ordenarla.
-            const hurricaneList = fc.features
-                .map(f => f.properties)
-                .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-            if (hurricaneList.length === 0) {
-                return reject(new Error(`No se encontraron huracanes con nombre para el año ${year}.`));
-            }
-
-            // 6. Devolvemos la lista final.
-            resolve({ hurricaneList });
-        });
-    });
-}
 
 // UBICACIÓN: ai-connector.js
 // REEMPLAZA la función fetchHurricaneList y su asignación a window con este bloque completo.
