@@ -474,7 +474,7 @@ visParams = {
             break;
     }
     // Este prompt es 100% a prueba de fallos de sintaxis.
-    return ` Funciones como Map.addLayer, Map.centerObject, Map.setCenter, o similares no son compatibles para el entorno actual, siempre sustituye esas funciones con codigo valido para el entorno actual y Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
+    return ` Funciones como Map.addLayer, Map.centerObject, Map.setCenter, o similares no son compatibles para el entorno actual, siempre sustituye esas funciones con codigo valido para el entorno actual, Simepre verifica que las funciones esten definidas por ejemplo Print, Siempre añade el formato correcto para la leyenda y Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
 
     // ${request.analysisType}
     // ${request.region}
