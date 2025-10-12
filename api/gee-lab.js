@@ -225,7 +225,7 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
     // 4. Ejecutar el script completo
     vm.runInContext(fullScript, context, { timeout: 90000 }); // Aumentamos el timeout a 90s
 
-    const { laImagenResultante, collectionForChart, bandNameForChart, visParams } = context;
+    let { laImagenResultante, collectionForChart, bandNameForChart, visParams } = context;
 
     if (!laImagenResultante) throw new Error("El código no definió 'laImagenResultante'.");
     if (!visParams) throw new Error("El código no definió 'visParams'.");
