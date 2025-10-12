@@ -594,22 +594,65 @@ async function handleHurricaneList({ year }) {
     });
 }
 
-// --- NUEVO CÓDIGO SUGERIDO ---
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA la función fetchHurricaneList y su asignación a window con este bloque completo.
+
 async function fetchHurricaneList() {
     const year = document.getElementById('lab-hurricane-year').value;
     const selector = document.getElementById('lab-hurricane-selector');
+    const selectorContainer = document.getElementById('lab-hurricane-selector-container');
+    const fetchButton = document.getElementById('lab-fetch-hurricanes-button');
+
+    if (!year) {
+        alert("Por favor, introduce un año.");
+        return;
+    }
+
+    // Deshabilitar el botón y mostrar estado de carga
     selector.innerHTML = '<option>Cargando...</option>';
+    selectorContainer.classList.remove('hidden');
+    fetchButton.disabled = true;
+    fetchButton.textContent = "Buscando...";
+
     try {
-        const { hurricaneList } = await handleHurricaneList({ year });
-        selector.innerHTML = '';
-        hurricaneList.forEach(storm => {
-            const option = document.createElement('option');
-            option.value = storm.sid;
-            option.textContent = storm.name;
-            selector.appendChild(option);
+        // 1. Realizar la llamada a la API del backend (esto era lo que faltaba)
+        const response = await fetch('/api/gee', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'getHurricaneList',
+                params: { year: parseInt(year) } // Asegurarse de que el año sea un número
+            })
         });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || "Error al contactar el servidor.");
+        }
+
+        const { hurricaneList } = await response.json();
+        
+        selector.innerHTML = ''; // Limpiar el selector antes de añadir nuevas opciones
+
+        // 2. Poblar el selector con la lista de huracanes obtenida
+        if (hurricaneList && hurricaneList.length > 0) {
+            hurricaneList.forEach(storm => {
+                const option = document.createElement('option');
+                option.value = storm.sid; // El valor será el SID único del huracán
+                option.textContent = storm.name; // El texto visible será el nombre
+                selector.appendChild(option);
+            });
+        } else {
+             selector.innerHTML = `<option>No se encontraron huracanes</option>`;
+        }
+
     } catch (error) {
+        console.error("Error al buscar huracanes:", error);
         selector.innerHTML = `<option>Error: ${error.message}</option>`;
+    } finally {
+        // 3. Reactivar el botón y restaurar su texto original
+        fetchButton.disabled = false;
+        fetchButton.textContent = "1. Buscar Huracanes";
     }
 }
 window.fetchHurricaneList = fetchHurricaneList;
