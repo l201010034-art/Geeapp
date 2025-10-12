@@ -526,6 +526,7 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
 
 // UBICACIÓN: /api/gee.js
 // REEMPLAZA la función getOptimizedChartData completa.
+// (Nota: Tenías esta función dos veces en tu archivo, asegúrate de reemplazar ambas o dejar solo una).
 
 async function getOptimizedChartData(collection, rois, bandName, startDate, endDate, eeRoi) {
     const eeStartDate = ee.Date(startDate);
@@ -567,9 +568,6 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
         return getChartData(collectionToProcess, eeRoi, bandName, scale);
     }
 }
-
-// UBICACIÓN: /api/gee.js
-// REEMPLAZA la función getChartDataByRegion completa.
 
 async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
     return new Promise((resolve, reject) => {
