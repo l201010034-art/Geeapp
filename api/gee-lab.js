@@ -253,7 +253,7 @@ export default async function handler(req, res) {
             for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
                 try {
                     console.log(`Ejecutando código (Intento ${attempt})...`);
-                    const result = await executeGeeCode(codeToRun, roi, lab-start-date, lab-end-date);
+                    const result = await executeGeeCode(codeToRun, roi, labStartDate, labEndDate);
                     return res.status(200).json({ ...result, code: codeToRun });
                 
                 } catch (error) {
