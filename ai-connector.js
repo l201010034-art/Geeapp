@@ -374,19 +374,56 @@ function buildGeeLabPrompt(request) {
     };
 
     switch (request.analysisType) {
+        // UBICACIÓN: ai-connector.js
+// REEMPLAZA el 'case' completo para 'NDVI' en la función buildGeeLabPrompt
+
         case 'NDVI':
-            analysisLogic = `
-var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED').filterBounds(roi).filterDate(startDate, endDate).filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20));
-var addNDVI = function(image) { return image.addBands(image.normalizedDifference(['B8', 'B4']).rename('NDVI')); };
-collection = collection.map(addNDVI);
-laImagenResultante = collection.select('NDVI').median();
-collectionForChart = collection.select('NDVI');
+    analysisLogic = `
+// 1. Cargar la colección de imágenes Sentinel-2 para el rango y región.
+// IMPORTANTE: No filtramos por porcentaje de nubes aquí.
+var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+    .filterBounds(roi)
+    .filterDate(startDate, endDate);
+
+// 2. Función para enmascarar nubes y sombras en cada imagen.
+// Esto nos permite usar todos los píxeles claros disponibles.
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+  // Bits 10 y 11 son nubes y cirros, respectivamente.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+  // Ambas banderas deben ser cero, indicando condiciones claras.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
+      .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+  return image.updateMask(mask).divide(10000);
+}
+
+// 3. Aplicar el enmascaramiento de nubes a la colección.
+var cloudMaskedCollection = collection.map(maskS2clouds);
+
+// 4. Función para añadir la banda NDVI a cada imagen limpia.
+var addNDVI = function(image) {
+  return image.addBands(image.normalizedDifference(['B8', 'B4']).rename('NDVI'));
+};
+
+// 5. Aplicar el cálculo de NDVI a la colección sin nubes.
+var collectionWithNDVI = cloudMaskedCollection.map(addNDVI);
+
+// 6. --- LA CORRECCIÓN CLAVE ---
+// Creamos una imagen final tomando la mediana de todos los valores de NDVI.
+// Este método crea un mosaico compuesto sin nubes que representa la condición
+// promedio de la vegetación durante el período.
+laImagenResultante = collectionWithNDVI.select('NDVI').median();
+
+// 7. Definir las variables de salida que el servidor necesita.
+collectionForChart = collectionWithNDVI.select('NDVI');
 bandNameForChart = 'NDVI';
 visParams = {
   min: -0.2, max: 0.9, palette: ['blue', 'white', 'green'],
   description: \`${createLegendHtml('Índice de Vegetación (NDVI)', ['blue', 'white', 'green'], -0.2, 0.9)}\`
 };`;
-            break;
+    break;
+
         case 'LST':
             analysisLogic = `
 var collection = ee.ImageCollection('MODIS/061/MOD11A2').filterBounds(roi).filterDate(startDate, endDate);
