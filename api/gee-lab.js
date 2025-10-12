@@ -282,6 +282,7 @@ export default async function handler(req, res) {
                         2.  Corrige el código para solucionar el error.
                         3.  Asegúrate de que las variables finales ('laImagenResultante', 'collectionForChart', 'bandNameForChart', 'visParams') estén definidas correctamente.
                         4.  Responde ÚNICAMENTE con el bloque de código JavaScript corregido y completo. No incluyas explicaciones.
+                        5.  Las funciones como Map.centerObject() no son reconocidas en este entorno y deben ser eliminadas o sustituidas para el entorno de servidor.
                     `;
                     
                     const result = await model.generateContent(debugPrompt);
