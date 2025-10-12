@@ -21,7 +21,7 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
     const gebco = gebcoCollection.mosaic();
     
     // Ahora podemos trabajar con la imagen mosaico como antes.
-    const deepWaterMask = gebco.select('elevation').lte(-15);
+    const deepWaterMask = gebco.select('b1').lte(-15);
     const finalMask = waterMask.and(deepWaterMask);
     // --- FIN DEL PASO CLAVE ---
 
