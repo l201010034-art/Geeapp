@@ -101,8 +101,6 @@ commandForm.addEventListener('submit', async (event) => {
 });
 
 
-// --- 3. LÓGICA PARA EL LABORATORIO DE IA (VERSIÓN MODULAR) ---
-
 async function handleLabExecution() {
     const executeButton = document.getElementById('lab-execute-button');
     const applyButton = document.getElementById('lab-apply-button');
@@ -280,8 +278,11 @@ function buildFireRiskPrompt(data) {
     return `Eres un analista de riesgos para el gobierno de Campeche. Interpreta un mapa de "Riesgo de Incendio Promedio" para **${roi}** del **${startDate}** al **${endDate}**. La leyenda es: Verde (Bajo), Amarillo (Moderado), Naranja (Alto), Rojo (Extremo). **Instrucciones:** 1. Titula "Interpretación del Mapa de Riesgo de Incendio". 2. Explica qué implica ver manchas naranjas/rojas en zonas agrícolas o forestales. 3. Da recomendaciones accionables para SEPROCI (monitoreo, alertas), Desarrollo Agropecuario y **SEDECO** (impacto económico). Usa Markdown.`;
 }
 
-// --- 5. EXPOSICIÓN DE FUNCIONES GLOBALES ---
-// Se exponen las funciones al objeto 'window' para que el HTML y otros scripts puedan acceder a ellas.
 window.handleLabExecution = handleLabExecution;
 window.applyLabResultToMap = applyLabResultToMap;
 window.fetchHurricaneList = fetchHurricaneList;
+
+// (También asegúrate de que las funciones como generateAiAnalysis estén expuestas si son llamadas desde platform-main.js)
+window.generateAiAnalysis = generateAiAnalysis;
+window.generatePrediction = generatePrediction;
+window.generateFireRiskAnalysis = generateFireRiskAnalysis;
