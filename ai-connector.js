@@ -428,8 +428,9 @@ visParams = {};`;
     }
     
     // Este prompt es 100% a prueba de fallos de sintaxis.
-    return `// Solicitud para el análisis: ${request.analysisType}
-// Región: ${request.region}
-// Fechas: ${request.startDate} a ${request.endDate}
-${analysisLogic}`;
+    return `Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
+    // ${request.analysisType}
+    // ${request.region}
+    // ${request.startDate} a ${request.endDate}
+    ${analysisLogic}`;
 }
