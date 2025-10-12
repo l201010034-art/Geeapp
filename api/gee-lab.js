@@ -221,6 +221,7 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
 
 // --- Manejador Principal de la API ---
 export default async function handler(req, res) {
+        process.chdir('/tmp'); 
     if (req.method !== 'POST') {
         return res.status(405).json({ error: "Method Not Allowed" });
     }
