@@ -524,7 +524,11 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
     });
 }
 
+// UBICACIÓN: /api/gee.js
+// REEMPLAZA la función getOptimizedChartData completa.
+
 async function getOptimizedChartData(collection, rois, bandName, startDate, endDate, eeRoi) {
+    // ... (la lógica inicial de la función para agregar por semana/mes se mantiene igual) ...
     const eeStartDate = ee.Date(startDate);
     const eeEndDate = ee.Date(endDate);
     
@@ -557,45 +561,61 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
     
     const scale = 5000;
 
-    // --- LÓGICA CORREGIDA ---
     if (rois.length > 1) {
-        // Este camino es para la función "Comparar" y funciona como antes.
         const fc = ee.FeatureCollection(rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name })));
         return getChartDataByRegion(collection, fc, bandName, scale);
     } else {
-        // Este es el camino para un solo análisis (incluyendo municipios).
-        // Usa el eeRoi que ya fue calculado y verificado en el handler principal.
         return getChartData(collection, eeRoi, bandName, scale);
     }
 }
 
-async function getChartData(collection, roi, bandName, scale = 2000) {
-    return new Promise((resolve, reject) => {
-        const series = collection.map(image => {
-            const value = image.reduceRegion({
-                reducer: ee.Reducer.mean(),
-                geometry: roi,
-                scale: scale,
-                bestEffort: true
-            }).get(bandName);
-            return ee.Feature(null, { 'system:time_start': image.get('system:time_start'), 'value': value });
-        });
+// UBICACIÓN: /api/gee.js
+// REEMPLAZA la función getOptimizedChartData completa.
 
-        series.evaluate((fc, error) => {
-            if (error) reject(new Error('Error evaluando datos del gráfico: ' + error));
-            else {
-                const header = [['Fecha', bandName]];
-                const rows = fc.features
-                    .filter(f => f.properties.value !== null)
-                    .map(f => [new Date(f.properties['system:time_start']).toISOString(), f.properties.value])
-                    .sort((a,b) => new Date(a[0]) - new Date(b[0]));
-                resolve(header.concat(rows));
-            }
-        });
+async function getOptimizedChartData(collection, rois, bandName, startDate, endDate, eeRoi) {
+    // ... (la lógica inicial de la función para agregar por semana/mes se mantiene igual) ...
+    const eeStartDate = ee.Date(startDate);
+    const eeEndDate = ee.Date(endDate);
+    
+    const dateDiffDays = await new Promise((resolve, reject) => {
+        eeEndDate.difference(eeStartDate, 'day').evaluate((val, err) => err ? reject(err) : resolve(val));
     });
+
+    if (dateDiffDays > 120) {
+        let aggregateUnit = 'week';
+        if (dateDiffDays > 730) { 
+            aggregateUnit = 'month';
+        }
+        
+        const dateDiff = eeEndDate.difference(eeStartDate, aggregateUnit);
+        const dateList = ee.List.sequence(0, dateDiff.subtract(1));
+        
+        const imageListWithNulls = dateList.map(offset => {
+            const start = eeStartDate.advance(ee.Number(offset), aggregateUnit);
+            const end = start.advance(1, aggregateUnit);
+            const filtered = collection.filterDate(start, end);
+            return ee.Algorithms.If(
+                filtered.size().gt(0),
+                filtered.mean().rename(bandName).set('system:time_start', start.millis()),
+                null
+            );
+        });
+        
+        collection = ee.ImageCollection.fromImages(imageListWithNulls.removeAll([null]));
+    }
+    
+    const scale = 5000;
+
+    if (rois.length > 1) {
+        const fc = ee.FeatureCollection(rois.map(r => ee.Feature(ee.Geometry(r.geom), { label: r.name })));
+        return getChartDataByRegion(collection, fc, bandName, scale);
+    } else {
+        return getChartData(collection, eeRoi, bandName, scale);
+    }
 }
 
-// Archivo: gee.js
+// UBICACIÓN: /api/gee.js
+// REEMPLAZA la función getChartDataByRegion completa.
 
 async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
     return new Promise((resolve, reject) => {
@@ -606,11 +626,7 @@ async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
         
                 const timeSeries = collection.map(image => {
                     const time = image.get('system:time_start');
-                    const means = image.reduceRegions({
-                        collection: fc,
-                        reducer: ee.Reducer.mean(),
-                        scale: scale
-                    });
+                    const means = image.reduceRegions({ collection: fc, reducer: ee.Reducer.mean(), scale: scale });
                     const values = labels.map(label => {
                         const feature = means.filter(ee.Filter.eq('label', label)).first();
                         return ee.Feature(feature).get('mean');
@@ -621,16 +637,15 @@ async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
                 timeSeries.evaluate((fc, error) => {
                     if (error) reject(new Error('Error evaluando datos de comparación: ' + error));
                     else {
-                        const rows = fc.features.map(f => {
-                            return [new Date(f.properties['system:time_start']).toISOString(), ...f.properties.means];
-                        }).sort((a,b) => new Date(a[0]) - new Date(b[0]));
+                        const rows = fc.features
+                             // ▼▼▼ LA CORRECCIÓN CLAVE ▼▼▼
+                            .filter(f => f.properties['system:time_start']) // Filtra entradas sin fecha
+                            .map(f => [new Date(f.properties['system:time_start']).toISOString(), ...f.properties.means])
+                            .sort((a,b) => new Date(a[0]) - new Date(b[0]));
                         resolve(header.concat(rows));
                     }
                 });
             }
         });
     });
-
-// UBICACIÓN: api/gee.js (fuera de la función handler)
-
 }
