@@ -448,83 +448,89 @@ visParams = {
 // UBICACIÓN: ai-connector.js
 // REEMPLAZA el 'case' de 'HURRICANE' dentro de buildGeeLabPrompt
 
+// UBICACIÓN: ai-connector.js, dentro de la función buildGeeLabPrompt
+// REEMPLAZA el 'case' completo para 'HURRICANE'
+
 case 'HURRICANE':
-    // El 'request' ahora contendrá el nombre del huracán seleccionado
-    const selectedHurricaneName = request.hurricaneName; // Necesitaremos pasar esto desde el request
-    const hurricaneYear = request.year; // También el año para acotar la búsqueda
+    const selectedHurricaneName = request.hurricaneName;
+    const hurricaneYear = request.year;
 
     analysisLogic = `
-// Filtramos la colección para el huracán y año específicos
-var hurricane = ee.FeatureCollection('NOAA/NHC/HURDAT2/atlantic')
+// 1. Filtramos la colección para el huracán y año específicos.
+var hurricane = ee.FeatureCollection('NOAA/IBTrACS/v4')
     .filter(ee.Filter.and(
         ee.Filter.eq('name', '${selectedHurricaneName}'),
         ee.Filter.calendarRange(${hurricaneYear}, ${hurricaneYear}, 'year')
     ));
 
-// Obtenemos la fecha de la última observación para centrar el mapa y los datos SST
+// 2. Obtenemos la fecha de la última observación para centrar la capa de temperatura.
 var lastPointDate = ee.Date(hurricane.aggregate_max('system:time_start'));
 
-// Capa de Temperatura Superficial del Mar (SST) para la fecha del huracán
+// 3. Creamos la capa de Temperatura Superficial del Mar (SST) de fondo.
 var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1')
     .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
-    .select(['sst'])
-    .mean()
-    .multiply(0.01); // Aplicar factor de escala
+    .select(['sst']).mean().multiply(0.01);
+var sstImage = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
 
-var sstLayer = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
+// --- LÓGICA DE VISUALIZACIÓN MEJORADA ---
 
-// Función para pintar las trayectorias según la categoría
-var paintTracks = function(features, color) {
-    return ee.Image().byte().paint({
-        featureCollection: features,
-        color: 1, // Usamos un solo color para pintar
-        width: features.first().get('usa_wind_width') // Usamos un ancho dinámico
-    }).visualize({palette: color});
+// 4. Definimos los estilos para cada categoría de la escala Saffir-Simpson.
+var styles = {
+  'Tropical Storm': {color: '00FFFF', width: 2},
+  'Category 1':     {color: '00FF00', width: 3},
+  'Category 2':     {color: 'FFFF00', width: 4},
+  'Category 3':     {color: 'FF8C00', width: 5},
+  'Category 4':     {color: 'FF0000', width: 6},
+  'Category 5':     {color: 'FF00FF', width: 7}
 };
 
-// Añadimos un ancho de línea dinámico a cada punto basado en la velocidad del viento
-hurricane = hurricane.map(function(f) {
-  var wind = ee.Number(f.get('usa_wind'));
-  var width = wind.gt(136) ? 6 : // Cat 5
-              wind.gt(112) ? 5 : // Cat 4
-              wind.gt(95)  ? 4 : // Cat 3
-              wind.gt(82)  ? 3 : // Cat 2
-              wind.gt(63)  ? 2 : 1; // Cat 1 y TS
-  return f.set('usa_wind_width', width);
+// 5. Asignamos una categoría a cada punto del huracán según su velocidad de viento.
+var hurricaneStyled = hurricane.map(function(feature) {
+  var wind = ee.Number(feature.get('usa_wind'));
+  var category = ee.String(
+      ee.Algorithms.If(wind.gt(136), 'Category 5',
+      ee.Algorithms.If(wind.gt(112), 'Category 4',
+      ee.Algorithms.If(wind.gt(95),  'Category 3',
+      ee.Algorithms.If(wind.gt(82),  'Category 2',
+      ee.Algorithms.If(wind.gt(63),  'Category 1',
+                                      'Tropical Storm'))))));
+  // Devolvemos el punto con una nueva propiedad 'styleProperty' que usaremos para pintarlo.
+  return feature.set('styleProperty', category);
 });
 
-// Pintamos cada categoría con su color
-var cat5 = paintTracks(hurricane.filter(ee.Filter.gt('usa_wind', 136)), 'FF00FF');
-var cat4 = paintTracks(hurricane.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 136), ee.Filter.gt('usa_wind', 112))), 'FF0000');
-var cat3 = paintTracks(hurricane.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 112), ee.Filter.gt('usa_wind', 95))), 'FF8C00');
-var cat2 = paintTracks(hurricane.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 95), ee.Filter.gt('usa_wind', 82))), 'FFFF00');
-var cat1 = paintTracks(hurricane.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 82), ee.Filter.gt('usa_wind', 63))), '00FF00');
-var ts = paintTracks(hurricane.filter(ee.Filter.lte('usa_wind', 63)), '00FFFF');
+// 6. "Dibujamos" la colección de puntos en una imagen, usando los estilos definidos.
+var tracksImage = hurricaneStyled.style({
+  styleProperty: 'styleProperty',
+  styles: styles
+});
 
-// Combinamos todas las capas en una sola imagen final
-laImagenResultante = ee.ImageCollection([sstLayer, ts, cat1, cat2, cat3, cat4, cat5]).mosaic();
+// --- FIN DE LA LÓGICA MEJORADA ---
 
-collectionForChart = null; // No hay gráfico para este análisis
+// 7. Combinamos la capa de temperatura (fondo) con la de las trayectorias (frente).
+laImagenResultante = sstImage.blend(tracksImage);
+
+// No se necesitan datos de gráfico para este análisis.
+collectionForChart = null;
 bandNameForChart = null;
 
-// La leyenda se mantiene igual, ya que es excelente
+// La leyenda HTML se mantiene, ya que es la forma correcta de mostrar esta información.
 visParams = {
   description: \`
     <div class="legend-title">Huracán: ${selectedHurricaneName} (${hurricaneYear})</div>
     <div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
     <div class="legend-scale-bar" style="background: linear-gradient(to right, #000080, #00FFFF, #FFFF00, #FF0000);"></div>
     <div class="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
-    <div style="font-size: 11px; margin-top: 4px;"><strong>Categoría (Saffir-Simpson)</strong></div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF00FF; margin-right: 5px;"></div> Cat. 5</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF0000; margin-right: 5px;"></div> Cat. 4</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF8C00; margin-right: 5px;"></div> Cat. 3</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FFFF00; margin-right: 5px;"></div> Cat. 2</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #00FF00; margin-right: 5px;"></div> Cat. 1</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #00FFFF; margin-right: 5px;"></div> Torm./Dep.</div>
+    <div style="font-size: 11px; margin-top: 4px;"><strong>Categoría Saffir-Simpson</strong></div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF00FF; margin-right: 5px;"></div> Cat. 5 (>136 kt)</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF0000; margin-right: 5px;"></div> Cat. 4 (113-136 kt)</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF8C00; margin-right: 5px;"></div> Cat. 3 (96-112 kt)</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FFFF00; margin-right: 5px;"></div> Cat. 2 (83-95 kt)</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #00FF00; margin-right: 5px;"></div> Cat. 1 (64-82 kt)</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #00FFFF; margin-right: 5px;"></div> Tormenta Tropical (<64 kt)</div>
   \`
 };`;
-    break; // Fin del case HURRICANE
-    }
+    break;
+}
     // Este prompt es 100% a prueba de fallos de sintaxis.
     return ` Funciones como Map.addLayer, Map.centerObject, Map.setCenter, o similares no son compatibles para el entorno actual, siempre sustituye esas funciones con codigo valido para el entorno actual, Simepre verifica que las funciones esten definidas por ejemplo Print o ui y similares (Solo si el codigo lo requiere), Siempre añade el formato correcto para la leyenda y Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
 

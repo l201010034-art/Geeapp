@@ -98,7 +98,7 @@ async function handleHurricaneList({ year, scope }) {
     }
 
     // Cargar la colección completa de huracanes
-    const hurdat = ee.FeatureCollection("NOAA/NHC/HURDAT2/atlantic");
+    const hurdat = ee.FeatureCollection('NOAA/IBTrACS/v4');
 
     // 1. Filtrar por el año seleccionado
     const hurricanesInYear = hurdat.filter(ee.Filter.calendarRange(year, year, 'year'));
