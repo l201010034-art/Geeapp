@@ -92,6 +92,7 @@ function aggregateCollection(collection, unit, reducer, startDate, endDate) {
     return ee.ImageCollection.fromImages(imageList);
 }
 
+// UBICACIÓN: /api/gee.js
 // REEMPLAZA la función handleHurricaneList completa
 
 async function handleHurricaneList({ year, scope }) {
@@ -99,13 +100,8 @@ async function handleHurricaneList({ year, scope }) {
         throw new Error("El año es un parámetro requerido.");
     }
 
-    const hurdat = ee.FeatureCollection('NOAA/IBTrACS/v4');
-
-    // --- CORRECCIÓN CLAVE ---
-    // Filtramos usando la propiedad 'SEASON' que es la correcta para este asset.
-    const hurricanesInYear = hurdat.filter(ee.Filter.eq('SEASON', year));
-    // --- FIN DE LA CORRECCIÓN ---
-
+    const collection = ee.FeatureCollection('NOAA/IBTrACS/v4');
+    const hurricanesInYear = collection.filter(ee.Filter.eq('SEASON', year));
     let filteredCollection = hurricanesInYear;
 
     if (scope === 'Mexico') {
@@ -114,18 +110,41 @@ async function handleHurricaneList({ year, scope }) {
         filteredCollection = hurricanesInYear.filterBounds(mexicoBoundary);
     }
     
-    const hurricaneNames = filteredCollection.aggregate_array('name').distinct();
+    // 1. Obtenemos la lista de SIDs únicos, que es el identificador fiable.
+    const stormSids = filteredCollection.aggregate_array('SID').distinct();
+
+    // 2. Para cada SID, obtenemos su nombre correspondiente para mostrarlo en la UI.
+    const stormInfo = ee.FeatureCollection(stormSids.map(function(sid) {
+        // Obtenemos el primer punto de ese huracán para extraer el nombre.
+        var firstPoint = filteredCollection.filter(ee.Filter.eq('SID', sid)).first();
+        // Creamos un objeto con el SID y el Nombre.
+        return ee.Feature(null, {
+            'sid': firstPoint.get('SID'),
+            'name': firstPoint.get('name')
+        });
+    }));
 
     return new Promise((resolve, reject) => {
-        hurricaneNames.evaluate((names, error) => {
+        // 3. Evaluamos la lista de objetos {sid, name}.
+        stormInfo.evaluate((fc, error) => {
             if (error) {
-                reject(new Error("Error al obtener la lista de huracanes: " + error));
-            } else if (names.length === 0) {
-                 reject(new Error(`No se encontraron huracanes para el año ${year} en el ámbito seleccionado.`));
+                return reject(new Error("Error al obtener la lista de huracanes: " + error));
             }
-            else {
-                resolve({ hurricaneNames: names.sort() });
+            
+            // 4. Procesamos la lista en el servidor para limpiarla y ordenarla.
+            const hurricaneList = fc.features
+                .map(f => f.properties)
+                // Filtramos los que no tienen nombre para una UI más limpia.
+                .filter(storm => storm.name !== 'UNNAMED')
+                // Ordenamos alfabéticamente por nombre.
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+            if (hurricaneList.length === 0) {
+                return reject(new Error(`No se encontraron huracanes con nombre para el año ${year}.`));
             }
+
+            // 5. Devolvemos la lista final.
+            resolve({ hurricaneList });
         });
     });
 }

@@ -102,29 +102,38 @@ commandForm.addEventListener('submit', async (event) => {
 
 
 // --- 3. LÓGICA PARA EL LABORATORIO DE IA (MODAL) ---
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA la función handleLabCodeGeneration completa
+
 async function handleLabCodeGeneration() {
     const resultDisplay = document.getElementById('lab-result-display');
     const generateButton = document.getElementById('lab-generate-button');
     const executeButton = document.getElementById('lab-execute-button');
     const copyButton = document.getElementById('lab-copy-code-button');
 
-    // Construir el prompt estructurado desde los controles
-    const structuredRequest = {
-        analysisType: document.getElementById('lab-analysis-type').value,
-        region: (() => {
-            const munSelector = document.getElementById('lab-region-selector-municipalities');
-            return !munSelector.classList.contains('hidden')
-                ? munSelector.value
-                : document.getElementById('lab-region-selector-marine').value;
-        })(),
-        // ▲▲▲ FIN DE LA LÓGICA ▲▲▲
-        startDate: document.getElementById('lab-start-date').value,
-        endDate: document.getElementById('lab-end-date').value
-    };
-    if (!structuredRequest.startDate || !structuredRequest.endDate) {
-        alert("Por favor, selecciona un rango de fechas.");
-        return;
+    // --- CORRECCIÓN CLAVE ---
+    // Se ajusta la construcción del objeto de la petición.
+    const analysisType = document.getElementById('lab-analysis-type').value;
+    let structuredRequest;
+
+    if (analysisType === 'HURRICANE') {
+        const hurricaneSelector = document.getElementById('lab-hurricane-selector');
+        structuredRequest = {
+            analysisType: 'HURRICANE',
+            // Enviamos el SID y el nombre para usar en la leyenda.
+            hurricaneSid: hurricaneSelector.value,
+            hurricaneName: hurricaneSelector.options[hurricaneSelector.selectedIndex].text,
+            year: document.getElementById('lab-hurricane-year').value
+        };
+    } else {
+        structuredRequest = {
+            analysisType: analysisType,
+            region: document.getElementById('lab-region-selector-municipalities').value,
+            startDate: document.getElementById('lab-start-date').value,
+            endDate: document.getElementById('lab-end-date').value
+        };
     }
+    // --- FIN DE LA CORRECCIÓN ---
 
     generateButton.disabled = true;
     generateButton.textContent = "Generando...";
@@ -445,32 +454,32 @@ visParams = {
   description: \`${createLegendHtml('Dióxido de Nitrógeno (mol/m²)', ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red'], 0, '0.0003')}\`
 };`;
             break;
-// REEMPLAZA el 'case' completo para 'HURRICANE'
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA el 'case' completo para 'HURRICANE' en buildGeeLabPrompt
 
 case 'HURRICANE':
+    // Ahora recibimos el SID y el nombre por separado.
+    const selectedHurricaneSid = request.hurricaneSid;
     const selectedHurricaneName = request.hurricaneName;
     const hurricaneYear = request.year;
 
     analysisLogic = `
-// 1. Filtramos todos los puntos del huracán seleccionado para el año correcto.
+// 1. Filtramos todos los puntos usando el SID, el identificador único y correcto.
 var points = ee.FeatureCollection('NOAA/IBTrACS/v4')
-    .filter(ee.Filter.and(
-        ee.Filter.eq('SEASON', ${hurricaneYear}),
-        ee.Filter.eq('name', '${selectedHurricaneName}')
-    ));
+    .filter(ee.Filter.eq('SID', '${selectedHurricaneSid}'));
 
 // 2. Creamos la línea de la trayectoria ordenando los puntos por fecha.
 var line = ee.Geometry.LineString(points.sort('ISO_TIME').geometry().coordinates());
-var trajectoryLine = ee.FeatureCollection(line).style({color: 'FFFFFF', width: 1}); // Línea blanca delgada
+var trajectoryLine = ee.FeatureCollection(line).style({color: 'FFFFFF', width: 1});
 
-// 3. Obtenemos la fecha de la última observación para centrar la capa de temperatura.
+// 3. Obtenemos la capa de temperatura del mar (SST).
 var lastPointDate = ee.Date(points.aggregate_max('system:time_start'));
 var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1')
     .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
     .select(['sst']).mean().multiply(0.01);
 var sstImage = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
 
-// 4. Definimos los estilos para los PUNTOS de intensidad (escala Saffir-Simpson).
+// 4. Definimos los estilos para los PUNTOS de intensidad.
 var styles = {
   'Tropical Storm': {pointSize: 3, color: '00FFFF'},
   'Category 1':     {pointSize: 4, color: '00FF00'},
@@ -480,7 +489,7 @@ var styles = {
   'Category 5':     {pointSize: 8, color: 'FF00FF'}
 };
 
-// 5. Asignamos una categoría a cada punto para poder colorearlo.
+// 5. Asignamos una categoría a cada punto.
 var pointsStyled = points.map(function(feature) {
   var wind = ee.Number(feature.get('usa_wind'));
   var category = ee.String(
@@ -493,26 +502,25 @@ var pointsStyled = points.map(function(feature) {
   return feature.set('styleProperty', category);
 });
 
-// 6. "Dibujamos" los puntos coloreados sobre una imagen transparente.
+// 6. "Dibujamos" los puntos coloreados.
 var intensityPoints = pointsStyled.style({
   styleProperty: 'styleProperty',
   styles: styles
 });
 
-// 7. Combinamos todo: el fondo de temperatura, la línea de trayectoria y los puntos de intensidad.
+// 7. Combinamos todo.
 laImagenResultante = sstImage.blend(trajectoryLine).blend(intensityPoints);
 
-// No se necesitan datos de gráfico.
 collectionForChart = null;
 bandNameForChart = null;
 
-// La leyenda HTML se mantiene, ahora representando los puntos de color.
+// La leyenda ahora usa el nombre que pasamos desde la UI.
 visParams = {
   description: \`
     <div class="legend-title">Huracán: ${selectedHurricaneName} (${hurricaneYear})</div>
     <div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
     <div class="legend-scale-bar" style="background: linear-gradient(to right, #000080, #00FFFF, #FFFF00, #FF0000);"></div>
-    <div class="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
+    <div class.="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
     <div style="font-size: 11px; margin-top: 4px;"><strong>Intensidad (Saffir-Simpson)</strong></div>
     <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF00FF; border-radius: 50%; margin-right: 5px;"></div> Cat. 5</div>
     <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF0000; border-radius: 50%; margin-right: 5px;"></div> Cat. 4</div>
@@ -535,6 +543,9 @@ visParams = {
 
 // UBICACIÓN: ai-connector.js (puedes añadirla al final del archivo)
 
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA la función fetchHurricaneList completa
+
 async function fetchHurricaneList() {
     const year = document.getElementById('lab-hurricane-year').value;
     const scope = document.getElementById('lab-hurricane-scope').value;
@@ -553,7 +564,6 @@ async function fetchHurricaneList() {
     selector.innerHTML = '';
 
     try {
-        // Usamos la API /api/gee que ya existe, no la de /api/gee-lab
         const response = await fetch('/api/gee', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -566,17 +576,22 @@ async function fetchHurricaneList() {
         const result = await response.json();
         if (!response.ok) throw new Error(result.details || "Error en el servidor.");
 
-        if (result.hurricaneNames && result.hurricaneNames.length > 0) {
-            result.hurricaneNames.forEach(name => {
+        // --- CORRECCIÓN CLAVE ---
+        // La respuesta ahora se llama 'hurricaneList' y es un array de objetos.
+        if (result.hurricaneList && result.hurricaneList.length > 0) {
+            result.hurricaneList.forEach(storm => {
                 const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
+                // El valor interno será el SID (fiable).
+                option.value = storm.sid;
+                // El texto que ve el usuario es el Nombre (amigable).
+                option.textContent = storm.name;
                 selector.appendChild(option);
             });
             selectorContainer.classList.remove('hidden');
         } else {
-            alert(`No se encontraron huracanes para ${year} en ${scope}.`);
+             alert(`No se encontraron huracanes para ${year} en ${scope}.`);
         }
+        // --- FIN DE LA CORRECCIÓN ---
 
     } catch (error) {
         console.error("Error al buscar huracanes:", error);
