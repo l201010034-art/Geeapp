@@ -140,7 +140,7 @@ async function handleLabExecution() {
     executeButton.textContent = "Ejecutando...";
     applyButton.classList.add('hidden');
     previewOverlay.classList.remove('hidden');
-    previewText.textContent = "Ejecutando en GEE y preparando previsualización...";
+    window.showLoading(true, 'lab');
     resultDisplay.textContent = `// Solicitando análisis '${analysisType}' al servidor...`;
 
     try {
