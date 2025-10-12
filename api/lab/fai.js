@@ -1,4 +1,4 @@
-// /api/lab/fai.js - VERSIÓN ESCALABLE FINAL
+// /api/lab/fai.js - VERSIÓN CON MÁSCARA DE BATIMETRÍA
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
@@ -6,25 +6,39 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
     const start = ee.Date(startDate);
     const end = ee.Date(endDate);
 
-    // 1. Pre-filtramos la colección completa UNA SOLA VEZ.
+    // 1. Pre-filtramos la colección Sentinel-2 una vez.
     const s2Collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
         .filterBounds(region)
         .filterDate(start, end);
 
-    // 2. Función auxiliar para calcular FAI (incluye escalado y máscara de agua).
+    // --- NUEVO PASO: Crear máscaras de agua y profundidad ---
+    // Máscara para tierra/agua (como antes).
+    const waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
+    // Máscara de batimetría para excluir aguas poco profundas.
+    // Cargamos el mapa de profundidad oceánica GEBCO.
+    const gebco = ee.Image('GEBCO/GEBCO_2020');
+    // Creamos una máscara que solo incluye píxeles con una profundidad de 15 metros o más.
+    // La elevación es negativa para la profundidad, por eso usamos lte(-15).
+    const deepWaterMask = gebco.select('elevation').lte(-15);
+    // Combinamos ambas máscaras. Un píxel debe ser agua Y profundo.
+    const finalMask = waterMask.and(deepWaterMask);
+    // --- FIN DEL NUEVO PASO ---
+
+    // 3. Función auxiliar para calcular FAI aplicando la máscara final.
     const calculateFAI = (image) => {
-        const waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
-        const scaledImage = image.divide(10000).updateMask(waterMask);
-        return scaledImage.expression(
+        // Aplicamos la máscara combinada que elimina tierra Y aguas poco profundas.
+        const maskedImage = image.divide(10000).updateMask(finalMask);
+        
+        return maskedImage.expression(
             'NIR - (RED + (SWIR - RED) * (842 - 665) / (1610 - 665))', {
-            'NIR': scaledImage.select('B8'), 'RED': scaledImage.select('B4'), 'SWIR': scaledImage.select('B11')
+            'NIR': maskedImage.select('B8'), 'RED': maskedImage.select('B4'), 'SWIR': maskedImage.select('B11')
         }).rename('FAI');
     };
 
-    // 3. Generamos la lista de meses para iterar.
+    // 4. Generamos la lista de meses para iterar.
     const months = ee.List.sequence(0, end.difference(start, 'month').subtract(1));
 
-    // 4. Mapeamos sobre cada mes para crear un compuesto mensual (mediana).
+    // 5. Mapeamos sobre cada mes para crear un compuesto mensual.
     const monthlyComposites = months.map((m) => {
         const ini = start.advance(m, 'month');
         const fin = ini.advance(1, 'month');
@@ -37,10 +51,10 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         );
     });
 
-    // 5. Creamos la colección final para el gráfico.
+    // 6. Creamos la colección final para el gráfico.
     const finalCollection = ee.ImageCollection.fromImages(monthlyComposites.removeAll([null]));
 
-    // 6. Devolvemos los resultados.
+    // 7. Devolvemos los resultados.
     return {
         laImagenResultante: finalCollection.mean(),
         collectionForChart: finalCollection,
