@@ -541,59 +541,57 @@ visParams = {
     ${analysisLogic}`;
 }
 
-// UBICACIÓN: ai-connector.js
-// REEMPLAZA la función fetchHurricaneList completa
+// UBICACIÓN: /api/gee.js
+// REEMPLAZA la función handleHurricaneList completa
 
-async function fetchHurricaneList() {
-    const year = document.getElementById('lab-hurricane-year').value;
-    // Se elimina la variable 'scope'
-    const button = document.getElementById('lab-fetch-hurricanes-button');
-    const selectorContainer = document.getElementById('lab-hurricane-selector-container');
-    const selector = document.getElementById('lab-hurricane-selector');
-
+async function handleHurricaneList({ year }) {
     if (!year) {
-        alert("Por favor, introduce un año.");
-        return;
+        throw new Error("El año es un parámetro requerido.");
     }
 
-    button.disabled = true;
-    button.textContent = "Buscando...";
-    selectorContainer.classList.add('hidden');
-    selector.innerHTML = '';
+    const collection = ee.FeatureCollection('NOAA/IBTrACS/v4');
+    
+    // 1. Filtramos todos los puntos de la temporada correcta.
+    const hurricanesInYear = collection.filter(ee.Filter.eq('SEASON', year));
+    
+    // 2. Obtenemos una lista de todos los nombres únicos que no sean 'UNNAMED'.
+    // Esto es más directo y fiable.
+    const distinctNames = hurricanesInYear
+        .filter(ee.Filter.neq('name', 'UNNAMED'))
+        .aggregate_array('name')
+        .distinct();
 
-    try {
-        const response = await fetch('/api/gee', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'getHurricaneList',
-                // El parámetro 'scope' se elimina del cuerpo de la petición.
-                params: { year: parseInt(year) }
-            })
+    // 3. Para cada nombre, obtenemos su SID correspondiente.
+    const stormInfo = ee.FeatureCollection(distinctNames.map(function(name) {
+        // Obtenemos el primer punto de ese huracán para extraer el SID.
+        var firstPoint = hurricanesInYear.filter(ee.Filter.eq('name', name)).first();
+        // Creamos un objeto con el SID y el Nombre.
+        return ee.Feature(null, {
+            'sid': firstPoint.get('SID'),
+            'name': name
         });
+    }));
 
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.details || "Error en el servidor.");
+    return new Promise((resolve, reject) => {
+        // 4. Evaluamos la lista de objetos {sid, name}.
+        stormInfo.evaluate((fc, error) => {
+            if (error) {
+                return reject(new Error("Error al obtener la lista de huracanes: " + error));
+            }
+            
+            // 5. Procesamos la lista final en el servidor para ordenarla.
+            const hurricaneList = fc.features
+                .map(f => f.properties)
+                .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-        if (result.hurricaneList && result.hurricaneList.length > 0) {
-            result.hurricaneList.forEach(storm => {
-                const option = document.createElement('option');
-                option.value = storm.sid;
-                option.textContent = storm.name;
-                selector.appendChild(option);
-            });
-            selectorContainer.classList.remove('hidden');
-        } else {
-             alert(`No se encontraron huracanes para ${year}.`);
-        }
+            if (hurricaneList.length === 0) {
+                return reject(new Error(`No se encontraron huracanes con nombre para el año ${year}.`));
+            }
 
-    } catch (error) {
-        console.error("Error al buscar huracanes:", error);
-        alert(`Error: ${error.message}`);
-    } finally {
-        button.disabled = false;
-        button.textContent = "1. Buscar Huracanes";
-    }
+            // 6. Devolvemos la lista final.
+            resolve({ hurricaneList });
+        });
+    });
 }
 
 // Expón la nueva función
