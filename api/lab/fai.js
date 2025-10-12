@@ -1,4 +1,4 @@
-// /api/lab/fai.js - VERSIÓN CON MÁSCARA DE BATIMETRÍA ETOPO1
+// /api/lab/fai.js - VERSIÓN FINAL CON ASSET COMUNITARIO GEBCO
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
@@ -11,14 +11,15 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         .filterBounds(region)
         .filterDate(start, end);
 
-    // --- PASO CLAVE: Crear máscaras de agua y profundidad con ETOPO1 ---
+    // --- PASO CLAVE: Crear máscaras de agua y profundidad con el nuevo asset ---
     const waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
     
-    // Cargamos el mapa de profundidad ETOPO1.
-    const etopo = ee.Image('NOAA/NGDC/ETOPO1');
-    // La banda 'bedrock' contiene la elevación/profundidad. Los valores negativos son profundidad.
+    // Cargamos el asset de GEBCO del proyecto sat-io.
+    const gebco = ee.Image("projects/sat-io/open-datasets/gebco/gebco_grid");
+    
+    // La banda 'elevation' contiene la profundidad. Los valores negativos son profundidad.
     // Creamos una máscara que solo incluye píxeles con una profundidad de 15 metros o más.
-    const deepWaterMask = etopo.select('bedrock').lte(-15);
+    const deepWaterMask = gebco.select('elevation').lte(-15);
     
     // Combinamos ambas máscaras. Un píxel debe ser agua Y profundo.
     const finalMask = waterMask.and(deepWaterMask);
@@ -34,7 +35,7 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         }).rename('FAI');
     };
 
-    // 4. Generamos la lista de meses para iterar.
+    // 4. Generamos la lista de meses para iterar, asegurando la escalabilidad.
     const months = ee.List.sequence(0, end.difference(start, 'month').subtract(1));
 
     // 5. Mapeamos sobre cada mes para crear un compuesto mensual.
