@@ -425,20 +425,24 @@ visParams = {
 };`;
             break;
 
-// UBICACIÓN: ai-connector.js
-// REEMPLAZA el 'case' completo para 'FAI' en la función buildGeeLabPrompt
+        // UBICACIÓN: ai-connector.js
+        // REEMPLAZA el 'case' completo para 'FAI' en la función buildGeeLabPrompt
 
         case 'FAI':
             analysisLogic = `
-        // 1. Crear una máscara de agua para asegurar que solo analizamos el océano.
+        // Contexto: El usuario quiere un análisis de Sargazo (FAI) sobre una ZONA MARINA.
+        // El script DEBE usar la variable 'roi' proporcionada por el servidor, que ya es una zona marina.
+        // NUNCA uses geometrías terrestres como municipios o áreas protegidas (ej. Calakmul).
+
+        // 1. Máscara de agua para filtrar cualquier remanente de tierra.
         var waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
 
-        // 2. Cargar la colección Sentinel-2. IMPORTANTE: No filtramos por nubes aquí.
-        var collection = ee.ImageCollection('COPERNICOS/S2_SR_HARMONIZED')
+        // 2. Cargar Sentinel-2 sin filtro de nubes, usando el 'roi' marino proporcionado.
+        var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
             .filterBounds(roi)
             .filterDate(startDate, endDate);
 
-        // 3. Función para calcular el Índice de Algas Flotantes (FAI) en cada imagen.
+        // 3. Función para calcular FAI, aplicando la máscara de agua.
         var addFAI = function(image) {
         var imageWithMask = image.updateMask(waterMask);
         var fai = imageWithMask.expression(
@@ -447,23 +451,16 @@ visParams = {
             'RED': imageWithMask.select('B4'),
             'SWIR': imageWithMask.select('B11')
         }).rename('FAI');
-        // Devolvemos la imagen original con la nueva banda FAI.
         return image.addBands(fai);
         };
-
-        // 4. Aplicar la función a toda la colección.
         var collectionWithFAI = collection.map(addFAI);
 
-        // 5. --- LA CORRECCIÓN CLAVE ---
-        // Crear un mosaico de calidad. Para cada píxel, GEE seleccionará el valor de la imagen
-        // que tenga el FAI más alto. Esto descarta automáticamente nubes y agua limpia.
+        // 4. Mosaico de calidad para obtener la mejor vista sin nubes, que es el método correcto.
         laImagenResultante = collectionWithFAI.qualityMosaic('FAI');
 
-        // 6. Preparar datos para el gráfico de series temporales.
+        // 5. Definir las salidas requeridas por el servidor (variables finales).
         collectionForChart = collectionWithFAI.select('FAI');
         bandNameForChart = 'FAI';
-
-        // 7. Definir los parámetros de visualización y la leyenda.
         visParams = {
         min: -0.05, max: 0.2, 
         palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
