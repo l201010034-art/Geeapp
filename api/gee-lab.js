@@ -176,7 +176,7 @@ async function getOptimizedChartData(collection, roi, bandName, startDate, endDa
 // UBICACIÓN: api/gee-lab.js
 // REEMPLAZA la función executeGeeCode completa con esta versión corregida.
 
-async function executeGeeCode(codeToExecute, roiParam, startDate, endDate, analysisType) { // <<-- PARÁMETRO AÑADIDO AQUÍ
+async function executeGeeCode(codeToExecute, roiParam, startDate, endDate, analysisType) {
     // 1. Inicializar GEE
     await new Promise((resolve, reject) => {
         ee.data.authenticateViaPrivateKey(
@@ -189,6 +189,7 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate, analy
     // 2. Preparar el Sandbox y el ROI
     const logs = [];
     let eeRoi;
+    // Esta lógica define la geometría (eeRoi) basada en el nombre de la zona.
     if (roiParam === 'Golfo de México (Zona Campeche)') {
         eeRoi = ee.Geometry.Rectangle([-94, 18, -89, 22], null, false);
     } else if (roiParam === 'Línea Costera (Sonda de Campeche)') {
@@ -198,7 +199,6 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate, analy
         if (!cvegeo) throw new Error(`El nombre del municipio "${roiParam}" no es válido.`);
         const municipios = ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024');
         const munFeature = municipios.filter(ee.Filter.eq('CVEGEO', cvegeo)).first();
-        // Verificación para asegurar que el feature fue encontrado antes de obtener la geometría
         if (!munFeature.getInfo()) {
              throw new Error(`No se pudo encontrar la geometría para el municipio "${roiParam}" con CVEGEO "${cvegeo}".`);
         }
@@ -214,38 +214,30 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate, analy
         ${codeToExecute}
     `;
 
-    const context = vm.createContext({
-        ee: ee,
-        console: { log: (message) => logs.push(message.toString()) },
-    });
-
-    // 4. Ejecutar el script completo
+    const context = vm.createContext({ ee: ee, console: { log: (message) => logs.push(message.toString()) } });
     vm.runInContext(fullScript, context, { timeout: 90000 });
-
     let { laImagenResultante, collectionForChart, bandNameForChart, visParams } = context;
 
     if (!laImagenResultante) throw new Error("El código no definió 'laImagenResultante'.");
     if (!visParams) throw new Error("El código no definió 'visParams'.");
     visParams = ensureLegendDescription(visParams);
 
-    // 5. OBTENER MAP ID (Lógica de recorte condicional)
-    // ¡ESTA LÍNEA AHORA FUNCIONARÁ PORQUE 'analysisType' EXISTE!
-    const imageToDisplay = analysisType === 'HURRICANE' 
-        ? laImagenResultante // Para huracanes, usamos la imagen completa sin recortar.
-        : laImagenResultante.clip(eeRoi); // Para todo lo demás, recortamos al ROI.
+    // ▼▼▼ ESTA ES LA LÍNEA CORREGIDA ▼▼▼
+    // 5. Obtener Map ID (con recorte condicional)
+    const imageToDisplay = (analysisType === 'HURRICANE' || analysisType === 'FAI')
+        ? laImagenResultante // Para Huracanes y Sargazo, usamos la imagen completa sin recortar.
+        : laImagenResultante.clip(eeRoi); // Para todo lo demás, recortamos al ROI del municipio.
 
     const mapId = await new Promise((resolve, reject) => {
         imageToDisplay.getMapId(visParams, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
     });
 
-    // 6. Obtener estadísticas y datos del gráfico (si aplica)
+    // 6. Obtener estadísticas y datos del gráfico
     let stats = `Análisis visual para: ${bandNameForChart || 'Resultado del Laboratorio'}`;
     let chartData = null;
-
     if (collectionForChart && bandNameForChart) {
         chartData = await getOptimizedChartData(collectionForChart, eeRoi, bandNameForChart, startDate, endDate);
-        const imageForStats = laImagenResultante.select(bandNameForChart); 
-        stats = await getStats(imageForStats, eeRoi, bandNameForChart, '', 'Resultado del Laboratorio');
+        stats = await getStats(laImagenResultante.select(bandNameForChart), eeRoi, bandNameForChart, '', 'Resultado del Laboratorio');
     }
 
     return { mapId, visParams, stats, chartData, chartOptions: { title: `Serie Temporal para ${bandNameForChart}` } };
