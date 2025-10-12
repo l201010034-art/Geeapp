@@ -454,91 +454,84 @@ visParams = {
   description: \`${createLegendHtml('Dióxido de Nitrógeno (mol/m²)', ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red'], 0, '0.0003')}\`
 };`;
             break;
-// UBICACIÓN: ai-connector.js
-// REEMPLAZA el 'case' completo para 'HURRICANE' en buildGeeLabPrompt
 
-// UBICACIÓN: ai-connector.js
-// REEMPLAZA el 'case' completo para 'HURRICANE' en la función buildGeeLabPrompt
 
-case 'HURRICANE':
-    const selectedHurricaneSid = request.hurricaneSid;
-    const selectedHurricaneName = request.hurricaneName;
-    const hurricaneYear = request.year;
+        case 'HURRICANE':
+            const selectedHurricaneSid = request.hurricaneSid;
+            const selectedHurricaneName = request.hurricaneName;
+            const hurricaneYear = request.year;
 
-    analysisLogic = `
-// 1. Filtramos todos los puntos usando el SID, que es el identificador único.
-var points = ee.FeatureCollection('NOAA/IBTrACS/v4')
-    .filter(ee.Filter.eq('SID', '${selectedHurricaneSid}'));
+            analysisLogic = `
+        // 1. Filtramos el huracán por su SID único y eliminamos puntos sin geometría.
+        var points = ee.FeatureCollection('NOAA/IBTrACS/v4')
+            .filter(ee.Filter.eq('SID', '${selectedHurricaneSid}'))
+            .filter(ee.Filter.bounds(ee.Geometry.Point(0,0).buffer(2e7))); // Filtra geometrías nulas
 
-// --- CORRECCIÓN CLAVE 2: Manejo de fechas robusto ---
-// Obtenemos la fecha máxima. Si no hay puntos, usamos el final del año para evitar el error 'Date: Parameter value is required'.
-var maxTime = points.aggregate_max('system:time_start');
-var lastPointDate = ee.Date(ee.Algorithms.If(maxTime, maxTime, '${hurricaneYear}-12-31'));
+        // 2. Obtenemos la temperatura del mar (SST) para la fecha del huracán.
+        var maxTime = points.aggregate_max('system:time_start');
+        var lastPointDate = ee.Date(ee.Algorithms.If(maxTime, maxTime, '${hurricaneYear}-12-31'));
+        var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1')
+            .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
+            .select(['sst']).mean().multiply(0.01);
+        var sstImage = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
 
-// 2. Creamos la línea de la trayectoria ordenando los puntos por fecha.
-var line = ee.Geometry.LineString(points.sort('ISO_TIME').geometry().coordinates());
-var trajectoryLine = ee.FeatureCollection(line).style({color: 'FFFFFF', width: 1});
+        // 3. Creamos la línea de la trayectoria.
+        var line = ee.Geometry.LineString(points.sort('ISO_TIME').geometry().coordinates());
+        var trajectoryLine = ee.FeatureCollection(line).style({color: 'FFFFFF', width: 1.5});
 
-// 3. Obtenemos la capa de temperatura del mar (SST) usando la fecha calculada.
-var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1')
-    .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
-    .select(['sst']).mean().multiply(0.01);
-var sstImage = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
+        // 4. Definimos los estilos para los PUNTOS de intensidad.
+        var styles = {
+        'Tropical Storm': {color: '00FFFF', pointSize: 3},
+        'Category 1':     {color: '00FF00', pointSize: 4},
+        'Category 2':     {color: 'FFFF00', pointSize: 5},
+        'Category 3':     {color: 'FF8C00', pointSize: 6},
+        'Category 4':     {color: 'FF0000', pointSize: 7},
+        'Category 5':     {color: 'FF00FF', pointSize: 8}
+        };
 
-// 4. Definimos los estilos para los PUNTOS de intensidad.
-var styles = {
-  'Tropical Storm': {color: '00FFFF', pointSize: 3},
-  'Category 1':     {color: '00FF00', pointSize: 4},
-  'Category 2':     {color: 'FFFF00', pointSize: 5},
-  'Category 3':     {color: 'FF8C00', pointSize: 6},
-  'Category 4':     {color: 'FF0000', pointSize: 7},
-  'Category 5':     {color: 'FF00FF', pointSize: 8}
-};
+        // 5. Asignamos un diccionario de estilo a cada punto según su intensidad de viento.
+        var pointsStyled = points.map(function(feature) {
+        // Usamos 'USA_WIND' que es el nombre correcto de la propiedad.
+        var wind = ee.Number(feature.get('USA_WIND'));
+        var category = ee.String(
+            ee.Algorithms.If(wind.gt(136), 'Category 5',
+            ee.Algorithms.If(wind.gt(112), 'Category 4',
+            ee.Algorithms.If(wind.gt(95),  'Category 3',
+            ee.Algorithms.If(wind.gt(82),  'Category 2',
+            ee.Algorithms.If(wind.gt(63),  'Category 1',
+                                            'Tropical Storm'))))));
+        var styleForCategory = ee.Dictionary(styles).get(category);
+        return feature.set('styleArgs', styleForCategory);
+        });
 
-// --- CORRECCIÓN CLAVE 1: Asignación de estilo compatible con el servidor ---
-// En lugar de asignar solo la categoría, asignamos el diccionario de estilo completo a una propiedad.
-var pointsStyled = points.map(function(feature) {
-  var wind = ee.Number(feature.get('usa_wind'));
-  var category = ee.String(
-      ee.Algorithms.If(wind.gt(136), 'Category 5',
-      ee.Algorithms.If(wind.gt(112), 'Category 4',
-      ee.Algorithms.If(wind.gt(95),  'Category 3',
-      ee.Algorithms.If(wind.gt(82),  'Category 2',
-      ee.Algorithms.If(wind.gt(63),  'Category 1',
-                                      'Tropical Storm'))))));
-  // Obtenemos el diccionario de estilo y lo asignamos a la propiedad 'styleArgs'
-  var styleForCategory = ee.Dictionary(styles).get(category);
-  return feature.set('styleArgs', styleForCategory);
-});
+        // "Pintamos" los puntos usando la propiedad de estilo que acabamos de crear.
+        var intensityPoints = pointsStyled.style({styleProperty: 'styleArgs'});
 
-// "Pintamos" los puntos. La función .style() ahora lee el diccionario de la propiedad 'styleArgs'.
-// Esto es compatible con el servidor y resuelve el error "Unrecognized arguments (styles)".
-var intensityPoints = pointsStyled.style({styleProperty: 'styleArgs'});
+        // 6. Combinamos la SST, la trayectoria y los puntos en una sola imagen final.
+        laImagenResultante = sstImage.blend(trajectoryLine).blend(intensityPoints);
 
-// 6. Combinamos todo en una sola imagen para el mapa.
-laImagenResultante = sstImage.blend(trajectoryLine).blend(intensityPoints);
+        // 7. Definimos las variables de salida que el servidor espera.
+        collectionForChart = null;
+        bandNameForChart = null;
 
-collectionForChart = null;
-bandNameForChart = null;
-
-// La leyenda ahora usa el nombre que pasamos desde la UI.
-visParams = {
-  description: \`
-    <div class="legend-title">Huracán: ${selectedHurricaneName} (${hurricaneYear})</div>
-    <div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
-    <div class="legend-scale-bar" style="background: linear-gradient(to right, #000080, #00FFFF, #FFFF00, #FF0000);"></div>
-    <div class="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
-    <div style="font-size: 11px; margin-top: 4px;"><strong>Intensidad (Saffir-Simpson)</strong></div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF00FF; border-radius: 50%; margin-right: 5px;"></div> Cat. 5</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF0000; border-radius: 50%; margin-right: 5px;"></div> Cat. 4</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF8C00; border-radius: 50%; margin-right: 5px;"></div> Cat. 3</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FFFF00; border-radius: 50%; margin-right: 5px;"></div> Cat. 2</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #00FF00; border-radius: 50%; margin-right: 5px;"></div> Cat. 1</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #00FFFF; border-radius: 50%; margin-right: 5px;"></div> Torm./Dep. Tropical</div>
-  \`
-};`;
-    break;
-}
+        // 8. Convertimos la leyenda de la UI a HTML para la descripción.
+        visParams = {
+        description: \`
+            <div class="legend-title">Huracán: ${selectedHurricaneName} (${hurricaneYear})</div>
+            <div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
+            <div class="legend-scale-bar" style="background: linear-gradient(to right, #000080, #00FFFF, #FFFF00, #FF0000);"></div>
+            <div class="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
+            <div style="font-size: 11px; margin-top: 4px;"><strong>Intensidad (Saffir-Simpson)</strong></div>
+            <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF00FF; border-radius: 50%; margin-right: 5px;"></div> Cat. 5</div>
+            <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF0000; border-radius: 50%; margin-right: 5px;"></div> Cat. 4</div>
+            <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF8C00; border-radius: 50%; margin-right: 5px;"></div> Cat. 3</div>
+            <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FFFF00; border-radius: 50%; margin-right: 5px;"></div> Cat. 2</div>
+            <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #00FF00; border-radius: 50%; margin-right: 5px;"></div> Cat. 1</div>
+            <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #00FFFF; border-radius: 50%; margin-right: 5px;"></div> Torm./Dep. Tropical</div>
+        \`
+        };`;
+            break;
+        }
     // Este prompt es 100% a prueba de fallos de sintaxis.
     return ` Funciones como Map.addLayer, Map.centerObject, Map.setCenter, o similares no son compatibles para el entorno actual, siempre sustituye esas funciones con codigo valido para el entorno actual, Simepre verifica que las funciones esten definidas por ejemplo Print o ui y similares (Solo si el codigo lo requiere), Siempre añade el formato correcto para la leyenda y Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
 
