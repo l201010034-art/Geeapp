@@ -1,4 +1,4 @@
-// /api/lab/fai.js - VERSIÓN CON MÁSCARA DE BATIMETRÍA
+// /api/lab/fai.js - VERSIÓN CON MÁSCARA DE BATIMETRÍA ETOPO1
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
@@ -11,22 +11,21 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         .filterBounds(region)
         .filterDate(start, end);
 
-    // --- NUEVO PASO: Crear máscaras de agua y profundidad ---
-    // Máscara para tierra/agua (como antes).
+    // --- PASO CLAVE: Crear máscaras de agua y profundidad con ETOPO1 ---
     const waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
-    // Máscara de batimetría para excluir aguas poco profundas.
-    // Cargamos el mapa de profundidad oceánica GEBCO.
-    const gebco = ee.Image('GEBCO/GEBCO_2020');
+    
+    // Cargamos el mapa de profundidad ETOPO1.
+    const etopo = ee.Image('NOAA/NGDC/ETOPO1');
+    // La banda 'bedrock' contiene la elevación/profundidad. Los valores negativos son profundidad.
     // Creamos una máscara que solo incluye píxeles con una profundidad de 15 metros o más.
-    // La elevación es negativa para la profundidad, por eso usamos lte(-15).
-    const deepWaterMask = gebco.select('elevation').lte(-15);
+    const deepWaterMask = etopo.select('bedrock').lte(-15);
+    
     // Combinamos ambas máscaras. Un píxel debe ser agua Y profundo.
     const finalMask = waterMask.and(deepWaterMask);
-    // --- FIN DEL NUEVO PASO ---
+    // --- FIN DEL PASO CLAVE ---
 
     // 3. Función auxiliar para calcular FAI aplicando la máscara final.
     const calculateFAI = (image) => {
-        // Aplicamos la máscara combinada que elimina tierra Y aguas poco profundas.
         const maskedImage = image.divide(10000).updateMask(finalMask);
         
         return maskedImage.expression(
