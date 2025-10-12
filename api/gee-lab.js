@@ -156,10 +156,10 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
         );
     });
 
-    // 2. Preparar el Sandbox y las variables a inyectar
+    // 2. Preparar el Sandbox
     const logs = [];
     let eeRoi;
-
+    // ... (la lógica para definir eeRoi se mantiene igual que antes) ...
     if (roiParam === 'Golfo de México (Zona Campeche)') {
         eeRoi = ee.Geometry.Rectangle([-94, 18, -89, 22], null, false);
     } else if (roiParam === 'Línea Costera (Sonda de Campeche)') {
@@ -170,35 +170,38 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
         const municipios = ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024');
         eeRoi = municipios.filter(ee.Filter.eq('CVEGEO', cvegeo)).first().geometry();
     }
+    
+    // 3. Construir el script final y el contexto
+    const fullScript = `
+        // Variables inyectadas por el servidor
+        var roi = ee.Geometry(${JSON.stringify(eeRoi.getInfo())});
+        var startDate = '${startDate}';
+        var endDate = '${endDate}';
+        
+        // Variables que el código de la IA debe definir
+        var laImagenResultante, collectionForChart, bandNameForChart, visParams;
 
-    // ▼▼▼ CAMBIO CLAVE: DEFINIMOS EL CONTEXTO CON TODAS LAS VARIABLES ▼▼▼
-    const executionContext = {
+        // --- INICIO DEL CÓDIGO GENERADO POR LA IA ---
+        ${codeToExecute}
+        // --- FIN DEL CÓDIGO GENERADO POR LA IA ---
+    `;
+
+    const context = vm.createContext({
         ee: ee,
         console: { log: (message) => logs.push(message.toString()) },
-        Map: { centerObject: () => {}, addLayer: () => {} }, // Mock Map object
-        // Variables que la IA espera que existan:
-        roi: eeRoi,
-        startDate: startDate,
-        endDate: endDate
-    };
-    const context = vm.createContext(executionContext);
+    });
 
-    // 3. Ejecutar el código en el sandbox, que ahora tiene acceso a roi, startDate y endDate
-    vm.runInContext(codeToExecute, context, { timeout: 60000 });
-    
-    // 4. Extraer las variables que la IA debió haber creado
+    // 4. Ejecutar el script completo
+    vm.runInContext(fullScript, context, { timeout: 90000 }); // Aumentamos el timeout a 90s
+
     const { laImagenResultante, collectionForChart, bandNameForChart, visParams } = context;
 
-    if (!laImagenResultante) {
-        throw new Error("El código generado por la IA no definió la variable 'laImagenResultante'.");
-    }
-    if (!visParams) {
-        throw new Error("El código generado por la IA no definió la variable 'visParams'.");
-    }
+    if (!laImagenResultante) throw new Error("El código no definió 'laImagenResultante'.");
+    if (!visParams) throw new Error("El código no definió 'visParams'.");
 
-    // 5. Obtener el Map ID para el frontend
+    // 5. Obtener Map ID
     const mapId = await new Promise((resolve, reject) => {
-        laImagenResultante.getMapId(visParams, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
+        laImagenResultante.clip(eeRoi).getMapId(visParams, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
     });
 
     // 6. Calcular estadísticas y datos del gráfico
@@ -207,7 +210,8 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
 
     if (collectionForChart && bandNameForChart) {
         chartData = await getOptimizedChartData(collectionForChart, eeRoi, bandNameForChart, startDate, endDate);
-        const imageForStats = laImagenResultante.select(bandNameForChart);
+        // Usamos la imagen ya compuesta para las estadísticas para asegurar la optimización
+        const imageForStats = laImagenResultante.select(bandNameForChart); 
         stats = await getStats(imageForStats, eeRoi, bandNameForChart, '', 'Resultado del Laboratorio');
     }
 
