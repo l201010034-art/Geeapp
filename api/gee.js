@@ -194,6 +194,9 @@ export default async function handler(req, res) {
             case 'getTemperatureData': responseData = await handleTemperatureData({...params, eeRoi}); break;
             case 'getSpiData': responseData = await handleSpiData({...params, eeRoi}); break;
             case 'getFireRiskData': responseData = await handleFireRiskData({...params, eeRoi}); break;
+            case 'getHurricaneList':
+                responseData = await handleHurricaneList({...params });
+                break;
             default: throw new Error(`Action '${action}' not recognized.`);
         }
 
@@ -575,4 +578,44 @@ async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
             }
         });
     });
+
+// UBICACIÓN: api/gee.js (fuera de la función handler)
+
+async function handleHurricaneList({ year, scope }) {
+    if (!year) {
+        throw new Error("El año es un parámetro requerido.");
+    }
+
+    // Cargar la colección completa de huracanes
+    const hurdat = ee.FeatureCollection("NOAA/NHC/HURDAT2/atlantic");
+
+    // 1. Filtrar por el año seleccionado
+    const hurricanesInYear = hurdat.filter(ee.Filter.calendarRange(year, year, 'year'));
+
+    let filteredCollection = hurricanesInYear;
+
+    // 2. Si el ámbito es México, aplicar un filtro espacial
+    if (scope === 'Mexico') {
+        const mexicoAsset = ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024');
+        const mexicoBoundary = mexicoAsset.union().first().geometry();
+        filteredCollection = hurricanesInYear.filterBounds(mexicoBoundary);
+    }
+    
+    // 3. Obtener la lista de nombres únicos de los huracanes
+    const hurricaneNames = filteredCollection.aggregate_array('name').distinct();
+
+    // 4. Evaluar en el servidor y devolver la lista
+    return new Promise((resolve, reject) => {
+        hurricaneNames.evaluate((names, error) => {
+            if (error) {
+                reject(new Error("Error al obtener la lista de huracanes: " + error));
+            } else if (names.length === 0) {
+                 reject(new Error(`No se encontraron huracanes para el año ${year} en el ámbito seleccionado.`));
+            }
+            else {
+                resolve({ hurricaneNames: names.sort() }); // Devolvemos la lista ordenada
+            }
+        });
+    });
+}
 }

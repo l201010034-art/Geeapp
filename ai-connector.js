@@ -445,27 +445,72 @@ visParams = {
   description: \`${createLegendHtml('Dióxido de Nitrógeno (mol/m²)', ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red'], 0, '0.0003')}\`
 };`;
             break;
-        case 'HURRICANE':
-            // Este caso ya usaba el método correcto, se mantiene igual.
-            analysisLogic = `
-var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1').filterDate(startDate, endDate).select(['sst']).median().multiply(0.01);
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA el 'case' de 'HURRICANE' dentro de buildGeeLabPrompt
+
+case 'HURRICANE':
+    // El 'request' ahora contendrá el nombre del huracán seleccionado
+    const selectedHurricaneName = request.hurricaneName; // Necesitaremos pasar esto desde el request
+    const hurricaneYear = request.year; // También el año para acotar la búsqueda
+
+    analysisLogic = `
+// Filtramos la colección para el huracán y año específicos
+var hurricane = ee.FeatureCollection('NOAA/NHC/HURDAT2/atlantic')
+    .filter(ee.Filter.and(
+        ee.Filter.eq('name', '${selectedHurricaneName}'),
+        ee.Filter.calendarRange(${hurricaneYear}, ${hurricaneYear}, 'year')
+    ));
+
+// Obtenemos la fecha de la última observación para centrar el mapa y los datos SST
+var lastPointDate = ee.Date(hurricane.aggregate_max('system:time_start'));
+
+// Capa de Temperatura Superficial del Mar (SST) para la fecha del huracán
+var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1')
+    .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
+    .select(['sst'])
+    .mean()
+    .multiply(0.01); // Aplicar factor de escala
+
 var sstLayer = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
-var goesImage = ee.ImageCollection('NOAA/GOES/16/MCMIPC').filterDate(ee.Date(endDate).advance(-24, 'hour'), ee.Date(endDate)).sort('system:time_start', false).first();
-var goesRgb = goesImage.select(['vis-red', 'vis-green', 'vis-blue']).visualize({min: 0, max: 255, gamma: 1.3});
-var tracks = ee.FeatureCollection('NOAA/IBTrACS/v4').filterBounds(roi).filterDate(startDate, endDate);
-var paintTracks = function(features, color, width) { return ee.Image().byte().paint({featureCollection: features, color: 1, width: width}).visualize({palette: color}); };
-var cat5 = paintTracks(tracks.filter(ee.Filter.gt('usa_wind', 136)), 'FF00FF', 6);
-var cat4 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 136), ee.Filter.gt('usa_wind', 112))), 'FF0000', 5);
-var cat3 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 112), ee.Filter.gt('usa_wind', 95))), 'FF8C00', 4);
-var cat2 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 95), ee.Filter.gt('usa_wind', 82))), 'FFFF00', 3);
-var cat1 = paintTracks(tracks.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 82), ee.Filter.gt('usa_wind', 63))), '00FF00', 2);
-var ts = paintTracks(tracks.filter(ee.Filter.lte('usa_wind', 63)), '00FFFF', 1);
-laImagenResultante = ee.ImageCollection([sstLayer, goesRgb, ts, cat1, cat2, cat3, cat4, cat5]).mosaic();
-collectionForChart = null;
+
+// Función para pintar las trayectorias según la categoría
+var paintTracks = function(features, color) {
+    return ee.Image().byte().paint({
+        featureCollection: features,
+        color: 1, // Usamos un solo color para pintar
+        width: features.first().get('usa_wind_width') // Usamos un ancho dinámico
+    }).visualize({palette: color});
+};
+
+// Añadimos un ancho de línea dinámico a cada punto basado en la velocidad del viento
+hurricane = hurricane.map(function(f) {
+  var wind = ee.Number(f.get('usa_wind'));
+  var width = wind.gt(136) ? 6 : // Cat 5
+              wind.gt(112) ? 5 : // Cat 4
+              wind.gt(95)  ? 4 : // Cat 3
+              wind.gt(82)  ? 3 : // Cat 2
+              wind.gt(63)  ? 2 : 1; // Cat 1 y TS
+  return f.set('usa_wind_width', width);
+});
+
+// Pintamos cada categoría con su color
+var cat5 = paintTracks(hurricane.filter(ee.Filter.gt('usa_wind', 136)), 'FF00FF');
+var cat4 = paintTracks(hurricane.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 136), ee.Filter.gt('usa_wind', 112))), 'FF0000');
+var cat3 = paintTracks(hurricane.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 112), ee.Filter.gt('usa_wind', 95))), 'FF8C00');
+var cat2 = paintTracks(hurricane.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 95), ee.Filter.gt('usa_wind', 82))), 'FFFF00');
+var cat1 = paintTracks(hurricane.filter(ee.Filter.and(ee.Filter.lte('usa_wind', 82), ee.Filter.gt('usa_wind', 63))), '00FF00');
+var ts = paintTracks(hurricane.filter(ee.Filter.lte('usa_wind', 63)), '00FFFF');
+
+// Combinamos todas las capas en una sola imagen final
+laImagenResultante = ee.ImageCollection([sstLayer, ts, cat1, cat2, cat3, cat4, cat5]).mosaic();
+
+collectionForChart = null; // No hay gráfico para este análisis
 bandNameForChart = null;
+
+// La leyenda se mantiene igual, ya que es excelente
 visParams = {
   description: \`
-    <div class="legend-title">Visualizador de Huracanes</div>
+    <div class="legend-title">Huracán: ${selectedHurricaneName} (${hurricaneYear})</div>
     <div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
     <div class="legend-scale-bar" style="background: linear-gradient(to right, #000080, #00FFFF, #FFFF00, #FF0000);"></div>
     <div class="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
@@ -478,7 +523,7 @@ visParams = {
     <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #00FFFF; margin-right: 5px;"></div> Torm./Dep.</div>
   \`
 };`;
-            break;
+    break; // Fin del case HURRICANE
     }
     // Este prompt es 100% a prueba de fallos de sintaxis.
     return ` Funciones como Map.addLayer, Map.centerObject, Map.setCenter, o similares no son compatibles para el entorno actual, siempre sustituye esas funciones con codigo valido para el entorno actual, Simepre verifica que las funciones esten definidas por ejemplo Print o ui y similares (Solo si el codigo lo requiere), Siempre añade el formato correcto para la leyenda y Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
@@ -488,3 +533,60 @@ visParams = {
     // ${request.startDate} a ${request.endDate}
     ${analysisLogic}`;
 }
+
+// UBICACIÓN: ai-connector.js (puedes añadirla al final del archivo)
+
+async function fetchHurricaneList() {
+    const year = document.getElementById('lab-hurricane-year').value;
+    const scope = document.getElementById('lab-hurricane-scope').value;
+    const button = document.getElementById('lab-fetch-hurricanes-button');
+    const selectorContainer = document.getElementById('lab-hurricane-selector-container');
+    const selector = document.getElementById('lab-hurricane-selector');
+
+    if (!year) {
+        alert("Por favor, introduce un año.");
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Buscando...";
+    selectorContainer.classList.add('hidden');
+    selector.innerHTML = '';
+
+    try {
+        // Usamos la API /api/gee que ya existe, no la de /api/gee-lab
+        const response = await fetch('/api/gee', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'getHurricaneList',
+                params: { year: parseInt(year), scope }
+            })
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.details || "Error en el servidor.");
+
+        if (result.hurricaneNames && result.hurricaneNames.length > 0) {
+            result.hurricaneNames.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                selector.appendChild(option);
+            });
+            selectorContainer.classList.remove('hidden');
+        } else {
+            alert(`No se encontraron huracanes para ${year} en ${scope}.`);
+        }
+
+    } catch (error) {
+        console.error("Error al buscar huracanes:", error);
+        alert(`Error: ${error.message}`);
+    } finally {
+        button.disabled = false;
+        button.textContent = "1. Buscar Huracanes";
+    }
+}
+
+// Expón la nueva función
+window.fetchHurricaneList = fetchHurricaneList;

@@ -147,6 +147,9 @@ function setupEventListeners() {
     menuToggle.addEventListener('click', (e) => { e.stopPropagation(); controlPanel.classList.toggle('control-panel-hidden'); });
     mainContent.addEventListener('click', () => { if (!controlPanel.classList.contains('control-panel-hidden')) { controlPanel.classList.add('control-panel-hidden'); }});
     document.getElementById('opacity-slider').addEventListener('input', e => { if (currentGEELayer) currentGEELayer.setOpacity(e.target.value); });
+
+    document.getElementById('lab-fetch-hurricanes-button').addEventListener('click', window.fetchHurricaneList);
+
     document.getElementById('loadDataButton').addEventListener('click', () => handleAnalysis('general'));
     document.getElementById('compareButton').addEventListener('click', () => { zoomToActiveLayers(); handleAnalysis('compare'); });
     document.getElementById('precipAnalysisButton').addEventListener('click', () => handleAnalysis('precipitation'));
@@ -519,50 +522,34 @@ function drawChart(data, options) {
 }
 
 // Función para manejar la lógica de la UI del Laboratorio de IA
+// UBICACIÓN: platform-main.js
+// REEMPLAZA la función handleLabAnalysisChange completa con esta versión.
+
 function handleLabAnalysisChange() {
     const analysisType = document.getElementById('lab-analysis-type').value;
     const regionStep = document.getElementById('lab-step-region');
     const datesStep = document.getElementById('lab-step-dates');
     const actionsStep = document.getElementById('lab-step-actions');
     const munSelector = document.getElementById('lab-region-selector-municipalities');
-    const marSelector = document.getElementById('lab-region-selector-marine');
-    const labStartDate = document.getElementById('lab-start-date');
-    const labEndDate = document.getElementById('lab-end-date');
-    const today = new Date().toISOString().split('T')[0];
+    
+    // Controles específicos para huracanes
+    const hurricaneOptions = document.getElementById('lab-hurricane-options');
+    const hurricaneSelectorContainer = document.getElementById('lab-hurricane-selector-container');
 
-    // Ocultar selectores específicos por defecto
+    // Ocultar todo por defecto para empezar de cero
     munSelector.classList.add('hidden');
-    marSelector.classList.add('hidden');
+    hurricaneOptions.classList.add('hidden');
+    datesStep.classList.add('hidden'); // Las fechas no se usan para la búsqueda inicial
 
-    // Mostrar los contenedores de los siguientes pasos
     regionStep.classList.remove('hidden');
-    datesStep.classList.remove('hidden');
     actionsStep.classList.remove('hidden');
 
-    // Lógica para mostrar el selector correcto y pre-configurar fechas
-    switch (analysisType) {
-        case 'FAI': // Sargazo
-        case 'HURRICANE': // Huracanes
-            marSelector.classList.remove('hidden');
-            // Sugerir un rango de fechas reciente, ideal para estos análisis
-            const aMonthAgo = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0];
-            labStartDate.value = aMonthAgo;
-            labEndDate.value = today;
-            break;
-
-        // Casos por defecto para análisis terrestres
-        case 'NDVI':
-        case 'LST':
-        case 'NDWI':
-        case 'FIRE':
-        case 'AIR_QUALITY':
-        default:
-            munSelector.classList.remove('hidden');
-            // Sugerir un rango de un año, típico para análisis de tendencias
-            const aYearAgo = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
-            labStartDate.value = aYearAgo;
-            labEndDate.value = today;
-            break;
+    if (analysisType === 'HURRICANE') {
+        hurricaneOptions.classList.remove('hidden');
+        hurricaneSelectorContainer.classList.add('hidden'); // Ocultar el selector hasta que se busquen
+    } else {
+        munSelector.classList.remove('hidden');
+        datesStep.classList.remove('hidden'); // Mostrar fechas para otros análisis
     }
 }
 
