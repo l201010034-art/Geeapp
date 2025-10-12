@@ -445,10 +445,6 @@ visParams = {
   description: \`${createLegendHtml('Dióxido de Nitrógeno (mol/m²)', ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red'], 0, '0.0003')}\`
 };`;
             break;
-// UBICACIÓN: ai-connector.js
-// REEMPLAZA el 'case' de 'HURRICANE' dentro de buildGeeLabPrompt
-
-// UBICACIÓN: ai-connector.js, dentro de la función buildGeeLabPrompt
 // REEMPLAZA el 'case' completo para 'HURRICANE'
 
 case 'HURRICANE':
@@ -456,36 +452,36 @@ case 'HURRICANE':
     const hurricaneYear = request.year;
 
     analysisLogic = `
-// 1. Filtramos la colección para el huracán y año específicos.
-var hurricane = ee.FeatureCollection('NOAA/IBTrACS/v4')
+// 1. Filtramos todos los puntos del huracán seleccionado para el año correcto.
+var points = ee.FeatureCollection('NOAA/IBTrACS/v4')
     .filter(ee.Filter.and(
-        ee.Filter.eq('name', '${selectedHurricaneName}'),
-        ee.Filter.calendarRange(${hurricaneYear}, ${hurricaneYear}, 'year')
+        ee.Filter.eq('SEASON', ${hurricaneYear}),
+        ee.Filter.eq('name', '${selectedHurricaneName}')
     ));
 
-// 2. Obtenemos la fecha de la última observación para centrar la capa de temperatura.
-var lastPointDate = ee.Date(hurricane.aggregate_max('system:time_start'));
+// 2. Creamos la línea de la trayectoria ordenando los puntos por fecha.
+var line = ee.Geometry.LineString(points.sort('ISO_TIME').geometry().coordinates());
+var trajectoryLine = ee.FeatureCollection(line).style({color: 'FFFFFF', width: 1}); // Línea blanca delgada
 
-// 3. Creamos la capa de Temperatura Superficial del Mar (SST) de fondo.
+// 3. Obtenemos la fecha de la última observación para centrar la capa de temperatura.
+var lastPointDate = ee.Date(points.aggregate_max('system:time_start'));
 var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1')
     .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
     .select(['sst']).mean().multiply(0.01);
 var sstImage = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
 
-// --- LÓGICA DE VISUALIZACIÓN MEJORADA ---
-
-// 4. Definimos los estilos para cada categoría de la escala Saffir-Simpson.
+// 4. Definimos los estilos para los PUNTOS de intensidad (escala Saffir-Simpson).
 var styles = {
-  'Tropical Storm': {color: '00FFFF', width: 2},
-  'Category 1':     {color: '00FF00', width: 3},
-  'Category 2':     {color: 'FFFF00', width: 4},
-  'Category 3':     {color: 'FF8C00', width: 5},
-  'Category 4':     {color: 'FF0000', width: 6},
-  'Category 5':     {color: 'FF00FF', width: 7}
+  'Tropical Storm': {pointSize: 3, color: '00FFFF'},
+  'Category 1':     {pointSize: 4, color: '00FF00'},
+  'Category 2':     {pointSize: 5, color: 'FFFF00'},
+  'Category 3':     {pointSize: 6, color: 'FF8C00'},
+  'Category 4':     {pointSize: 7, color: 'FF0000'},
+  'Category 5':     {pointSize: 8, color: 'FF00FF'}
 };
 
-// 5. Asignamos una categoría a cada punto del huracán según su velocidad de viento.
-var hurricaneStyled = hurricane.map(function(feature) {
+// 5. Asignamos una categoría a cada punto para poder colorearlo.
+var pointsStyled = points.map(function(feature) {
   var wind = ee.Number(feature.get('usa_wind'));
   var category = ee.String(
       ee.Algorithms.If(wind.gt(136), 'Category 5',
@@ -494,39 +490,36 @@ var hurricaneStyled = hurricane.map(function(feature) {
       ee.Algorithms.If(wind.gt(82),  'Category 2',
       ee.Algorithms.If(wind.gt(63),  'Category 1',
                                       'Tropical Storm'))))));
-  // Devolvemos el punto con una nueva propiedad 'styleProperty' que usaremos para pintarlo.
   return feature.set('styleProperty', category);
 });
 
-// 6. "Dibujamos" la colección de puntos en una imagen, usando los estilos definidos.
-var tracksImage = hurricaneStyled.style({
+// 6. "Dibujamos" los puntos coloreados sobre una imagen transparente.
+var intensityPoints = pointsStyled.style({
   styleProperty: 'styleProperty',
   styles: styles
 });
 
-// --- FIN DE LA LÓGICA MEJORADA ---
+// 7. Combinamos todo: el fondo de temperatura, la línea de trayectoria y los puntos de intensidad.
+laImagenResultante = sstImage.blend(trajectoryLine).blend(intensityPoints);
 
-// 7. Combinamos la capa de temperatura (fondo) con la de las trayectorias (frente).
-laImagenResultante = sstImage.blend(tracksImage);
-
-// No se necesitan datos de gráfico para este análisis.
+// No se necesitan datos de gráfico.
 collectionForChart = null;
 bandNameForChart = null;
 
-// La leyenda HTML se mantiene, ya que es la forma correcta de mostrar esta información.
+// La leyenda HTML se mantiene, ahora representando los puntos de color.
 visParams = {
   description: \`
     <div class="legend-title">Huracán: ${selectedHurricaneName} (${hurricaneYear})</div>
     <div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
     <div class="legend-scale-bar" style="background: linear-gradient(to right, #000080, #00FFFF, #FFFF00, #FF0000);"></div>
     <div class="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
-    <div style="font-size: 11px; margin-top: 4px;"><strong>Categoría Saffir-Simpson</strong></div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF00FF; margin-right: 5px;"></div> Cat. 5 (>136 kt)</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF0000; margin-right: 5px;"></div> Cat. 4 (113-136 kt)</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FF8C00; margin-right: 5px;"></div> Cat. 3 (96-112 kt)</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #FFFF00; margin-right: 5px;"></div> Cat. 2 (83-95 kt)</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #00FF00; margin-right: 5px;"></div> Cat. 1 (64-82 kt)</div>
-    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 15px; height: 3px; background-color: #00FFFF; margin-right: 5px;"></div> Tormenta Tropical (<64 kt)</div>
+    <div style="font-size: 11px; margin-top: 4px;"><strong>Intensidad (Saffir-Simpson)</strong></div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF00FF; border-radius: 50%; margin-right: 5px;"></div> Cat. 5</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF0000; border-radius: 50%; margin-right: 5px;"></div> Cat. 4</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF8C00; border-radius: 50%; margin-right: 5px;"></div> Cat. 3</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FFFF00; border-radius: 50%; margin-right: 5px;"></div> Cat. 2</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #00FF00; border-radius: 50%; margin-right: 5px;"></div> Cat. 1</div>
+    <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #00FFFF; border-radius: 50%; margin-right: 5px;"></div> Torm./Dep. Tropical</div>
   \`
 };`;
     break;
