@@ -1,6 +1,6 @@
-import ee from '@google/earthengine';
+const ee = require('@google/earthengine');
 
-export async function handleAnalysis({ roi, startDate, endDate }) {
+module.exports.handleAnalysis = async function({ roi, startDate, endDate }) {
     const fires = ee.ImageCollection('FIRMS')
         .filterBounds(roi)
         .filterDate(startDate, endDate)

@@ -1,6 +1,6 @@
-import ee from '@google/earthengine';
+const ee = require('@google/earthengine');
 
-export async function handleAnalysis({ roi, startDate, endDate }) {
+module.exports.handleAnalysis = async function({ roi, startDate, endDate }) {
     const waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
     const collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
         .filterBounds(roi)

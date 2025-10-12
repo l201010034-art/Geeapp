@@ -1,7 +1,7 @@
-import ee from '@google/earthengine';
+const ee = require('@google/earthengine');
 
 // Para el caso de huracanes, la función recibe los parámetros específicos
-export async function handleAnalysis({ hurricaneSid, hurricaneName, year }) {
+module.exports.handleAnalysis= async function ({ hurricaneSid, hurricaneName, year }) {
     const points = ee.FeatureCollection('NOAA/IBTrACS/v4')
         .filter(ee.Filter.eq('SID', hurricaneSid))
         .filter(ee.Filter.bounds(ee.Geometry.Point(0,0).buffer(2e7)));

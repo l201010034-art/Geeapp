@@ -1,6 +1,6 @@
 // /api/gee-lab.js - ¡NUEVA VERSIÓN MODULAR!
 
-import ee from '@google/earthengine';
+const ee = require('@google/earthengine');
 
 // --- Funciones de Utilidad (Helpers) ---
 
@@ -183,7 +183,7 @@ async function executeAnalysis(params) {
 
 
 // --- Manejador Principal de la API ---
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: "Method Not Allowed" });
     }

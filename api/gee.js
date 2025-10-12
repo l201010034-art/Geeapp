@@ -1,4 +1,4 @@
-import ee from '@google/earthengine';
+const ee = require('@google/earthengine');
 
 // =========================================================================================
 // === HELPERS Y FUNCIONES DE PROCESAMIENTO DE GEE (traídas del script original) ==========
@@ -172,7 +172,7 @@ function getMunicipalityCvegeo(municipalityName) {
 // =========================================================================================
 // === MANEJADOR PRINCIPAL DE LA API (VERSIÓN CORREGIDA) ===================================
 // =========================================================================================
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
