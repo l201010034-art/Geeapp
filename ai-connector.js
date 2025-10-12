@@ -457,23 +457,29 @@ visParams = {
 // UBICACIÓN: ai-connector.js
 // REEMPLAZA el 'case' completo para 'HURRICANE' en buildGeeLabPrompt
 
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA el 'case' completo para 'HURRICANE' en la función buildGeeLabPrompt
+
 case 'HURRICANE':
-    // Ahora recibimos el SID y el nombre por separado.
     const selectedHurricaneSid = request.hurricaneSid;
     const selectedHurricaneName = request.hurricaneName;
     const hurricaneYear = request.year;
 
     analysisLogic = `
-// 1. Filtramos todos los puntos usando el SID, el identificador único y correcto.
+// 1. Filtramos todos los puntos usando el SID, que es el identificador único.
 var points = ee.FeatureCollection('NOAA/IBTrACS/v4')
     .filter(ee.Filter.eq('SID', '${selectedHurricaneSid}'));
+
+// --- CORRECCIÓN CLAVE 2: Manejo de fechas robusto ---
+// Obtenemos la fecha máxima. Si no hay puntos, usamos el final del año para evitar el error 'Date: Parameter value is required'.
+var maxTime = points.aggregate_max('system:time_start');
+var lastPointDate = ee.Date(ee.Algorithms.If(maxTime, maxTime, '${hurricaneYear}-12-31'));
 
 // 2. Creamos la línea de la trayectoria ordenando los puntos por fecha.
 var line = ee.Geometry.LineString(points.sort('ISO_TIME').geometry().coordinates());
 var trajectoryLine = ee.FeatureCollection(line).style({color: 'FFFFFF', width: 1});
 
-// 3. Obtenemos la capa de temperatura del mar (SST).
-var lastPointDate = ee.Date(points.aggregate_max('system:time_start'));
+// 3. Obtenemos la capa de temperatura del mar (SST) usando la fecha calculada.
 var sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1')
     .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
     .select(['sst']).mean().multiply(0.01);
@@ -481,15 +487,16 @@ var sstImage = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', 
 
 // 4. Definimos los estilos para los PUNTOS de intensidad.
 var styles = {
-  'Tropical Storm': {pointSize: 3, color: '00FFFF'},
-  'Category 1':     {pointSize: 4, color: '00FF00'},
-  'Category 2':     {pointSize: 5, color: 'FFFF00'},
-  'Category 3':     {pointSize: 6, color: 'FF8C00'},
-  'Category 4':     {pointSize: 7, color: 'FF0000'},
-  'Category 5':     {pointSize: 8, color: 'FF00FF'}
+  'Tropical Storm': {color: '00FFFF', pointSize: 3},
+  'Category 1':     {color: '00FF00', pointSize: 4},
+  'Category 2':     {color: 'FFFF00', pointSize: 5},
+  'Category 3':     {color: 'FF8C00', pointSize: 6},
+  'Category 4':     {color: 'FF0000', pointSize: 7},
+  'Category 5':     {color: 'FF00FF', pointSize: 8}
 };
 
-// 5. Asignamos una categoría a cada punto.
+// --- CORRECCIÓN CLAVE 1: Asignación de estilo compatible con el servidor ---
+// En lugar de asignar solo la categoría, asignamos el diccionario de estilo completo a una propiedad.
 var pointsStyled = points.map(function(feature) {
   var wind = ee.Number(feature.get('usa_wind'));
   var category = ee.String(
@@ -499,16 +506,16 @@ var pointsStyled = points.map(function(feature) {
       ee.Algorithms.If(wind.gt(82),  'Category 2',
       ee.Algorithms.If(wind.gt(63),  'Category 1',
                                       'Tropical Storm'))))));
-  return feature.set('styleProperty', category);
+  // Obtenemos el diccionario de estilo y lo asignamos a la propiedad 'styleArgs'
+  var styleForCategory = ee.Dictionary(styles).get(category);
+  return feature.set('styleArgs', styleForCategory);
 });
 
-// 6. "Dibujamos" los puntos coloreados.
-var intensityPoints = pointsStyled.style({
-  styleProperty: 'styleProperty',
-  styles: styles
-});
+// "Pintamos" los puntos. La función .style() ahora lee el diccionario de la propiedad 'styleArgs'.
+// Esto es compatible con el servidor y resuelve el error "Unrecognized arguments (styles)".
+var intensityPoints = pointsStyled.style({styleProperty: 'styleArgs'});
 
-// 7. Combinamos todo.
+// 6. Combinamos todo en una sola imagen para el mapa.
 laImagenResultante = sstImage.blend(trajectoryLine).blend(intensityPoints);
 
 collectionForChart = null;
@@ -520,7 +527,7 @@ visParams = {
     <div class="legend-title">Huracán: ${selectedHurricaneName} (${hurricaneYear})</div>
     <div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
     <div class="legend-scale-bar" style="background: linear-gradient(to right, #000080, #00FFFF, #FFFF00, #FF0000);"></div>
-    <div class.="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
+    <div class="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
     <div style="font-size: 11px; margin-top: 4px;"><strong>Intensidad (Saffir-Simpson)</strong></div>
     <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF00FF; border-radius: 50%; margin-right: 5px;"></div> Cat. 5</div>
     <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF0000; border-radius: 50%; margin-right: 5px;"></div> Cat. 4</div>
@@ -535,9 +542,9 @@ visParams = {
     // Este prompt es 100% a prueba de fallos de sintaxis.
     return ` Funciones como Map.addLayer, Map.centerObject, Map.setCenter, o similares no son compatibles para el entorno actual, siempre sustituye esas funciones con codigo valido para el entorno actual, Simepre verifica que las funciones esten definidas por ejemplo Print o ui y similares (Solo si el codigo lo requiere), Siempre añade el formato correcto para la leyenda y Genera el siguiente código GEE, sin añadir comentarios ni explicaciones:
 
-    // ${request.analysisType}
-    // ${request.region}
-    // ${request.startDate} a ${request.endDate}
+    ${request.analysisType}
+    ${request.region}
+    ${request.startDate} a ${request.endDate}
     ${analysisLogic}`;
 }
 
