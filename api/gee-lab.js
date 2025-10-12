@@ -173,11 +173,10 @@ async function getOptimizedChartData(collection, roi, bandName, startDate, endDa
     });
 }
 
-
 // UBICACIÓN: api/gee-lab.js
+// REEMPLAZA la función executeGeeCode completa con esta versión corregida.
 
-// REEMPLAZA la función executeGeeCode completa con esta:
-async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
+async function executeGeeCode(codeToExecute, roiParam, startDate, endDate, analysisType) { // <<-- PARÁMETRO AÑADIDO AQUÍ
     // 1. Inicializar GEE
     await new Promise((resolve, reject) => {
         ee.data.authenticateViaPrivateKey(
@@ -187,10 +186,9 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
         );
     });
 
-    // 2. Preparar el Sandbox
+    // 2. Preparar el Sandbox y el ROI
     const logs = [];
     let eeRoi;
-    // ... (la lógica para definir eeRoi se mantiene igual que antes) ...
     if (roiParam === 'Golfo de México (Zona Campeche)') {
         eeRoi = ee.Geometry.Rectangle([-94, 18, -89, 22], null, false);
     } else if (roiParam === 'Línea Costera (Sonda de Campeche)') {
@@ -199,22 +197,21 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
         const cvegeo = getMunicipalityCvegeo(roiParam);
         if (!cvegeo) throw new Error(`El nombre del municipio "${roiParam}" no es válido.`);
         const municipios = ee.FeatureCollection('projects/residenciaproject-443903/assets/municipios_mexico_2024');
-        eeRoi = municipios.filter(ee.Filter.eq('CVEGEO', cvegeo)).first().geometry();
+        const munFeature = municipios.filter(ee.Filter.eq('CVEGEO', cvegeo)).first();
+        // Verificación para asegurar que el feature fue encontrado antes de obtener la geometría
+        if (!munFeature.getInfo()) {
+             throw new Error(`No se pudo encontrar la geometría para el municipio "${roiParam}" con CVEGEO "${cvegeo}".`);
+        }
+        eeRoi = munFeature.geometry();
     }
     
     // 3. Construir el script final y el contexto
     const fullScript = `
-        // Variables inyectadas por el servidor
         var roi = ee.Geometry(${JSON.stringify(eeRoi.getInfo())});
         var startDate = '${startDate}';
         var endDate = '${endDate}';
-        
-        // Variables que el código de la IA debe definir
         var laImagenResultante, collectionForChart, bandNameForChart, visParams;
-
-        // --- INICIO DEL CÓDIGO GENERADO POR LA IA ---
         ${codeToExecute}
-        // --- FIN DEL CÓDIGO GENERADO POR LA IA ---
     `;
 
     const context = vm.createContext({
@@ -223,7 +220,7 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
     });
 
     // 4. Ejecutar el script completo
-    vm.runInContext(fullScript, context, { timeout: 90000 }); // Aumentamos el timeout a 90s
+    vm.runInContext(fullScript, context, { timeout: 90000 });
 
     let { laImagenResultante, collectionForChart, bandNameForChart, visParams } = context;
 
@@ -231,18 +228,17 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
     if (!visParams) throw new Error("El código no definió 'visParams'.");
     visParams = ensureLegendDescription(visParams);
 
-
- // ▼▼▼ BLOQUE MODIFICADO: LÓGICA DE CLIPPING CONDICIONAL ▼▼▼
-    // 5. Obtener Map ID (con recorte condicional)
+    // 5. OBTENER MAP ID (Lógica de recorte condicional)
+    // ¡ESTA LÍNEA AHORA FUNCIONARÁ PORQUE 'analysisType' EXISTE!
     const imageToDisplay = analysisType === 'HURRICANE' 
-        ? laImagenResultante // Para huracanes, usamos la imagen completa.
+        ? laImagenResultante // Para huracanes, usamos la imagen completa sin recortar.
         : laImagenResultante.clip(eeRoi); // Para todo lo demás, recortamos al ROI.
 
     const mapId = await new Promise((resolve, reject) => {
         imageToDisplay.getMapId(visParams, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
     });
 
-    // ... (el resto de la función para estadísticas y gráficos se queda igual) ...
+    // 6. Obtener estadísticas y datos del gráfico (si aplica)
     let stats = `Análisis visual para: ${bandNameForChart || 'Resultado del Laboratorio'}`;
     let chartData = null;
 
@@ -254,7 +250,6 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
 
     return { mapId, visParams, stats, chartData, chartOptions: { title: `Serie Temporal para ${bandNameForChart}` } };
 }
-
 
 // --- Manejador Principal de la API ---
 export default async function handler(req, res) {
