@@ -425,47 +425,45 @@ visParams = {
 };`;
             break;
 
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA el 'case' completo para 'FAI' en la función buildGeeLabPrompt
+
         case 'FAI':
             analysisLogic = `
-        // 1. Crear una máscara de agua para filtrar la tierra.
-        // Usamos el dataset JRC Global Surface Water, píxeles con más de 80% de ocurrencia de agua.
+        // 1. Crear una máscara de agua para asegurar que solo analizamos el océano.
         var waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
 
-        // 2. Cargar la colección de imágenes Sentinel-2 y aplicar filtros.
-        var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+        // 2. Cargar la colección Sentinel-2. IMPORTANTE: No filtramos por nubes aquí.
+        var collection = ee.ImageCollection('COPERNICOS/S2_SR_HARMONIZED')
             .filterBounds(roi)
-            .filterDate(startDate, endDate)
-            // Filtrar por baja nubosidad para obtener mejores resultados.
-            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 50));
+            .filterDate(startDate, endDate);
 
-        // 3. Función para calcular el Índice de Algas Flotantes (FAI).
+        // 3. Función para calcular el Índice de Algas Flotantes (FAI) en cada imagen.
         var addFAI = function(image) {
-        // Aplicar la máscara de agua a la imagen actual.
         var imageWithMask = image.updateMask(waterMask);
-        
-        // Calcular FAI usando la fórmula estándar para Sentinel-2.
-        // FAI = NIR - (RED + (SWIR - RED) * (λ_NIR - λ_RED) / (λ_SWIR - λ_RED))
         var fai = imageWithMask.expression(
             'NIR - (RED + (SWIR - RED) * (842 - 665) / (1610 - 665))', {
-            'NIR': imageWithMask.select('B8'),  // Banda 8: Infrarrojo cercano
-            'RED': imageWithMask.select('B4'),  // Banda 4: Rojo
-            'SWIR': imageWithMask.select('B11') // Banda 11: Infrarrojo de onda corta
+            'NIR': imageWithMask.select('B8'),
+            'RED': imageWithMask.select('B4'),
+            'SWIR': imageWithMask.select('B11')
         }).rename('FAI');
-        
+        // Devolvemos la imagen original con la nueva banda FAI.
         return image.addBands(fai);
         };
 
-        // 4. Mapear la función sobre la colección para añadir la banda FAI a cada imagen.
-        collection = collection.map(addFAI);
+        // 4. Aplicar la función a toda la colección.
+        var collectionWithFAI = collection.map(addFAI);
 
-        // 5. Crear la imagen final para el mapa. Usamos max() para resaltar la mayor presencia de sargazo.
-        laImagenResultante = collection.select('FAI').max();
+        // 5. --- LA CORRECCIÓN CLAVE ---
+        // Crear un mosaico de calidad. Para cada píxel, GEE seleccionará el valor de la imagen
+        // que tenga el FAI más alto. Esto descarta automáticamente nubes y agua limpia.
+        laImagenResultante = collectionWithFAI.qualityMosaic('FAI');
 
         // 6. Preparar datos para el gráfico de series temporales.
-        collectionForChart = collection.select('FAI');
+        collectionForChart = collectionWithFAI.select('FAI');
         bandNameForChart = 'FAI';
 
-        // 7. Definir los parámetros de visualización y la leyenda HTML.
+        // 7. Definir los parámetros de visualización y la leyenda.
         visParams = {
         min: -0.05, max: 0.2, 
         palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
