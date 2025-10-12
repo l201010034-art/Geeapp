@@ -521,7 +521,6 @@ function drawChart(data, options) {
     currentChart.draw(dataTable, {...defaultOptions, ...options});
 }
 
-// Función para manejar la lógica de la UI del Laboratorio de IA
 // UBICACIÓN: platform-main.js
 // REEMPLAZA la función handleLabAnalysisChange completa con esta versión.
 
@@ -530,7 +529,10 @@ function handleLabAnalysisChange() {
     const regionStep = document.getElementById('lab-step-region');
     const datesStep = document.getElementById('lab-step-dates');
     const actionsStep = document.getElementById('lab-step-actions');
+    
+    // Selectores de región
     const munSelector = document.getElementById('lab-region-selector-municipalities');
+    const marineSelector = document.getElementById('lab-region-selector-marine'); // Selector para zonas marinas
     
     // Controles específicos para huracanes
     const hurricaneOptions = document.getElementById('lab-hurricane-options');
@@ -538,18 +540,28 @@ function handleLabAnalysisChange() {
 
     // Ocultar todo por defecto para empezar de cero
     munSelector.classList.add('hidden');
+    marineSelector.classList.add('hidden');
     hurricaneOptions.classList.add('hidden');
-    datesStep.classList.add('hidden'); // Las fechas no se usan para la búsqueda inicial
+    datesStep.classList.add('hidden'); 
 
+    // Mostrar los pasos principales que casi siempre se usan
     regionStep.classList.remove('hidden');
     actionsStep.classList.remove('hidden');
 
+    // Lógica condicional para mostrar los controles correctos
     if (analysisType === 'HURRICANE') {
+        // Para huracanes, solo mostramos las opciones de búsqueda de huracanes.
         hurricaneOptions.classList.remove('hidden');
-        hurricaneSelectorContainer.classList.add('hidden'); // Ocultar el selector hasta que se busquen
+        hurricaneSelectorContainer.classList.add('hidden'); // Se oculta hasta la búsqueda
+    } else if (analysisType === 'FAI') {
+        // ▼▼▼ LÓGICA PARA SARGAZO ▼▼▼
+        // Para sargazo, mostramos el selector de zonas marinas y las fechas.
+        marineSelector.classList.remove('hidden');
+        datesStep.classList.remove('hidden');
     } else {
+        // Para todos los demás análisis (NDVI, LST, etc.), mostramos los municipios y las fechas.
         munSelector.classList.remove('hidden');
-        datesStep.classList.remove('hidden'); // Mostrar fechas para otros análisis
+        datesStep.classList.remove('hidden');
     }
 }
 
