@@ -66,7 +66,6 @@ async function getOptimizedChartData(collection, roi, bandName, startDate, endDa
 
     let collectionToProcess = collection;
 
-    // Si el rango es grande, FORZAMOS la agregación a una colección más pequeña primero.
     if (dateDiffDays > 120) {
         let aggregateUnit = 'week';
         if (dateDiffDays > 730) { 
@@ -91,17 +90,20 @@ async function getOptimizedChartData(collection, roi, bandName, startDate, endDa
         collectionToProcess = ee.ImageCollection.fromImages(aggregatedImages.removeAll([null]));
     }
     
-    // Ahora, la operación costosa se mapea sobre una colección ya optimizada.
     return new Promise((resolve, reject) => {
         const series = collectionToProcess.map(image => {
-            const value = image.reduceRegion({
-                reducer: ee.Reducer.mean(), geometry: roi, scale: 5000, bestEffort: true
+            const value = image.select(bandName).reduceRegion({
+                reducer: ee.Reducer.mean(),
+                geometry: roi,
+                scale: 5000,
+                bestEffort: true
             }).get(bandName);
             return ee.Feature(null, { 'system:time_start': image.get('system:time_start'), 'value': value });
         });
 
         series.evaluate((fc, error) => {
-            if (error) return reject(new Error('Error al evaluar los datos del gráfico: ' + error.message));
+            // --- ESTA ES LA LÍNEA CORREGIDA ---
+            if (error) return reject(new Error('Error al evaluar los datos del gráfico: ' + (error.message || 'Error desconocido de GEE.')));
             
             const header = [['Fecha', bandName]];
             const rows = fc.features

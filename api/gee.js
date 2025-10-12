@@ -524,10 +524,52 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
     });
 }
 
-// UBICACIÓN: /api/gee.js
-// REEMPLAZA la función getOptimizedChartData completa.
-// (Nota: Tenías esta función dos veces en tu archivo, asegúrate de reemplazar ambas o dejar solo una).
+async function getChartData(collection, roi, bandName, scale = 2000) {
+    return new Promise((resolve, reject) => {
+        const series = collection.map(image => {
+            const value = image.reduceRegion({
+                reducer: ee.Reducer.mean(), geometry: roi, scale: scale, bestEffort: true
+            }).get(bandName);
+            return ee.Feature(null, { 'system:time_start': image.get('system:time_start'), 'value': value });
+        });
 
+        series.evaluate((fc, error) => {
+            if (error) return reject(new Error('Error evaluando datos del gráfico: ' + (error.message || 'Error desconocido de GEE.')));
+            const header = [['Fecha', bandName]];
+            const rows = fc.features
+                .filter(f => f.properties.value !== null && f.properties.value !== undefined)
+                .filter(f => f.properties['system:time_start'])
+                .map(f => [new Date(f.properties['system:time_start']).toISOString(), f.properties.value])
+                .sort((a,b) => new Date(a[0]) - new Date(b[0]));
+            resolve(header.concat(rows));
+        });
+    });
+}
+
+async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
+    return new Promise((resolve, reject) => {
+        fc.aggregate_array('label').evaluate((labels, error) => {
+             if (error) return reject(new Error('Error obteniendo etiquetas de región: ' + error));
+             const header = [['Fecha', ...labels]];
+             const timeSeries = collection.map(image => {
+                 const time = image.get('system:time_start');
+                 const means = image.reduceRegions({ collection: fc, reducer: ee.Reducer.mean(), scale: scale });
+                 const values = labels.map(label => ee.Feature(means.filter(ee.Filter.eq('label', label)).first()).get('mean'));
+                 return ee.Feature(null, {'system:time_start': time}).set('means', values);
+             });
+             timeSeries.evaluate((fc, error) => {
+                 if (error) return reject(new Error('Error evaluando datos de comparación: ' + error));
+                 const rows = fc.features
+                    .filter(f => f.properties['system:time_start'])
+                    .map(f => [new Date(f.properties['system:time_start']).toISOString(), ...f.properties.means])
+                    .sort((a,b) => new Date(a[0]) - new Date(b[0]));
+                 resolve(header.concat(rows));
+             });
+        });
+    });
+}
+
+// Esta es la función principal de optimización que llama a las anteriores.
 async function getOptimizedChartData(collection, rois, bandName, startDate, endDate, eeRoi) {
     const eeStartDate = ee.Date(startDate);
     const eeEndDate = ee.Date(endDate);
@@ -537,12 +579,9 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
     });
 
     let collectionToProcess = collection;
-
     if (dateDiffDays > 120) {
         let aggregateUnit = 'week';
-        if (dateDiffDays > 730) { 
-            aggregateUnit = 'month';
-        }
+        if (dateDiffDays > 730) { aggregateUnit = 'month'; }
         
         const dateDiff = eeEndDate.difference(eeStartDate, aggregateUnit);
         const dateList = ee.List.sequence(0, dateDiff.subtract(1));
@@ -567,37 +606,4 @@ async function getOptimizedChartData(collection, rois, bandName, startDate, endD
     } else {
         return getChartData(collectionToProcess, eeRoi, bandName, scale);
     }
-}
-
-async function getChartDataByRegion(collection, fc, bandName, scale = 2000) {
-    return new Promise((resolve, reject) => {
-        fc.aggregate_array('label').evaluate((labels, error) => {
-             if (error) reject(new Error('Error obteniendo etiquetas de región: ' + error));
-             else {
-                const header = [['Fecha', ...labels]];
-        
-                const timeSeries = collection.map(image => {
-                    const time = image.get('system:time_start');
-                    const means = image.reduceRegions({ collection: fc, reducer: ee.Reducer.mean(), scale: scale });
-                    const values = labels.map(label => {
-                        const feature = means.filter(ee.Filter.eq('label', label)).first();
-                        return ee.Feature(feature).get('mean');
-                    });
-                    return ee.Feature(null, {'system:time_start': time}).set('means', values);
-                });
-                
-                timeSeries.evaluate((fc, error) => {
-                    if (error) reject(new Error('Error evaluando datos de comparación: ' + error));
-                    else {
-                        const rows = fc.features
-                             // ▼▼▼ LA CORRECCIÓN CLAVE ▼▼▼
-                            .filter(f => f.properties['system:time_start']) // Filtra entradas sin fecha
-                            .map(f => [new Date(f.properties['system:time_start']).toISOString(), ...f.properties.means])
-                            .sort((a,b) => new Date(a[0]) - new Date(b[0]));
-                        resolve(header.concat(rows));
-                    }
-                });
-            }
-        });
-    });
 }
