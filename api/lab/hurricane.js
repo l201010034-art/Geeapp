@@ -9,7 +9,7 @@ module.exports.handleAnalysis= async function ({ hurricaneSid, hurricaneName, ye
     const maxTime = points.aggregate_max('system:time_start');
     const lastPointDate = ee.Date(ee.Algorithms.If(maxTime, maxTime, `${year}-12-31`));
     
-    const sst = ee.ImageCollection('NOAA/CDR/OISST/V2.1')
+    const sst = ee.ImageCollection('NOAA/CDR/OISST/V2_1')
         .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
         .select(['sst']).mean().multiply(0.01);
     
