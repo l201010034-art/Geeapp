@@ -283,6 +283,9 @@ export default async function handler(req, res) {
                         3.  Asegúrate de que las variables finales ('laImagenResultante', 'collectionForChart', 'bandNameForChart', 'visParams') estén definidas correctamente.
                         4.  Responde ÚNICAMENTE con el bloque de código JavaScript corregido y completo. No incluyas explicaciones.
                         5.  Las funciones como Map.centerObject() no son reconocidas en este entorno y deben ser eliminadas o sustituidas para el entorno de servidor.
+                        6.  startDate y endDate son enviados desde el servidor y no necesitan ser definidos en el código.
+                        7.  Añade a todos los analisis una leyenda que describa la variable analizada.
+                        
                     `;
                     
                     const result = await model.generateContent(debugPrompt);
