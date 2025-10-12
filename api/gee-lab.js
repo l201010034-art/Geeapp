@@ -50,6 +50,37 @@ const commonFixes = {
     "'USDOS/LSIB_simple/2017'": "'USDOS/LSIB/2017'",
 };
 
+// UBICACIÓN: /api/gee-lab.js (cerca del inicio del archivo)
+
+function ensureLegendDescription(visParams) {
+    // Si la descripción HTML ya existe y es válida, la usamos directamente.
+    if (visParams && typeof visParams.description === 'string' && visParams.description.trim() !== '') {
+        return visParams;
+    }
+
+    // Si no, construimos el HTML a partir de las otras propiedades.
+    const newVisParams = { ...visParams };
+    const title = newVisParams.bandName || 'Resultado del Laboratorio';
+    const unit = newVisParams.unit ? `(${newVisParams.unit})` : '';
+    const min = newVisParams.min ?? '';
+    const max = newVisParams.max ?? '';
+    const palette = newVisParams.palette;
+
+    // Solo creamos la barra de gradiente si existe una paleta de colores.
+    if (palette && Array.isArray(palette)) {
+        const gradient = `linear-gradient(to right, ${palette.join(', ')})`;
+        newVisParams.description = `
+            <div class="legend-title">${title} ${unit}</div>
+            <div class="legend-scale-bar" style="background: ${gradient};"></div>
+            <div class="legend-labels"><span>${min}</span><span>${max}</span></div>
+        `;
+    } else {
+         // Si no hay paleta, solo mostramos el título.
+         newVisParams.description = `<div class="legend-title">${title} ${unit}</div>`;
+    }
+    return newVisParams;
+}
+
 function autoCorrectCode(code) {
     let correctedCode = code;
     for (const [error, fix] of Object.entries(commonFixes)) {
@@ -198,6 +229,8 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
 
     if (!laImagenResultante) throw new Error("El código no definió 'laImagenResultante'.");
     if (!visParams) throw new Error("El código no definió 'visParams'.");
+    visParams = ensureLegendDescription(visParams);
+
 
     // 5. Obtener Map ID
     const mapId = await new Promise((resolve, reject) => {
