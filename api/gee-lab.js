@@ -228,16 +228,29 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate, analy
         ? laImagenResultante // Para Huracanes y Sargazo, usamos la imagen completa sin recortar.
         : laImagenResultante.clip(eeRoi); // Para todo lo demás, recortamos al ROI del municipio.
 
+// UBICACIÓN: api/gee-lab.js
+// Dentro de la función executeGeeCode, REEMPLAZA el bloque de código final.
+
+    // ... (todo el código anterior de la función se mantiene igual hasta aquí) ...
+
     const mapId = await new Promise((resolve, reject) => {
         imageToDisplay.getMapId(visParams, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
     });
 
-    // 6. Obtener estadísticas y datos del gráfico
+    // 6. Obtener estadísticas y datos del gráfico (Lógica corregida)
     let stats = `Análisis visual para: ${bandNameForChart || 'Resultado del Laboratorio'}`;
     let chartData = null;
+
     if (collectionForChart && bandNameForChart) {
         chartData = await getOptimizedChartData(collectionForChart, eeRoi, bandNameForChart, startDate, endDate);
-        stats = await getStats(laImagenResultante.select(bandNameForChart), eeRoi, bandNameForChart, '', 'Resultado del Laboratorio');
+        
+        // ▼▼▼ ESTA ES LA CORRECCIÓN CLAVE PARA LAS ESTADÍSTICAS ▼▼▼
+        // Creamos una imagen que representa el PROMEDIO de FAI en todo el periodo.
+        const imageForStats = collectionForChart.select(bandNameForChart).mean();
+        
+        // Calculamos las estadísticas sobre esa imagen promedio.
+        // Esto garantiza que los valores sean correctos y representen todo el periodo de tiempo.
+        stats = await getStats(imageForStats, eeRoi, bandNameForChart, '', 'Resultado del Laboratorio');
     }
 
     return { mapId, visParams, stats, chartData, chartOptions: { title: `Serie Temporal para ${bandNameForChart}` } };

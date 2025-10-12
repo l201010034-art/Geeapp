@@ -428,50 +428,48 @@ visParams = {
         // UBICACIÓN: ai-connector.js
         // REEMPLAZA el 'case' completo para 'FAI' en la función buildGeeLabPrompt
 
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA el 'case' completo para 'FAI' en la función buildGeeLabPrompt
+
         case 'FAI':
-            analysisLogic = `
-        // Contexto: El usuario quiere un análisis de Sargazo (FAI) sobre una ZONA MARINA.
-        // El script DEBE usar la variable 'roi' proporcionada por el servidor, que ya es una zona marina.
-        // NUNCA uses geometrías terrestres como municipios o áreas protegidas (ej. Calakmul).
+    analysisLogic = `
+// Contexto: Análisis de Sargazo (FAI) sobre una ZONA MARINA.
+// El script DEBE usar la variable 'roi' proporcionada por el servidor.
 
-        // 1. Máscara de agua para filtrar cualquier remanente de tierra.
-        var waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
+// 1. Máscara de agua para filtrar cualquier remanente de tierra.
+var waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
 
-        // 2. Cargar Sentinel-2 sin filtro de nubes, usando el 'roi' marino proporcionado.
-        var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-            .filterBounds(roi)
-            .filterDate(startDate, endDate);
+// 2. Cargar Sentinel-2 sin filtro de nubes, usando el 'roi' marino.
+var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+    .filterBounds(roi)
+    .filterDate(startDate, endDate);
 
-        // 3. Función para calcular FAI, aplicando la máscara de agua.
-        var addFAI = function(image) {
-        var imageWithMask = image.updateMask(waterMask);
-        var fai = imageWithMask.expression(
-            'NIR - (RED + (SWIR - RED) * (842 - 665) / (1610 - 665))', {
-            'NIR': imageWithMask.select('B8'),
-            'RED': imageWithMask.select('B4'),
-            'SWIR': imageWithMask.select('B11')
-        }).rename('FAI');
-        return image.addBands(fai);
-        };
-        var collectionWithFAI = collection.map(addFAI);
+// 3. Función para calcular FAI en cada imagen de la colección.
+var addFAI = function(image) {
+  var imageWithMask = image.updateMask(waterMask);
+  var fai = imageWithMask.expression(
+      'NIR - (RED + (SWIR - RED) * (842 - 665) / (1610 - 665))', {
+      'NIR': imageWithMask.select('B8'), 'RED': imageWithMask.select('B4'), 'SWIR': imageWithMask.select('B11')
+  }).rename('FAI');
+  return image.addBands(fai);
+};
+var collectionWithFAI = collection.map(addFAI);
 
-        // 4. Mosaico de calidad para obtener la mejor vista sin nubes, que es el método correcto.
-        laImagenResultante = collectionWithFAI.qualityMosaic('FAI');
+// 4. --- CORRECCIÓN VISUAL ---
+// Usamos median() en lugar de qualityMosaic(). Esto crea una imagen compuesta
+// que representa la condición 'típica' y es muy eficaz para eliminar
+// artefactos como el brillo solar que causaban la 'franja roja'.
+laImagenResultante = collectionWithFAI.select('FAI').median();
 
-        // 5. Definir las salidas requeridas por el servidor (variables finales).
-        collectionForChart = collectionWithFAI.select('FAI');
-        bandNameForChart = 'FAI';
-        visParams = {
-        min: -0.05, max: 0.2, 
-        palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
-        description: \`${createLegendHtml(
-            'Índice de Algas Flotantes (FAI)', 
-            ['#000080', '#00FFFF', '#FFFF00', '#FF0000'], 
-            -0.05, 
-            0.2
-        )}\`
-        };`;
-            break;
+// 5. Definir las salidas requeridas por el servidor.
+collectionForChart = collectionWithFAI.select('FAI');
+bandNameForChart = 'FAI';
+visParams = {
+  min: -0.05, max: 0.2, 
+  palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
+  description: \`${createLegendHtml('Índice de Algas Flotantes (FAI)', ['#000080', '#00FFFF', '#FFFF00', '#FF0000'], -0.05, 0.2)}\`
+};`;
+    break;
         case 'AIR_QUALITY':
             analysisLogic = `
 var collection = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_NO2').filterBounds(roi).filterDate(startDate, endDate).select('tropospheric_NO2_column_number_density');
