@@ -1,4 +1,4 @@
-// /api/lab/fai.js - VERSIÓN FINAL CON ASSET COMUNITARIO GEBCO
+// /api/lab/fai.js - VERSIÓN FINAL CON MOSAICO DE IMAGECOLLECTION
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
@@ -11,17 +11,17 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         .filterBounds(region)
         .filterDate(start, end);
 
-    // --- PASO CLAVE: Crear máscaras de agua y profundidad con el nuevo asset ---
+    // --- PASO CLAVE CORREGIDO: Cargar y Mosaicar la Colección de Batimetría ---
     const waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
     
-    // Cargamos el asset de GEBCO del proyecto sat-io.
-    const gebco = ee.Image("projects/sat-io/open-datasets/gebco/gebco_grid");
+    // Cargamos el asset como una ImageCollection, no como una Image.
+    const gebcoCollection = ee.ImageCollection("projects/sat-io/open-datasets/gebco/gebco_grid");
     
-    // La banda 'elevation' contiene la profundidad. Los valores negativos son profundidad.
-    // Creamos una máscara que solo incluye píxeles con una profundidad de 15 metros o más.
+    // Creamos un mosaico para unir todas las teselas en una sola imagen global.
+    const gebco = gebcoCollection.mosaic();
+    
+    // Ahora podemos trabajar con la imagen mosaico como antes.
     const deepWaterMask = gebco.select('elevation').lte(-15);
-    
-    // Combinamos ambas máscaras. Un píxel debe ser agua Y profundo.
     const finalMask = waterMask.and(deepWaterMask);
     // --- FIN DEL PASO CLAVE ---
 
