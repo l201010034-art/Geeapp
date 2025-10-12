@@ -57,20 +57,51 @@ function initMap() {
     layerControl = L.control.layers({ "Híbrido": googleHybrid, "Satélite": googleSat }, {}).addTo(map);
     legendControl = L.control({position: 'bottomright'});
     legendControl.onAdd = function (map) { this._div = L.DomUtil.create('div', 'legend'); this.update(); return this._div; };
+// UBICACIÓN: platform-main.js
+// REEMPLAZA la función legendControl.update completa con esta versión final.
+
     legendControl.update = function (varInfo) {
-            if (varInfo) {
-        // ▼▼▼ LÓGICA AÑADIDA ▼▼▼
-        // Si el objeto de visualización tiene una descripción HTML personalizada, úsala.
-        if (varInfo.description) {
-            this._div.innerHTML = varInfo.description;
+        // Si no hay información, limpia la leyenda y termina.
+        if (!varInfo) {
+            this._div.innerHTML = '';
             return;
         }
-            const hasPalette = varInfo.palette && Array.isArray(varInfo.palette);
-            const gradient = hasPalette ? `linear-gradient(to right, ${varInfo.palette.join(', ')})` : `linear-gradient(to right, black, white)`;
-            const unit = varInfo.unit || '';
-            const title = varInfo.bandName || 'Leyenda';
-            this._div.innerHTML = `<div class="legend-title">${title} ${unit ? `(${unit})` : ''}</div><div class="legend-scale-bar" style="background: ${gradient};"></div><div class="legend-labels"><span>${varInfo.min ?? ''}</span><span>${varInfo.max ?? ''}</span></div>`;
-        } else { this._div.innerHTML = ''; }
+
+        // --- PRIORIDAD 1: Usar el HTML pre-generado ---
+        // Si el backend nos envía una 'description' (como hacen el Lab de IA y Huracanes),
+        // la usamos directamente. Es el método más fiable para leyendas complejas.
+        if (varInfo.description && typeof varInfo.description === 'string' && varInfo.description.trim() !== '') {
+            this._div.innerHTML = varInfo.description;
+            return; // ¡Importante! Si usamos la descripción, no hacemos nada más.
+        }
+
+        // --- PRIORIDAD 2 (FALLBACK): Construir la leyenda manualmente ---
+        // Si no hay 'description', construimos la leyenda a partir de sus partes.
+        // Esto asegura que los análisis predefinidos sigan funcionando perfectamente.
+        const title = varInfo.bandName || 'Leyenda';
+        const unit = varInfo.unit ? `(${varInfo.unit})` : '';
+        
+        // Usamos '??' para manejar correctamente el valor 0.
+        const min = varInfo.min ?? '';
+        const max = varInfo.max ?? '';
+
+        // Verificamos que la paleta sea un array con contenido.
+        const hasPalette = Array.isArray(varInfo.palette) && varInfo.palette.length > 0;
+        
+        // Si hay paleta, la usamos. Si no, mostramos un gradiente por defecto.
+        const gradient = hasPalette
+            ? `linear-gradient(to right, ${varInfo.palette.join(', ')})`
+            : `linear-gradient(to right, #FFFFFF, #000000)`;
+
+        // Construimos el HTML final.
+        this._div.innerHTML = `
+            <div class="legend-title">${title} ${unit}</div>
+            <div class="legend-scale-bar" style="background: ${gradient};"></div>
+            <div class="legend-labels">
+                <span>${min}</span>
+                <span>${max}</span>
+            </div>
+        `;
     };
     legendControl.addTo(map);
 }
