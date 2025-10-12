@@ -85,10 +85,10 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
     });
 }
 
-async function getOptimizedChartData(collection, roi, bandName, startDate, endDate) {
+async function getOptimizedChartData(collection, roi, bandName, labStartDate, labEndDate) {
     // ... (Esta función optimiza la consulta de datos para el gráfico)
-    const eeStartDate = ee.Date(startDate);
-    const eeEndDate = ee.Date(endDate);
+    const eeStartDate = ee.Date(labStartDate);
+    const eeEndDate = ee.Date(labEndDate);
     
     const dateDiffDays = await new Promise((resolve, reject) => {
         eeEndDate.difference(eeStartDate, 'day').evaluate((val, err) => err ? reject(err) : resolve(val));
@@ -146,7 +146,7 @@ async function getOptimizedChartData(collection, roi, bandName, startDate, endDa
 // UBICACIÓN: api/gee-lab.js
 
 // REEMPLAZA la función executeGeeCode completa con esta:
-async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
+async function executeGeeCode(codeToExecute, roiParam, labStartDate, labEndDate) {
     // 1. Inicializar GEE
     await new Promise((resolve, reject) => {
         ee.data.authenticateViaPrivateKey(
@@ -175,8 +175,8 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
     const fullScript = `
         // Variables inyectadas por el servidor
         var roi = ee.Geometry(${JSON.stringify(eeRoi.getInfo())});
-        var startDate = '${startDate}';
-        var endDate = '${endDate}';
+        var startDate = '${labStartDate}';
+        var endDate = '${labEndDate}';
         
         // Variables que el código de la IA debe definir
         var laImagenResultante, collectionForChart, bandNameForChart, visParams;
@@ -209,7 +209,7 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
     let chartData = null;
 
     if (collectionForChart && bandNameForChart) {
-        chartData = await getOptimizedChartData(collectionForChart, eeRoi, bandNameForChart, startDate, endDate);
+        chartData = await getOptimizedChartData(collectionForChart, eeRoi, bandNameForChart, labStartDate, labEndDate);
         // Usamos la imagen ya compuesta para las estadísticas para asegurar la optimización
         const imageForStats = laImagenResultante.select(bandNameForChart); 
         stats = await getStats(imageForStats, eeRoi, bandNameForChart, '', 'Resultado del Laboratorio');
@@ -227,7 +227,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { prompt, codeToExecute, roi, startDate, endDate } = req.body;
+        const { prompt, codeToExecute, roi, labStartDate, labEndDate } = req.body;
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
@@ -242,7 +242,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ generatedCode });
 
         } else if (codeToExecute) {
-            if (!roi || !startDate || !endDate) {
+            if (!roi || !labStartDate || !labEndDate) {
                return res.status(400).json({ error: "Se requiere 'roi', 'startDate' y 'endDate' para ejecutar el código." });
            }
             // --- MODO 2: EJECUTAR CÓDIGO CON CICLO DE DEPURACIÓN ---
@@ -253,7 +253,7 @@ export default async function handler(req, res) {
             for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
                 try {
                     console.log(`Ejecutando código (Intento ${attempt})...`);
-                    const result = await executeGeeCode(codeToRun, roi, startDate, endDate);
+                    const result = await executeGeeCode(codeToRun, roi, lab-start-date, lab-end-date);
                     return res.status(200).json({ ...result, code: codeToRun });
                 
                 } catch (error) {
@@ -283,9 +283,9 @@ export default async function handler(req, res) {
                         3.  Asegúrate de que las variables finales ('laImagenResultante', 'collectionForChart', 'bandNameForChart', 'visParams') estén definidas correctamente.
                         4.  Responde ÚNICAMENTE con el bloque de código JavaScript corregido y completo. No incluyas explicaciones.
                         5.  Las funciones como Map.centerObject() no son reconocidas en este entorno y deben ser eliminadas o sustituidas para el entorno de servidor.
-                        6.  startDate y endDate son enviados desde el servidor y no necesitan ser definidos en el código.
-                        7.  Añade a todos los analisis una leyenda que describa la variable analizada.
-                        
+                        6.  Añade a todos los analisis una leyenda que describa la variable analizada.
+                        7.  labStartDate y labEndDate son enviados desde el servidor y no necesitan ser definidos en el código.
+
                     `;
                     
                     const result = await model.generateContent(debugPrompt);
