@@ -266,3 +266,5 @@ async function fetchHurricaneList() {
     }
 }
 window.fetchHurricaneList = fetchHurricaneList;
+window.handleLabExecution = handleLabExecution;
+window.applyLabResultToMap = applyLabResultToMap;
