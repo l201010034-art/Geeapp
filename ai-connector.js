@@ -164,6 +164,9 @@ async function handleLabCodeGeneration() {
     }
 }
 
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA la función handleLabCodeExecution completa
+
 async function handleLabCodeExecution() {
     const code = document.getElementById('lab-result-display').textContent;
     const executeButton = document.getElementById('lab-execute-button');
@@ -171,8 +174,6 @@ async function handleLabCodeExecution() {
     const previewOverlay = document.getElementById('lab-preview-overlay');
     const previewText = document.getElementById('lab-preview-text');
 
-// LÍNEA NUEVA - CORREGIDA
-// BLOQUE NUEVO - CORRECCIÓN DEFINITIVA
     const trimmedCode = code.trim();
     const isPlaceholderOrError = 
         trimmedCode.startsWith("// El código generado por la IA aparecerá aquí.") ||
@@ -187,54 +188,52 @@ async function handleLabCodeExecution() {
     previewOverlay.classList.remove('hidden');
     previewText.textContent = "Ejecutando en GEE y preparando previsualización...";
 
-// UBICACIÓN: ai-connector.js, dentro de handleLabCodeExecution
+    try {
+        const regionName = (() => {
+            const munSelector = document.getElementById('lab-region-selector-municipalities');
+            return !munSelector.classList.contains('hidden')
+                ? munSelector.value
+                : document.getElementById('lab-region-selector-marine').value;
+        })();
+        const startDate = document.getElementById('lab-start-date').value;
+        const endDate = document.getElementById('lab-end-date').value;
+        // ▼▼▼ LÍNEA AÑADIDA ▼▼▼
+        const analysisType = document.getElementById('lab-analysis-type').value;
 
-        try {
-            const regionName = (() => {
-                const munSelector = document.getElementById('lab-region-selector-municipalities');
-                return !munSelector.classList.contains('hidden')
-                    ? munSelector.value
-                    : document.getElementById('lab-region-selector-marine').value;
-            })();
-            const startDate = document.getElementById('lab-start-date').value;
-            const endDate = document.getElementById('lab-end-date').value;
+        const response = await fetch('/api/gee-lab', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                codeToExecute: code,
+                roi: regionName,
+                startDate: startDate,
+                endDate: endDate,
+                // ▼▼▼ LÍNEA AÑADIDA ▼▼▼
+                analysisType: analysisType // Enviamos el tipo de análisis
+            })
+        });
 
-            const response = await fetch('/api/gee-lab', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    codeToExecute: code,
-                    roi: regionName,
-                    startDate: startDate,
-                    endDate: endDate
-                })
-            });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.details || "Error al ejecutar el código en el servidor.");
+        }
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || "Error al ejecutar el código en el servidor.");
-            }
+        lastLabResult = await response.json();
+        
+        previewText.textContent = "✅ ¡Previsualización Lista! Cierra para aplicar al mapa.";
+        applyButton.classList.remove('hidden');
 
-            // Guardamos el resultado exitoso en la variable global
-            lastLabResult = await response.json();
-            
-            // Mostramos un mensaje de éxito y activamos el botón de aplicar
-            previewText.textContent = "✅ ¡Previsualización Lista! Cierra para aplicar al mapa.";
-            applyButton.classList.remove('hidden');
-
-        } catch (error) {
-            previewText.textContent = `❌ Error: ${error.message}`;
-            executeButton.classList.remove('hidden'); 
-            setTimeout(() => {
-                previewOverlay.classList.add('hidden');
-                // Restablecer el texto por si el usuario quiere intentarlo de nuevo
-                previewText.textContent = "Ejecutando en GEE y preparando previsualización...";
-            }, 4000); 
+    } catch (error) {
+        previewText.textContent = `❌ Error: ${error.message}`;
+        executeButton.classList.remove('hidden'); 
+        setTimeout(() => {
+            previewOverlay.classList.add('hidden');
+            previewText.textContent = "Ejecutando en GEE y preparando previsualización...";
+        }, 4000); 
 
     } finally {
         executeButton.disabled = false;
         executeButton.textContent = "Ejecutar Código";
-        // No re-habilitar el botón de ejecutar aquí, se maneja con el botón de aplicar
     }
 }
 

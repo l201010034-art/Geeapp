@@ -232,18 +232,22 @@ async function executeGeeCode(codeToExecute, roiParam, startDate, endDate) {
     visParams = ensureLegendDescription(visParams);
 
 
-    // 5. Obtener Map ID
+ // ▼▼▼ BLOQUE MODIFICADO: LÓGICA DE CLIPPING CONDICIONAL ▼▼▼
+    // 5. Obtener Map ID (con recorte condicional)
+    const imageToDisplay = analysisType === 'HURRICANE' 
+        ? laImagenResultante // Para huracanes, usamos la imagen completa.
+        : laImagenResultante.clip(eeRoi); // Para todo lo demás, recortamos al ROI.
+
     const mapId = await new Promise((resolve, reject) => {
-        laImagenResultante.clip(eeRoi).getMapId(visParams, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
+        imageToDisplay.getMapId(visParams, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
     });
 
-    // 6. Calcular estadísticas y datos del gráfico
+    // ... (el resto de la función para estadísticas y gráficos se queda igual) ...
     let stats = `Análisis visual para: ${bandNameForChart || 'Resultado del Laboratorio'}`;
     let chartData = null;
 
     if (collectionForChart && bandNameForChart) {
         chartData = await getOptimizedChartData(collectionForChart, eeRoi, bandNameForChart, startDate, endDate);
-        // Usamos la imagen ya compuesta para las estadísticas para asegurar la optimización
         const imageForStats = laImagenResultante.select(bandNameForChart); 
         stats = await getStats(imageForStats, eeRoi, bandNameForChart, '', 'Resultado del Laboratorio');
     }
@@ -274,11 +278,16 @@ export default async function handler(req, res) {
             
             return res.status(200).json({ generatedCode });
 
+        // UBICACIÓN: /api/gee-lab.js
+// REEMPLAZA el bloque "else if (codeToExecute)" dentro de la función handler
+
         } else if (codeToExecute) {
+            // ▼▼▼ LÍNEA MODIFICADA ▼▼▼
+            const { roi, startDate, endDate, analysisType } = req.body; 
             if (!roi || !startDate || !endDate) {
                return res.status(400).json({ error: "Se requiere 'roi', 'startDate' y 'endDate' para ejecutar el código." });
-           }
-            // --- MODO 2: EJECUTAR CÓDIGO CON CICLO DE DEPURACIÓN ---
+            }
+            
             let codeToRun = codeToExecute;
             const MAX_ATTEMPTS = 4;
             let lastError = null;
@@ -286,7 +295,8 @@ export default async function handler(req, res) {
             for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
                 try {
                     console.log(`Ejecutando código (Intento ${attempt})...`);
-                    const result = await executeGeeCode(codeToRun, roi, startDate, endDate);
+                    // ▼▼▼ LÍNEA MODIFICADA ▼▼▼
+                    const result = await executeGeeCode(codeToRun, roi, startDate, endDate, analysisType);
                     return res.status(200).json({ ...result, code: codeToRun });
                 
                 } catch (error) {
