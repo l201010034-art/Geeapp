@@ -38,7 +38,7 @@ module.exports = async (req, res) => {
             PREGUNTA DEL USUARIO: "${question}"
         `;
 
-        const answer = await gemini.ask(promptForGeo);
+        const answer = await gemini(promptForGeo);
         
         // Enviamos la respuesta de vuelta al front-end
         res.status(200).json({ answer });
