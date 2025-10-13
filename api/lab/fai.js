@@ -55,7 +55,7 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         .map(enmascararNubesYTierra)
         .map(calcularNDVI);
 
-    const coleccionNDVI = coleccionProcesada.select('SARGAZO');
+    const coleccionNDVI = coleccionProcesada.select('NDVI');
 
     // Crea un compuesto de máxima intensidad para resaltar la mayor presencia de sargazo.
     const sargazoMaxCompuesto = coleccionNDVI.max();
