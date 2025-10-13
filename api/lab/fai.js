@@ -1,4 +1,4 @@
-// /api/lab/fai.js - VERSIÓN FINAL CON MÁSCARA OCEÁNICA PRECISA
+// /api/lab/fai.js - VERSIÓN FINAL CON MÁSCARA DE AGUA PERMANENTE
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
@@ -6,18 +6,21 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
     const start = ee.Date(startDate);
     const end = ee.Date(endDate);
 
-    // 1. MÁSCARA OCEÁNICA PRECISA USANDO ÚNICAMENTE GEBCO
-    // Eliminamos JRC para no incluir lagunas ni ríos.
-    const gebco = ee.Image('projects/residenciaproject-443903/assets/gebco_2025').select('b1').rename('elevation');
+    // 1. MÁSCARA DE PRECISIÓN (LA CORRECCIÓN DEFINITIVA)
+    // Usamos el dataset JRC para identificar agua que está presente >90% del tiempo.
+    // Esto excluye eficazmente lagunas estacionales y zonas intermareales.
+    const permanentWater = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(90);
     
-    // Creamos la máscara que solo incluye píxeles que son mar (profundidad <= -15m).
-    // Esta única máscara elimina la tierra Y las aguas interiores en un solo paso.
-    const oceanMask = gebco.lte(-15);
+    // Mantenemos la máscara de profundidad que ya funciona bien para el mar abierto.
+    const gebco = ee.Image('projects/residenciaproject-443903/assets/gebco_2025').select('b1').rename('elevation');
+    const deepWaterMask = gebco.lte(-15);
 
-    // Erosionamos la máscara para "lijar los bordes" y eliminar la franja costera.
-    const finalMask = oceanMask.focal_min({ radius: 2, units: 'pixels' });
+    // La máscara final requiere que un píxel sea AGUA PERMANENTE Y PROFUNDA.
+    // Esto elimina la costa y las lagunas turbias.
+    const finalMask = permanentWater.and(deepWaterMask);
 
     // 2. FUNCIÓN AUXILIAR PARA CALCULAR FAI
+    // (Esta función no cambia)
     const calculateFAI = (image) => {
         const scaledImage = image.divide(10000);
         const qa = image.select('QA60');
@@ -30,7 +33,6 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
             'SWIR': scaledImage.select('B12')
         }).rename('FAI');
         
-        // Aplicamos la máscara de nubes y nuestra nueva máscara oceánica precisa.
         return fai.updateMask(cloudMask).updateMask(finalMask);
     };
 
@@ -57,12 +59,12 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
     const finalCollection = ee.ImageCollection.fromImages(monthlyComposites.removeAll([null]));
     
     return {
-        laImagenResultante: finalCollection.select('FAI').mean(),
+        laImagenResultante: finalCollection.mean(),
         collectionForChart: finalCollection.select('FAI'),
         bandNameForChart: 'FAI',
         visParams: {
             min: -0.05, max: 0.2, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
-            bandName: 'FAI Promedio', unit: ''
+            bandName: 'Índice de Algas Flotantes (FAI)', unit: ''
         }
     };
 };
