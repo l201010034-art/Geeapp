@@ -1,71 +1,99 @@
-// /api/lab/fai.js - VERSIÓN FINAL CON MÁSCARA OCEÁNICA PRECISA
+// /api/lab/fai.js - VERSIÓN OPTIMIZADA Y ADAPTADA PARA GEEAPP
 const ee = require('@google/earthengine');
 
+/**
+ * Maneja el análisis de FAI (Índice de Algas Flotantes) para sargazo.
+ * Esta versión utiliza una máscara oceánica precisa y calcula compuestos mensuales
+ * de mínimo, mediana y máximo, ideal para consultas en rangos de fechas extensos.
+ */
 module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
     const region = ee.Geometry(roi);
     const start = ee.Date(startDate);
     const end = ee.Date(endDate);
 
-    // 1. MÁSCARA OCEÁNICA PRECISA USANDO ÚNICAMENTE GEBCO
-    // Eliminamos JRC para no incluir lagunas ni ríos.
-    const gebco = ee.Image('projects/residenciaproject-443903/assets/gebco_2025').select('b1').rename('elevation');
-    
-    // Creamos la máscara que solo incluye píxeles que son mar (profundidad <= -15m).
-    // Esta única máscara elimina la tierra Y las aguas interiores en un solo paso.
-    const oceanMask = gebco.lte(0);
-
-    // Erosionamos la máscara para "lijar los bordes" y eliminar la franja costera.
-    const finalMask = oceanMask.focal_min({ radius: 2, units: 'pixels' });
-
-    // 2. FUNCIÓN AUXILIAR PARA CALCULAR FAI
-    const calculateFAI = (image) => {
-        const scaledImage = image.divide(10000);
+    // 1. FILTRADO DE NUBES Y CIRROS
+    const maskClouds = function(image) {
         const qa = image.select('QA60');
-        const cloudMask = qa.bitwiseAnd(1 << 10).eq(0).and(qa.bitwiseAnd(1 << 11).eq(0));
-        
-        const fai = scaledImage.expression(
-            'NIR - (RED + (SWIR - RED) * (865 - 665) / (2202 - 665))', {
-            'NIR': scaledImage.select('B8A'),
-            'RED': scaledImage.select('B4'),
-            'SWIR': scaledImage.select('B12')
-        }).rename('FAI');
-        
-        // Aplicamos la máscara de nubes y nuestra nueva máscara oceánica precisa.
-        return fai.updateMask(cloudMask).updateMask(finalMask);
+        const cloudBitMask = 1 << 10;
+        const cirrusBitMask = 1 << 11;
+        const mask = qa.bitwiseAnd(cloudBitMask).eq(0)
+                       .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+        return image.updateMask(mask);
     };
 
-    // 3. COLECCIÓN PRE-FILTRADA
+    // 2. MÁSCARA OCEÁNICA PRECISA
+    // Combina JRC para agua permanente y GEBCO para asegurar que sea océano (excluye lagos/ríos).
+    const waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
+    const gebco = ee.Image('projects/residenciaproject-443903/assets/gebco_2025').select('b1').rename('elevation');
+    const oceanMask = gebco.lte(0);
+    const finalMask = waterMask.and(oceanMask);
+
+    // 3. FUNCIÓN PARA CALCULAR FAI
+    // Se aplica la máscara oceánica directamente en el retorno.
+    const calculateFAI = function(image) {
+        // Escala las bandas reflectivas. La fórmula FAI original no requiere escalado,
+        // pero es buena práctica hacerlo si se combinan con otros índices.
+        // Para mantener la consistencia con tu script original, no se escala aquí.
+        const red = image.select('B4');
+        const nir = image.select('B8A');
+        const swir = image.select('B12');
+        
+        const fai = nir.subtract(red)
+            .add(swir.subtract(red).multiply(864.7 - 664.6)
+            .divide(2185.7 - 664.6));
+            
+        return image.addBands(fai.rename('FAI')).updateMask(finalMask);
+    };
+
+    // 4. COLECCIÓN SENTINEL-2 PRE-FILTRADA
     const s2Collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
         .filterBounds(region)
-        .filterDate(start, end);
+        .filterDate(start, end)
+        .map(maskClouds);
 
-    // 4. GENERACIÓN DE COMPUESTOS MENSUALES
-    const months = ee.List.sequence(0, end.difference(start, 'month').subtract(1));
-    const monthlyComposites = months.map((m) => {
+    // 5. GENERACIÓN DE COMPUESTOS MENSUALES (Min, Max, Mediana)
+    const months = ee.List.sequence(0, end.difference(start, 'month').round().subtract(1));
+    
+    const monthlyComposites = months.map(function(m) {
         const ini = start.advance(m, 'month');
         const fin = ini.advance(1, 'month');
-        const monthlyCollection = s2Collection.filterDate(ini, fin);
+        const monthCollection = s2Collection.filterDate(ini, fin).map(calculateFAI);
 
+        // Se usa ee.Algorithms.If para manejar meses sin imágenes y evitar errores.
         return ee.Algorithms.If(
-            monthlyCollection.size().gt(0),
-            monthlyCollection.map(calculateFAI).median().set('system:time_start', ini.millis()),
-            null
+            monthCollection.size().gt(0),
+            ee.Image.cat([
+                monthCollection.min().select('FAI').rename('FAI_min'),
+                monthCollection.median().select('FAI').rename('FAI_median'),
+                monthCollection.max().select('FAI').rename('FAI_max')
+            ]).set('system:time_start', ini.millis()),
+            null // Retorna nulo si no hay imágenes en el mes.
         );
     });
 
-    // 5. COLECCIÓN FINAL Y RESULTADOS
+    // 6. COLECCIÓN FINAL Y RESULTADO PROMEDIO
+    // Se eliminan los meses que no tuvieron imágenes.
     const finalCollection = ee.ImageCollection.fromImages(monthlyComposites.removeAll([null]));
     
+    // Se calcula el promedio de las medianas mensuales para la visualización principal.
+    const laImagenResultante = finalCollection.select('FAI_median').mean();
+
+    // 7. OBJETO DE RETORNO PARA LA PLATAFORMA GEEAPP
     return {
-        laImagenResultante: finalCollection.select('FAI').mean(),
-        collectionForChart: finalCollection.select('FAI'),
-        bandNameForChart: 'FAI',
+        // Imagen principal a mostrar en el mapa (el promedio de las medianas).
+        laImagenResultante: laImagenResultante,
+        
+        // Colección de datos para la gráfica de series de tiempo (usamos la mediana).
+        collectionForChart: finalCollection.select(['FAI_median', 'FAI_min', 'FAI_max']),
+        bandNameForChart: 'FAI_median',
+        
+        // Parámetros de visualización que corregimos anteriormente.
         visParams: {
-            min: -0.05, 
-            max: 0.5, // <-- Valor ajustado para una mejor visualización
-            palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
-            bandName: 'FAI Promedio', 
-            unit: ''
+            min: -0.05,
+            max: 0.5,
+            palette: ['#000080', '#00FFFF', '#00FF00', '#FFFF00', '#FF8000', '#FF0000'],
+            bandName: 'FAI Promedio (Mediana)',
+            unit: '' // El FAI es un índice adimensional.
         }
     };
 };
