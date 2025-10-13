@@ -517,12 +517,30 @@ function clearChartAndAi() {
     document.getElementById('ai-actions-container').classList.add('hidden');
 }
 
+// UBICACIÓN: platform-main.js
+// REEMPLAZA la función addGeeLayer completa.
+
 function addGeeLayer(url, varName) {
     if (currentGEELayer) {
         map.removeLayer(currentGEELayer);
         layerControl.removeLayer(currentGEELayer);
     }
-    currentGEELayer = L.tileLayer(url, { attribution: 'Google Earth Engine' }).addTo(map);
+    
+    // --- LA CORRECCIÓN CLAVE ---
+    // 1. Antes de crear la capa, cambiamos el loader a la Etapa 2.
+    Loader.showStage2();
+
+    currentGEELayer = L.tileLayer(url, { attribution: 'Google Earth Engine' });
+
+    // 2. Escuchamos el evento 'load'. Este se dispara cuando TODAS las teselas visibles se han cargado.
+    currentGEELayer.on('load', function() {
+        // 3. Cuando la capa está completamente visible, ocultamos el loader.
+        Loader.hide();
+    });
+    
+    // 4. Añadimos la capa al mapa (esto inicia la descarga de teselas).
+    currentGEELayer.addTo(map);
+    
     layerControl.addOverlay(currentGEELayer, `Capa: ${varName}`);
     document.getElementById('opacity-slider-container').style.display = 'block';
     document.getElementById('opacity-slider').value = 1;

@@ -97,26 +97,25 @@
     <div id="intelligent-loader" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[9999]">
         <div class="bg-gray-800 border-2 border-[var(--accent-color)] rounded-lg shadow-xl p-8 w-11/12 max-w-md text-center flex flex-col items-center">
             
-            <div id="loader-animation" class="w-24 h-24 mb-4">
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <defs><path id="sat-body" d="M 20 40 H 80 L 70 60 H 30 Z" fill="#cccccc"/><path id="sat-wing" d="M 0 30 H 20 V 70 H 0 Z" fill="#4a90e2"/></defs>
-                    <use href="#sat-body"/>
-                    <use href="#sat-wing" transform="translate(0, 0)"/>
-                    <use href="#sat-wing" transform="translate(80, 0)"/>
-                    <circle id="sat-dish" cx="50" cy="30" r="10" fill="none" stroke="#f0ad4e" stroke-width="3"/>
-                    <line id="sat-beam" x1="50" y1="30" x2="50" y2="100" stroke="#f0ad4e" stroke-width="2" stroke-dasharray="5 5"/>
-                </svg>
-            </div>
-            
-            <p id="loader-status" class="text-lg font-semibold text-white mb-2">Iniciando análisis...</p>
-            
-            <p id="loader-tip" class="text-sm text-gray-400 h-16 transition-opacity duration-500">Cargando consejos...</p>
-            
-            <div class="w-full bg-gray-700 rounded-full h-2.5 mt-4">
-                <div id="loader-progress" class="bg-[var(--accent-color)] h-2.5 rounded-full"></div>
+            <div id="loader-stage-1">
+                <div id="loader-animation" class="w-24 h-24 mb-4">
+                    </div>
+                <p id="loader-status" class="text-lg font-semibold text-white mb-2">Iniciando análisis...</p>
+                <p id="loader-tip" class="text-sm text-gray-400 h-16 transition-opacity duration-500">Cargando consejos...</p>
+                <div class="w-full bg-gray-700 rounded-full h-2.5 mt-4">
+                    <div id="loader-progress" class="bg-[var(--accent-color)] h-2.5 rounded-full"></div>
+                </div>
             </div>
 
-        </div> 
+            <div id="loader-stage-2" class="hidden">
+                <div class="w-24 h-24 mb-4 animate-pulse">
+                    <svg class="w-full h-full text-[var(--accent-color)]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12 1.586l-4 4v2.828l-4 4V18.5a1.5 1.5 0 002.121 1.414L10 18.414l7.879 1.5a1.5 1.5 0 001.527-1.905l-1.414-7.071-4-4H12V1.586zM10 16.414L3 17.5V14l4-4V8l4-4v2.586l4 4V15l-5-1.086z" clip-rule="evenodd"></path></svg>
+                </div>
+                <p class="text-lg font-semibold text-white">Renderizando mapa satelital...</p>
+                <p class="text-sm text-gray-400">Este proceso puede tardar unos segundos.</p>
+            </div>
+
+        </div>
     </div>
     <nav class="bg-black bg-opacity-70 text-white p-3 flex justify-between items-center z-[1100] w-full flex-shrink-0">
         <div class="flex items-center space-x-4">
