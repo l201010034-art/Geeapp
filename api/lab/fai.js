@@ -71,8 +71,8 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         // Colección de datos para la gráfica de series de tiempo.
         collectionForChart: coleccionNDVI,
         bandNameForChart: 'NDVI',
-        renameBand: 'Sargazo', // Renombramos la banda para mayor claridad en la plataforma.
-        
+        renameBandForChart: 'Sargazo', // Renombramos la banda para mayor claridad en la plataforma.    
+         
         // Parámetros de visualización del script original.
         visParams: {
             min: 0,
