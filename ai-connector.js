@@ -104,8 +104,6 @@ commandForm.addEventListener('submit', async (event) => {
 async function handleLabExecution() {
     const executeButton = document.getElementById('lab-execute-button');
     const applyButton = document.getElementById('lab-apply-button');
-    const previewOverlay = document.getElementById('lab-preview-overlay');
-    const previewText = document.getElementById('lab-preview-text');
     const resultDisplay = document.getElementById('lab-result-display');
 
     const analysisType = document.getElementById('lab-analysis-type').value;
@@ -136,11 +134,10 @@ async function handleLabExecution() {
         };
     }
 
+    showLoading(true, 'lab');
     executeButton.disabled = true;
     executeButton.textContent = "Ejecutando...";
     applyButton.classList.add('hidden');
-    previewOverlay.classList.remove('hidden');
-    window.showLoading(true, 'lab');
     resultDisplay.textContent = `// Solicitando análisis '${analysisType}' al servidor...`;
 
     try {
@@ -149,27 +146,21 @@ async function handleLabExecution() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
         });
-
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.details || "Error al ejecutar el análisis en el servidor.");
         }
-
         lastLabResult = await response.json();
-        
-        resultDisplay.textContent = `// Análisis '${analysisType}' completado exitosamente.\n// El resultado está listo para ser aplicado al mapa.`;
-        previewText.textContent = "✅ ¡Previsualización Lista! Cierra para aplicar al mapa.";
+        resultDisplay.textContent = `// Análisis '${analysisType}' completado exitosamente.`;
         applyButton.classList.remove('hidden');
         executeButton.classList.add('hidden');
-
     } catch (error) {
         resultDisplay.textContent = `// Ocurrió un error:\n// ${error.message}`;
-        previewText.textContent = `❌ Error: ${error.message}`;
-        executeButton.classList.remove('hidden');
-        setTimeout(() => {
-            previewOverlay.classList.add('hidden');
-        }, 4000);
+        executeButton.classList.remove('hidden'); // Re-habilita el botón en caso de error
     } finally {
+        // Ocultamos el loader global al finalizar
+        showLoading(false);
+        // La re-habilitación del botón ya se maneja en el bloque 'catch', así que lo mantenemos simple aquí.
         executeButton.disabled = false;
         executeButton.textContent = "🚀 Ejecutar Análisis";
     }
@@ -278,11 +269,11 @@ function buildFireRiskPrompt(data) {
     return `Eres un analista de riesgos para el gobierno de Campeche. Interpreta un mapa de "Riesgo de Incendio Promedio" para **${roi}** del **${startDate}** al **${endDate}**. La leyenda es: Verde (Bajo), Amarillo (Moderado), Naranja (Alto), Rojo (Extremo). **Instrucciones:** 1. Titula "Interpretación del Mapa de Riesgo de Incendio". 2. Explica qué implica ver manchas naranjas/rojas en zonas agrícolas o forestales. 3. Da recomendaciones accionables para SEPROCI (monitoreo, alertas), Desarrollo Agropecuario y **SEDECO** (impacto económico). Usa Markdown.`;
 }
 
-window.handleLabExecution = handleLabExecution;
-window.applyLabResultToMap = applyLabResultToMap;
-window.fetchHurricaneList = fetchHurricaneList;
-
-// (También asegúrate de que las funciones como generateAiAnalysis estén expuestas si son llamadas desde platform-main.js)
-window.generateAiAnalysis = generateAiAnalysis;
-window.generatePrediction = generatePrediction;
-window.generateFireRiskAnalysis = generateFireRiskAnalysis;
+export {
+    generateAiAnalysis,
+    generatePrediction,
+    generateFireRiskAnalysis,
+    handleLabExecution,
+    applyLabResultToMap,
+    fetchHurricaneList
+};

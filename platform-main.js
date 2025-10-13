@@ -1,5 +1,11 @@
 // Archivo: platform-main.js (Versión Final Corregida)
 import { Loader } from './intelligent-loader.js';
+// ▼▼▼ AÑADE ESTE BLOQUE ▼▼▼
+import { 
+    fetchHurricaneList, 
+    handleLabExecution, 
+    applyLabResultToMap 
+} from './ai-connector.js';
 
 // --- VARIABLES GLOBALES ---
 let map, drawnItems, currentGEELayer, legendControl, layerControl, currentChart, currentChartData;
@@ -172,27 +178,19 @@ function setupEventListeners() {
     document.getElementById('copy-ai-button').addEventListener('click', copyAiAnalysis);
     document.getElementById('download-ai-button').addEventListener('click', downloadAiAnalysis);
 
-    // --- LÓGICA CORREGIDA PARA EL LABORATORIO DE IA ---
     document.getElementById('openLabButton').addEventListener('click', () => labOverlay.classList.remove('hidden'));
     document.getElementById('lab-close-button').addEventListener('click', () => labOverlay.classList.add('hidden'));
     labOverlay.addEventListener('click', (event) => { if (event.target === labOverlay) labOverlay.classList.add('hidden'); });
     
-    // Controles dinámicos del laboratorio
     document.getElementById('lab-analysis-type').addEventListener('change', handleLabAnalysisChange);
-    handleLabAnalysisChange(); // Llama una vez para configurar la UI inicial
+    handleLabAnalysisChange();
 
-    // Botones de acción del laboratorio
-    document.getElementById('lab-fetch-hurricanes-button').addEventListener('click', window.fetchHurricaneList);
-    
-    // ¡ESTA ES LA LÍNEA MÁS IMPORTANTE Y LA QUE FALTABA!
-    // Conecta el botón "Ejecutar Análisis" a su función correspondiente.
-    document.getElementById('lab-execute-button').addEventListener('click', window.handleLabExecution);
-    
-    // El botón de copiar código ya no existe, por lo que se elimina su listener.
-    // El botón 'lab-generate-button' tampoco existe ya.
+    // Ahora usamos las funciones importadas directamente, sin 'window'.
+    document.getElementById('lab-fetch-hurricanes-button').addEventListener('click', fetchHurricaneList);
+    document.getElementById('lab-execute-button').addEventListener('click', handleLabExecution);
     
     document.getElementById('lab-apply-button').addEventListener('click', () => {
-        window.applyLabResultToMap();
+        applyLabResultToMap();
         labOverlay.classList.add('hidden');
     });
 }
