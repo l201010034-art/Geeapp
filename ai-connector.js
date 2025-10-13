@@ -1,5 +1,3 @@
-// /ai-connector.js - VERSIÓN MODULAR FINAL
-
 // --- 1. CONEXIÓN CON LA IA PARA ANÁLISIS (PANELES DERECHOS) ---
 const AI_API_URL = '/api/analyze';
 const aiPanel = document.getElementById('ai-analysis-panel');
@@ -7,9 +5,10 @@ const aiSummaryDiv = document.getElementById('ai-summary');
 const aiActionsContainer = document.getElementById('ai-actions-container');
 const commandForm = document.getElementById('ai-command-form');
 const commandBar = document.getElementById('ai-command-bar');
-let lastLabResult = null; // Almacenar el último resultado exitoso del lab
+let lastLabResult = null;
 
-window.generateAiAnalysis = async function(data) {
+// --- CORRECCIÓN CLAVE: Se elimina 'window.' de las declaraciones de función ---
+async function generateAiAnalysis(data) {
     if (!data.stats && !data.chartData) return;
     aiPanel.classList.remove('hidden');
     aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Analizando datos...</p>';
@@ -18,7 +17,7 @@ window.generateAiAnalysis = async function(data) {
     await callAndDisplayAnalysis(prompt);
 }
 
-window.generatePrediction = async function(chartData) {
+async function generatePrediction(chartData) {
     aiPanel.classList.remove('hidden');
     aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Generando pronóstico...</p>';
     aiActionsContainer.classList.add('hidden');
@@ -26,7 +25,7 @@ window.generatePrediction = async function(chartData) {
     await callAndDisplayAnalysis(prompt);
 }
 
-window.generateFireRiskAnalysis = async function(data) {
+async function generateFireRiskAnalysis(data) {
     aiPanel.classList.remove('hidden');
     aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Interpretando mapa de riesgo...</p>';
     aiActionsContainer.classList.add('hidden');
