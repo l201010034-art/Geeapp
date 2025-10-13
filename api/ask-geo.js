@@ -1,7 +1,6 @@
-// api/ask-geo.js
 const express = require('express');
 const router = express.Router();
-const gemini = require('../gemini'); // Reutiliza tu conector existente
+const gemini = require('../gemini');
 
 router.post('/', async (req, res) => {
     try {

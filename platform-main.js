@@ -748,3 +748,27 @@ window.copyAiAnalysis = copyAiAnalysis;
 window.downloadAiAnalysis = downloadAiAnalysis;
 window.handleLabAnalysisChange = handleLabAnalysisChange;
 window.showLoading = showLoading;
+
+// =======================================================
+// INICIALIZACIÓN DE EVENTOS PARA EL CHAT (SOLUCIÓN FINAL)
+// =======================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Vincula los elementos del DOM con las funciones del chat
+    const chatFab = document.getElementById('chat-fab');
+    const chatCloseBtn = document.getElementById('chat-close-btn');
+    const chatSendBtn = document.getElementById('chat-send-btn');
+    const chatInput = document.getElementById('chat-input');
+
+    if (chatFab) {
+        chatFab.addEventListener('click', toggleChat);
+    }
+    if (chatCloseBtn) {
+        chatCloseBtn.addEventListener('click', toggleChat);
+    }
+    if (chatSendBtn) {
+        chatSendBtn.addEventListener('click', sendMessageToBot);
+    }
+    if (chatInput) {
+        chatInput.addEventListener('keydown', handleChatInput);
+    }
+});

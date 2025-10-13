@@ -363,30 +363,24 @@
 
 <script src="platform-main.js"></script>
 
-    <div id="chat-fab" onclick="toggleChat()">
-        <i class="fas fa-comment-alt"></i>
+<script type="module" src="platform-main.js"></script>
+
+ <div id="chat-fab">
+    <i class="fas fa-comment-alt"></i>
+</div>
+
+<div id="chat-window">
+    <div class="chat-header">
+        <h5>Asistente Geo</h5>
+        <button id="chat-close-btn">×</button> </div>
+    <div id="chat-messages" class="chat-messages">
+        </div>
+    <div class="chat-input-container">
+        <input type="text" id="chat-input" placeholder="Escribe tu pregunta...">
+        <button id="chat-send-btn">
+            <i class="fas fa-paper-plane"></i>
+        </button>
     </div>
-
-    <div id="chat-window">
-        <div class="chat-header">
-            <h5>Asistente Geo</h5>
-            <button onclick="toggleChat()">×</button>
-        </div>
-        <div id="chat-messages" class="chat-messages">
-            <div class="chat-message bot">
-                <p>¡Hola! Soy Geo, tu explorador geoespacial. Pregúntame sobre conceptos como 'NDVI' o cómo usar la plataforma.</p>
-            </div>
-        </div>
-        <div class="chat-input-container">
-            <input type="text" id="chat-input" placeholder="Escribe tu pregunta..." onkeydown="handleChatInput(event)">
-            <button id="chat-send-btn" onclick="sendMessageToBot()">
-                <i class="fas fa-paper-plane"></i>
-            </button>
-        </div>
-    </div>
-    </body>
-</html>
-
-
+</div>
 </body>
 </html>
