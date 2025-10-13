@@ -133,7 +133,6 @@ async function handleLabExecution() {
         };
     }
 
-    showLoading(true, 'lab');
     executeButton.disabled = true;
     executeButton.textContent = "Ejecutando...";
     applyButton.classList.add('hidden');

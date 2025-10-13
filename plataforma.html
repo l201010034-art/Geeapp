@@ -99,7 +99,15 @@
             
             <div id="loader-stage-1">
                 <div id="loader-animation" class="w-24 h-24 mb-4">
-                    </div>
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <defs><path id="sat-body" d="M 20 40 H 80 L 70 60 H 30 Z" fill="#cccccc"/><path id="sat-wing" d="M 0 30 H 20 V 70 H 0 Z" fill="#4a90e2"/></defs>
+                        <use href="#sat-body"/>
+                        <use href="#sat-wing" transform="translate(0, 0)"/>
+                        <use href="#sat-wing" transform="translate(80, 0)"/>
+                        <circle id="sat-dish" cx="50" cy="30" r="10" fill="none" stroke="#f0ad4e" stroke-width="3"/>
+                        <line id="sat-beam" x1="50" y1="30" x2="50" y2="100" stroke="#f0ad4e" stroke-width="2" stroke-dasharray="5 5"/>
+                    </svg>
+                </div>
                 <p id="loader-status" class="text-lg font-semibold text-white mb-2">Iniciando análisis...</p>
                 <p id="loader-tip" class="text-sm text-gray-400 h-16 transition-opacity duration-500">Cargando consejos...</p>
                 <div class="w-full bg-gray-700 rounded-full h-2.5 mt-4">
