@@ -192,12 +192,28 @@ function setupEventListeners() {
 
     // Ahora usamos las funciones importadas directamente, sin 'window'.
     document.getElementById('lab-fetch-hurricanes-button').addEventListener('click', fetchHurricaneList);
-    document.getElementById('lab-execute-button').addEventListener('click', handleLabExecution);
+    document.getElementById('lab-execute-button').addEventListener('click', async () => {
+        // 1. Muestra el loader pasándole el tipo 'lab' para los mensajes correctos.
+        showLoading(true, 'lab');
+        
+        try {
+            // 2. Espera a que la función de análisis termine.
+            await handleLabExecution();
+        } catch (error) {
+            // 3. Si hay un error, lo mostramos en la consola.
+            console.error("Fallo en la ejecución del Laboratorio:", error.message);
+        } finally {
+            // 4. Pase lo que pase, ocultamos la Etapa 1 del loader.
+            // La Etapa 2 se activará cuando el usuario presione "Aplicar al Mapa".
+            showLoading(false);
+        }
+    });
     
     document.getElementById('lab-apply-button').addEventListener('click', () => {
         applyLabResultToMap();
         labOverlay.classList.add('hidden');
     });
+
 }
 
 function handleZoneSelection(selectedName) {
@@ -271,7 +287,7 @@ async function handleAnalysis(type, overrideRoi = null) {
         return;
     }
     clearMapAndAi();
-    showLoading(true);
+    showLoading(true,type);
     let action, params;
     const selectedVar = document.getElementById('variableSelector').value;
     const varInfo = varParams[selectedVar];
@@ -287,7 +303,15 @@ async function handleAnalysis(type, overrideRoi = null) {
     try {
         const response = await callGeeApi(action, params);
         legendControl.update(response.visParams || varInfo); 
-        if (response.mapId) addGeeLayer(response.mapId.urlFormat, varInfo?.bandName || 'Análisis');
+        if (response.mapId) {
+            // ...le pasamos el trabajo a addGeeLayer, que se encargará de la Etapa 2
+            // y de ocultar el loader cuando el mapa esté listo.
+            addGeeLayer(response.mapId.urlFormat, varInfo?.bandName || 'Análisis');
+        } else {
+            // Si NO hay mapa (ej. en una comparación de solo gráfico),
+            // ocultamos el loader nosotros mismos.
+            showLoading(false);
+        }
         if (response.stats) updateStatsPanel(response.stats);
         if (response.chartData && response.chartData.length >= 2) {
             updateChartAndData(response.chartData, response.chartOptions);
@@ -303,13 +327,14 @@ async function handleAnalysis(type, overrideRoi = null) {
     generateAiAnalysis(aiData); // Se elimina 'window.'
 }
 
-} catch (error) {
-console.error("Error en el análisis:", error);
-updateStatsPanel(`Error: ${error.message}`);
-legendControl.update(null);
-} finally {
-showLoading(false);
-}
+    } catch (error) {
+        console.error("Error en el análisis:", error);
+        updateStatsPanel(`Error: ${error.message}`);
+        legendControl.update(null);
+        // Si hay un error, siempre ocultamos el loader.
+        showLoading(false);
+    }
+    // ¡IMPORTANTE! Hemos eliminado el bloque 'finally' que ocultaba el loader prematuramente.
 }
 
 function getActiveROIs() {
