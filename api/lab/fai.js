@@ -10,17 +10,17 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
     // Creada una sola vez para máxima eficiencia.
     const waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
     const gebco = ee.Image('projects/residenciaproject-443903/assets/gebco_2025').select('b1').rename('elevation');
-    const deepWaterMask = gebco.lte(-15); // Profundidad > 15m
+    const deepWaterMask = gebco.gte(0); // Profundidad > 15m
     const finalMask = waterMask.and(deepWaterMask.focal_min(2)); // Erosionamos para limpiar bordes
 
     // 2. FUNCIÓN AUXILIAR PARA CALCULAR FAI Y MÁSCARA DE NUBES
     const calculateFAI = (image) => {
-        const scaledImage = image.divide(10000); // Factor de escala obligatorio
+        const scaledImage = image.divide(1000); // Factor de escala obligatorio
         const qa = image.select('QA60');
         const cloudMask = qa.bitwiseAnd(1 << 10).eq(0).and(qa.bitwiseAnd(1 << 11).eq(0));
         
         const fai = scaledImage.expression(
-            'NIR - (RED + (SWIR - RED) * (865 - 665) / (2202 - 665))', {
+            'NIR - (RED + (SWIR - RED) * (865 - 665) / (1610 - 665))', {
             'NIR': scaledImage.select('B8A'),
             'RED': scaledImage.select('B4'),
             'SWIR': scaledImage.select('B12')
