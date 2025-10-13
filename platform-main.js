@@ -1,10 +1,12 @@
-// Archivo: platform-main.js (Versión Final Corregida)
 import { Loader } from './intelligent-loader.js';
-// ▼▼▼ AÑADE ESTE BLOQUE ▼▼▼
-import { 
-    fetchHurricaneList, 
-    handleLabExecution, 
-    applyLabResultToMap 
+// ▼▼▼ REEMPLAZA TU BLOQUE DE IMPORTACIÓN DE AI-CONNECTOR CON ESTE ▼▼▼
+import {
+    fetchHurricaneList,
+    handleLabExecution,
+    applyLabResultToMap,
+    generateAiAnalysis,    // <-- Función que faltaba importar
+    generatePrediction,      // <-- Función que faltaba importar
+    generateFireRiskAnalysis // <-- Función que faltaba importar
 } from './ai-connector.js';
 
 // --- VARIABLES GLOBALES ---
@@ -169,7 +171,9 @@ function setupEventListeners() {
     document.getElementById('tempAnalysisButton').addEventListener('click', () => handleAnalysis('temperature'));
     document.getElementById('calculateSpiButton').addEventListener('click', () => handleAnalysis('spi'));
     document.getElementById('fireRiskButton').addEventListener('click', () => handleAnalysis('fireRisk'));
-    document.getElementById('predictButton').addEventListener('click', () => { if (currentChartData) window.generatePrediction(currentChartData); });
+    document.getElementById('predictButton').addEventListener('click', () => {
+    if (currentChartData) generatePrediction(currentChartData); // Se elimina 'window.'
+    });    
     document.getElementById('clearDrawingButton').addEventListener('click', () => { drawnItems.clearLayers(); updateStatsPanel('Dibujos limpiados.'); });
     document.getElementById('resetButton').addEventListener('click', resetApp);
     document.getElementById('downloadCsvButton').addEventListener('click', downloadCSV);
@@ -292,15 +296,20 @@ async function handleAnalysis(type, overrideRoi = null) {
             drawChart(null);
         }
         const aiData = { stats: response.stats, chartData: response.chartData, chartOptions: response.chartOptions, variable: selectedVar, roi: activeROIs[0]?.name || "área seleccionada", startDate, endDate };
-        if (type === 'fireRisk') window.generateFireRiskAnalysis(aiData);
-        else window.generateAiAnalysis(aiData);
-    } catch (error) {
-        console.error("Error en el análisis:", error);
-        updateStatsPanel(`Error: ${error.message}`);
-        legendControl.update(null);
-    } finally {
-        showLoading(false);
-    }
+        
+        if (type === 'fireRisk') {
+    generateFireRiskAnalysis(aiData); // Se elimina 'window.'
+} else {
+    generateAiAnalysis(aiData); // Se elimina 'window.'
+}
+
+} catch (error) {
+console.error("Error en el análisis:", error);
+updateStatsPanel(`Error: ${error.message}`);
+legendControl.update(null);
+} finally {
+showLoading(false);
+}
 }
 
 function getActiveROIs() {
