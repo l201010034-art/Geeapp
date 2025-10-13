@@ -1,4 +1,4 @@
-// /api/lab/fai.js - VERSIÓN FINAL CON MOSAICO DE IMAGECOLLECTION
+// /api/lab/fai.js - VERSIÓN FINAL Y DEFINITIVA CON RENOMBRAMIENTO DE BANDA
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
@@ -11,17 +11,17 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         .filterBounds(region)
         .filterDate(start, end);
 
-    // --- PASO CLAVE CORREGIDO: Cargar y Mosaicar la Colección de Batimetría ---
+    // --- PASO CLAVE Y CORRECCIÓN FINAL ---
     const waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
     
-    // Cargamos el asset como una ImageCollection, no como una Image.
-    const gebcoCollection = ee.ImageCollection("projects/sat-io/open-datasets/gebco/gebco_grid");
+    // Cargamos tu asset personal.
+    const gebco = ee.Image('projects/residenciaproject-443903/assets/gebco_2025');
     
-    // Creamos un mosaico para unir todas las teselas en una sola imagen global.
-    const gebco = gebcoCollection.mosaic();
+    // Seleccionamos la banda 'b1' y la renombramos a 'elevation'.
+    // Esto garantiza que el resto del código la encontrará con el nombre correcto.
+    const depthBand = gebco.select('b1').rename('elevation');
     
-    // Ahora podemos trabajar con la imagen mosaico como antes.
-    const deepWaterMask = gebco.select('b1').lte(-15);
+    const deepWaterMask = depthBand.lte(-15);
     const finalMask = waterMask.and(deepWaterMask);
     // --- FIN DEL PASO CLAVE ---
 
