@@ -1,10 +1,16 @@
-const gemini = require('./gemini'); // Ajusta la ruta si es necesario
+// api/ask-geo.js - Versión reconstruida y final para Vercel
 
-// La función que Vercel ejecutará.
+// Importamos la librería oficial de Google AI
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// Inicializamos la IA con tu clave de API (la tomará de las variables de entorno de Vercel)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// La función serverless que Vercel ejecutará
 module.exports = async (req, res) => {
-    // Vercel solo permite peticiones POST a esta función si lo especificamos.
+    // Solo permitimos peticiones de tipo POST
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method Not Allowed' });
+        return res.status(405).json({ error: 'Método no permitido' });
     }
 
     try {
@@ -13,8 +19,7 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: 'No se recibió ninguna pregunta.' });
         }
 
-        // --- INGENIERÍA DE PROMPTS PARA "GEO" ---
-        // Aquí definimos la personalidad y el conocimiento del bot.
+        // --- INGENIERÍA DE PROMPTS PARA "GEO" (sin cambios) ---
         const promptForGeo = `
             Actúa como "Geo", un asistente de IA amigable, experto y servicial en una plataforma de análisis geoespacial. Tu personalidad es curiosa, precisa y paciente. Explica temas complejos de forma sencilla.
 
@@ -38,7 +43,11 @@ module.exports = async (req, res) => {
             PREGUNTA DEL USUARIO: "${question}"
         `;
 
-        const answer = await gemini(promptForGeo);
+        // Lógica para llamar a la API de Gemini (reconstruida)
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+        const result = await model.generateContent(promptForGeo);
+        const response = await result.response;
+        const answer = response.text();
         
         // Enviamos la respuesta de vuelta al front-end
         res.status(200).json({ answer });
