@@ -93,10 +93,10 @@
         #lab-modal code { display: block; white-space: pre-wrap; padding: 1rem; color: #c5c8c6; }
     </style>
 </head>
-<body class="bg-gray-800 text-white flex flex-col">
-
+<body class="bg-gray-800 text-white flex flex-col h-screen"> 
     <div id="intelligent-loader" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[9999]">
         <div class="bg-gray-800 border-2 border-[var(--accent-color)] rounded-lg shadow-xl p-8 w-11/12 max-w-md text-center flex flex-col items-center">
+            
             <div id="loader-animation" class="w-24 h-24 mb-4">
                 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
                     <defs><path id="sat-body" d="M 20 40 H 80 L 70 60 H 30 Z" fill="#cccccc"/><path id="sat-wing" d="M 0 30 H 20 V 70 H 0 Z" fill="#4a90e2"/></defs>
@@ -107,7 +107,7 @@
                     <line id="sat-beam" x1="50" y1="30" x2="50" y2="100" stroke="#f0ad4e" stroke-width="2" stroke-dasharray="5 5"/>
                 </svg>
             </div>
-        </div> 
+            
             <p id="loader-status" class="text-lg font-semibold text-white mb-2">Iniciando análisis...</p>
             
             <p id="loader-tip" class="text-sm text-gray-400 h-16 transition-opacity duration-500">Cargando consejos...</p>
@@ -115,7 +115,9 @@
             <div class="w-full bg-gray-700 rounded-full h-2.5 mt-4">
                 <div id="loader-progress" class="bg-[var(--accent-color)] h-2.5 rounded-full"></div>
             </div>
-        </div>        
+
+        </div> 
+    </div>
     <nav class="bg-black bg-opacity-70 text-white p-3 flex justify-between items-center z-[1100] w-full flex-shrink-0">
         <div class="flex items-center space-x-4">
             <button id="menu-toggle" class="md:hidden p-2" aria-label="Abrir menú de controles">
