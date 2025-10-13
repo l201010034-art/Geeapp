@@ -33,6 +33,7 @@ const municipios = ["Calakmul", "Calkiní", "Campeche", "Candelaria", "Carmen", 
 
 // --- INICIALIZACIÓN DE LA PLATAFORMA ---
 export function initPlatform() {
+    Loader.init();
     google.charts.load('current', {'packages':['corechart']});
     google.charts.setOnLoadCallback(() => {
         initMap();

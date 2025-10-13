@@ -1,17 +1,12 @@
-// /intelligent-loader.js - Módulo Autónomo para el Loader Inteligente
+// /intelligent-loader.js - Módulo con Inicialización Retrasada
 
-// Encapsulamos toda la lógica en un objeto 'Loader' para evitar conflictos.
 const Loader = {
-    // Referencias a los elementos del DOM
-    element: document.getElementById('intelligent-loader'),
-    statusElement: document.getElementById('loader-status'),
-    tipElement: document.getElementById('loader-tip'),
-
-    // Variables para controlar los intervalos
+    // 1. Inicializamos las propiedades como null.
+    element: null,
+    statusElement: null,
+    tipElement: null,
     statusInterval: null,
     tipInterval: null,
-
-    // Colección de consejos y mensajes
     tips: [
         "**Consejo:** ¿Sabías que puedes dibujar tu propia área de interés en el mapa usando las herramientas de la izquierda?",
         "**Consejo:** Para comparar múltiples zonas, selecciona varias casillas y presiona el botón '📊 Comparar'.",
@@ -21,47 +16,50 @@ const Loader = {
         "**Consejo:** La opacidad de la capa del mapa se puede ajustar con el control deslizante en la esquina inferior izquierda."
     ],
 
-    // Función para mostrar el loader
+    // 2. Creamos una función 'init' para buscar los elementos.
+    init: function() {
+        this.element = document.getElementById('intelligent-loader');
+        this.statusElement = document.getElementById('loader-status');
+        this.tipElement = document.getElementById('loader-tip');
+    },
+
     show: function(statusMessages) {
-        // Detener cualquier intervalo anterior para evitar duplicados
+        // 3. Verificamos si los elementos existen antes de usarlos.
+        if (!this.element || !this.statusElement) return;
+
         clearInterval(this.statusInterval);
         clearInterval(this.tipInterval);
 
-        // Configurar estado inicial
         let currentStatusIndex = 0;
         this.statusElement.textContent = statusMessages[0];
 
         let currentTipIndex = Math.floor(Math.random() * this.tips.length);
         this.tipElement.innerHTML = this.tips[currentTipIndex].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-        // Iniciar nuevos intervalos para cambiar los mensajes dinámicamente
         this.statusInterval = setInterval(() => {
             currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
             this.statusElement.textContent = statusMessages[currentStatusIndex];
-        }, 2500); // Cambia el mensaje de estado cada 2.5 segundos
+        }, 2500);
 
         this.tipInterval = setInterval(() => {
-            this.tipElement.style.opacity = '0'; // Inicia el desvanecimiento
+            this.tipElement.style.opacity = '0';
             setTimeout(() => {
                 currentTipIndex = (currentTipIndex + 1) % this.tips.length;
                 this.tipElement.innerHTML = this.tips[currentTipIndex].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                this.tipElement.style.opacity = '1'; // Muestra el nuevo consejo
-            }, 500); // Espera 0.5s para que termine la animación de desvanecimiento
-        }, 5000); // Cambia el consejo cada 5 segundos
+                this.tipElement.style.opacity = '1';
+            }, 500);
+        }, 5000);
 
-        // Mostrar el loader
         this.element.classList.remove('hidden');
     },
 
-    // Función para ocultar el loader
     hide: function() {
-        // Detener los intervalos para no consumir recursos en segundo plano
+        if (!this.element) return;
         clearInterval(this.statusInterval);
         clearInterval(this.tipInterval);
-        // Ocultar el loader
         this.element.classList.add('hidden');
     }
 };
 
-// Exportamos el objeto para que pueda ser importado desde otros archivos
+// 4. Exportamos el objeto Loader para que pueda ser utilizado.
 export { Loader };
