@@ -294,14 +294,14 @@
         </div>
     </div>
     
-<script type="module" src="intelligent-loader.js"></script> 
+<script type="module" src="intelligent-loader.js" defer></script> 
     
-    <script type="module" src="ai-connector.js"></script>
+    <script type="module" src="ai-connector.js" defer></script>
 
-    <script type="module">
+    <script type="module" defer>
         import { initPlatform } from './platform-main.js';
-        document.addEventListener('DOMContentLoaded', initPlatform);
-        
+        // Ahora que usamos 'defer', podemos estar 100% seguros de que el DOM está listo.
+        initPlatform();
     </script>
 </body>
 </html>
