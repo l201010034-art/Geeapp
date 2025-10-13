@@ -55,7 +55,7 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         .map(enmascararNubesYTierra)
         .map(calcularNDVI);
 
-    const coleccionNDVI = coleccionProcesada.select('NDVI');
+    const coleccionNDVI = coleccionProcesada.select('SARGAZO');
 
     // Crea un compuesto de máxima intensidad para resaltar la mayor presencia de sargazo.
     const sargazoMaxCompuesto = coleccionNDVI.max();
@@ -70,14 +70,14 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         
         // Colección de datos para la gráfica de series de tiempo.
         collectionForChart: coleccionNDVI,
-        bandNameForChart: 'NDVI',
+        bandNameForChart: 'SARGAZO',
         
         // Parámetros de visualización del script original.
         visParams: {
             min: 0,
             max: 0.6,
             palette: ['0000FF', '00FFFF', '00FF00', 'FFFF00', 'FF0000'],
-            bandName: 'Máxima Detección de Sargazo (NDVI)',
+            bandName: 'Máxima Detección de Sargazo (FAI)',
             unit: ''
         }
     };
