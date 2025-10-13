@@ -61,8 +61,11 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         collectionForChart: finalCollection.select('FAI'),
         bandNameForChart: 'FAI',
         visParams: {
-            min: -0.05, max: 0.2, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
-            bandName: 'FAI Promedio', unit: ''
+            min: -0.05, 
+            max: 0.5, // <-- Valor ajustado para una mejor visualización
+            palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
+            bandName: 'FAI Promedio', 
+            unit: ''
         }
     };
 };
