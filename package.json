@@ -11,7 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "@google/earthengine": "^0.1.391",
-    "@google/generative-ai": "^0.24.1"
+    "@google/generative-ai": "^0.24.1",
+    "express": "^5.1.0"
   },
   "engines": {
     "node": "22.x"

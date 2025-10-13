@@ -1,8 +1,12 @@
-const express = require('express');
-const router = express.Router();
-const gemini = require('../gemini');
+const gemini = require('../gemini'); // Ajusta la ruta si es necesario
 
-router.post('/', async (req, res) => {
+// La función que Vercel ejecutará.
+module.exports = async (req, res) => {
+    // Vercel solo permite peticiones POST a esta función si lo especificamos.
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
     try {
         const { question } = req.body;
         if (!question) {
@@ -36,12 +40,11 @@ router.post('/', async (req, res) => {
 
         const answer = await gemini.ask(promptForGeo);
         
-        res.json({ answer });
+        // Enviamos la respuesta de vuelta al front-end
+        res.status(200).json({ answer });
 
     } catch (error) {
         console.error('Error en el GeoChat Bot:', error);
         res.status(500).json({ error: 'Error al procesar la pregunta con la IA.' });
     }
-});
-
-module.exports = router;
+};
