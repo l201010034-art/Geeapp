@@ -12,7 +12,7 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
     
     // Creamos la máscara que solo incluye píxeles que son mar (profundidad <= -15m).
     // Esta única máscara elimina la tierra Y las aguas interiores en un solo paso.
-    const oceanMask = gebco.lte(-5);
+    const oceanMask = gebco.lte(0);
 
     // Erosionamos la máscara para "lijar los bordes" y eliminar la franja costera.
     const finalMask = oceanMask.focal_min({ radius: 2, units: 'pixels' });
