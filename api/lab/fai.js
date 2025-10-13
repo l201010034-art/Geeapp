@@ -15,7 +15,7 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
 
     // 2. FUNCIÓN AUXILIAR PARA CALCULAR FAI
     const calculateFAI = (image) => {
-        const scaledImage = image.divide(10000);
+        const scaledImage = image.divide(1000);
         const qa = image.select('QA60');
         const cloudMask = qa.bitwiseAnd(1 << 10).eq(0).and(qa.bitwiseAnd(1 << 11).eq(0));
         const fai = scaledImage.expression(
