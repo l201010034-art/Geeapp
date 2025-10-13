@@ -1,4 +1,4 @@
-const gemini = require('../gemini'); // Ajusta la ruta si es necesario
+const gemini = require('./gemini'); // Ajusta la ruta si es necesario
 
 // La función que Vercel ejecutará.
 module.exports = async (req, res) => {
