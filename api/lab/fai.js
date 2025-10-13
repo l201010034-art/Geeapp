@@ -1,4 +1,4 @@
-// /api/lab/fai.js - VERSIÓN FINAL Y DEFINITIVA CON RENOMBRAMIENTO DE BANDA
+// /api/lab/fai.js - VERSIÓN DEFINITIVA CON MASCARILLADO POST-CÁLCULO
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
@@ -11,31 +11,28 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         .filterBounds(region)
         .filterDate(start, end);
 
-    // --- PASO CLAVE Y CORRECCIÓN FINAL ---
+    // 2. Creamos la máscara de una vez. Esta máscara se reutilizará en cada imagen.
     const waterMask = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('occurrence').gt(80);
-    
-    // Cargamos tu asset personal.
-    const gebco = ee.Image('projects/residenciaproject-443903/assets/gebco_2025');
-    
-    // Seleccionamos la banda 'b1' y la renombramos a 'elevation'.
-    // Esto garantiza que el resto del código la encontrará con el nombre correcto.
-    const depthBand = gebco.select('b1').rename('elevation');
-    
-    const deepWaterMask = depthBand.lte(-15);
+    const gebco = ee.Image('projects/residenciaproject-443903/assets/gebco_2025').select('b1').rename('elevation');
+    const deepWaterMask = gebco.lte(-15);
     const finalMask = waterMask.and(deepWaterMask);
-    // --- FIN DEL PASO CLAVE ---
 
-    // 3. Función auxiliar para calcular FAI aplicando la máscara final.
+    // 3. Función auxiliar para calcular FAI. La máscara se aplica al final.
     const calculateFAI = (image) => {
-        const maskedImage = image.divide(10000).updateMask(finalMask);
+        // Primero, escalamos la imagen.
+        const scaledImage = image.divide(10000);
         
-        return maskedImage.expression(
+        // Segundo, calculamos el FAI sobre la imagen escalada.
+        const fai = scaledImage.expression(
             'NIR - (RED + (SWIR - RED) * (842 - 665) / (1610 - 665))', {
-            'NIR': maskedImage.select('B8'), 'RED': maskedImage.select('B4'), 'SWIR': maskedImage.select('B11')
+            'NIR': scaledImage.select('B8'), 'RED': scaledImage.select('B4'), 'SWIR': scaledImage.select('B11')
         }).rename('FAI');
+        
+        // Tercero, aplicamos la máscara al RESULTADO del cálculo.
+        return fai.updateMask(finalMask);
     };
 
-    // 4. Generamos la lista de meses para iterar, asegurando la escalabilidad.
+    // 4. Generamos la lista de meses para iterar.
     const months = ee.List.sequence(0, end.difference(start, 'month').subtract(1));
 
     // 5. Mapeamos sobre cada mes para crear un compuesto mensual.
