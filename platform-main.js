@@ -9,6 +9,9 @@ import {
     generateFireRiskAnalysis // <-- Función que faltaba importar
 } from './ai-connector.js';
 
+let hasWelcomed = false;
+
+
 // --- VARIABLES GLOBALES ---
 let map, drawnItems, currentGEELayer, legendControl, layerControl, currentChart, currentChartData;
 const zonaLayers = {};
@@ -675,15 +678,30 @@ function handleLabAnalysisChange() {
 
 function toggleChat() {
     const chatWindow = document.getElementById('chat-window');
-    chatWindow.style.display = chatWindow.style.display === 'flex' ? 'none' : 'flex';
+    const chatMessages = document.getElementById('chat-messages');
+    const isOpening = chatWindow.style.display !== 'flex';
+    
+    chatWindow.style.display = isOpening ? 'flex' : 'none';
+
+    // Si es la primera vez que se abre, Geo se presenta.
+    if (isOpening && !hasWelcomed) {
+        setTimeout(() => {
+            const welcomeMessage = document.createElement('div');
+            welcomeMessage.className = 'chat-message bot initial-message';
+            welcomeMessage.innerHTML = `<p>¡Hola! Soy Geo, tu explorador geoespacial. Puedes preguntarme sobre conceptos de la plataforma o temas geoespaciales.</p>`;
+            chatMessages.appendChild(welcomeMessage);
+            hasWelcomed = true;
+        }, 500); // Un pequeño retraso para que la animación sea más agradable
+    }
 }
+
 
 function handleChatInput(event) {
     if (event.key === 'Enter') {
         sendMessageToBot();
     }
 }
-
+// REEMPLAZA tu función sendMessageToBot() con esta:
 async function sendMessageToBot() {
     const input = document.getElementById('chat-input');
     const messageText = input.value.trim();
@@ -698,16 +716,22 @@ async function sendMessageToBot() {
     chatMessages.appendChild(userMessage);
 
     input.value = '';
-    chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // Muestra indicador de "escribiendo"
+    // Muestra el nuevo indicador de "escribiendo"
     const typingIndicator = document.createElement('div');
     typingIndicator.className = 'chat-message bot';
-    typingIndicator.innerHTML = `<p class="loader">Geo está pensando...</p>`;
+    // Estructura correcta con el <p> y la animación dentro
+    typingIndicator.innerHTML = `
+        <p class="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+        </p>
+    `;
     chatMessages.appendChild(typingIndicator);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // Llama al nuevo endpoint de la IA
     try {
         const response = await fetch('/api/ask-geo', {
             method: 'POST',
@@ -721,12 +745,15 @@ async function sendMessageToBot() {
 
         const { answer } = await response.json();
 
-        // Reemplaza el indicador con la respuesta de Geo
-        typingIndicator.innerHTML = `<p>${answer}</p>`;
+        // Reemplaza el contenido del indicador de escritura con la respuesta final
+        typingIndicator.querySelector('p').classList.remove('typing-indicator');
+        typingIndicator.querySelector('p').innerHTML = answer;
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
     } catch (error) {
-        typingIndicator.innerHTML = `<p style="color: red;">Lo siento, tuve un problema para conectarme. Intenta de nuevo.</p>`;
+        // Muestra el error en la misma burbuja
+        typingIndicator.querySelector('p').classList.remove('typing-indicator');
+        typingIndicator.querySelector('p').innerHTML = `<span style="color: #ff8c8c;">Lo siento, tuve un problema para conectarme. Intenta de nuevo.</span>`;
     }
 }
 
