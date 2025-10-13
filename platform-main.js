@@ -664,6 +664,72 @@ function handleLabAnalysisChange() {
     }
 }
 
+// ... todo tu código existente de platform-main.js ...
+
+// Por ejemplo, después de la última llave de cierre `}` de tu última función.
+
+
+// ===============================================
+//         LÓGICA DEL GEOCHAT BOT
+// ===============================================
+
+function toggleChat() {
+    const chatWindow = document.getElementById('chat-window');
+    chatWindow.style.display = chatWindow.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function handleChatInput(event) {
+    if (event.key === 'Enter') {
+        sendMessageToBot();
+    }
+}
+
+async function sendMessageToBot() {
+    const input = document.getElementById('chat-input');
+    const messageText = input.value.trim();
+    if (!messageText) return;
+
+    const chatMessages = document.getElementById('chat-messages');
+
+    // Muestra el mensaje del usuario
+    const userMessage = document.createElement('div');
+    userMessage.className = 'chat-message user';
+    userMessage.innerHTML = `<p>${messageText}</p>`;
+    chatMessages.appendChild(userMessage);
+
+    input.value = '';
+    chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
+
+    // Muestra indicador de "escribiendo"
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'chat-message bot';
+    typingIndicator.innerHTML = `<p class="loader">Geo está pensando...</p>`;
+    chatMessages.appendChild(typingIndicator);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Llama al nuevo endpoint de la IA
+    try {
+        const response = await fetch('/api/ask-geo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: messageText })
+        });
+
+        if (!response.ok) {
+            throw new Error('Hubo un problema al contactar a Geo.');
+        }
+
+        const { answer } = await response.json();
+
+        // Reemplaza el indicador con la respuesta de Geo
+        typingIndicator.innerHTML = `<p>${answer}</p>`;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    } catch (error) {
+        typingIndicator.innerHTML = `<p style="color: red;">Lo siento, tuve un problema para conectarme. Intenta de nuevo.</p>`;
+    }
+}
+
 // --- EXPOSICIÓN DE FUNCIONES GLOBALES ---
 window.updateStatsPanel = updateStatsPanel;
 window.drawChart = drawChart;

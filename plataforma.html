@@ -91,6 +91,57 @@
         /* Estilos para el Laboratorio de IA */
         #lab-modal pre { margin: 0; }
         #lab-modal code { display: block; white-space: pre-wrap; padding: 1rem; color: #c5c8c6; }
+
+        #chat-fab {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 60px;
+            height: 60px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        #chat-window {
+            position: fixed;
+            bottom: 100px;
+            right: 25px;
+            width: 350px;
+            max-width: 90vw;
+            height: 500px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: none;
+            flex-direction: column;
+            z-index: 1001;
+        }
+        .chat-header {
+            padding: 15px;
+            background: #f1f1f1;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header h5 { margin: 0; }
+        .chat-header button { background: none; border: none; font-size: 20px; cursor: pointer; }
+        .chat-messages { flex-grow: 1; padding: 15px; overflow-y: auto; }
+        .chat-message { margin-bottom: 10px; }
+        .chat-message p { padding: 10px; border-radius: 8px; max-width: 85%; display: inline-block; word-wrap: break-word; }
+        .chat-message.user { text-align: right; }
+        .chat-message.user p { background-color: #007bff; color: white; }
+        .chat-message.bot p { background-color: #e9e9eb; }
+        .chat-input-container { display: flex; padding: 10px; border-top: 1px solid #ddd; }
+        #chat-input { flex-grow: 1; border: 1px solid #ccc; border-radius: 20px; padding: 10px 15px; }
+        #chat-send-btn { background: #007bff; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; margin-left: 10px; cursor: pointer; }
     </style>
 </head>
 <body class="bg-gray-800 text-white flex flex-col h-screen"> 
@@ -309,5 +360,33 @@
         // Ahora que usamos 'defer', podemos estar 100% seguros de que el DOM está listo.
         initPlatform();
     </script>
+
+<script src="platform-main.js"></script>
+
+    <div id="chat-fab" onclick="toggleChat()">
+        <i class="fas fa-comment-alt"></i>
+    </div>
+
+    <div id="chat-window">
+        <div class="chat-header">
+            <h5>Asistente Geo</h5>
+            <button onclick="toggleChat()">×</button>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <div class="chat-message bot">
+                <p>¡Hola! Soy Geo, tu explorador geoespacial. Pregúntame sobre conceptos como 'NDVI' o cómo usar la plataforma.</p>
+            </div>
+        </div>
+        <div class="chat-input-container">
+            <input type="text" id="chat-input" placeholder="Escribe tu pregunta..." onkeydown="handleChatInput(event)">
+            <button id="chat-send-btn" onclick="sendMessageToBot()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+    </body>
+</html>
+
+
 </body>
 </html>
