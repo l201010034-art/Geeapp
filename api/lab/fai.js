@@ -13,7 +13,7 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
     
     // Mantenemos la máscara de profundidad que ya funciona bien para el mar abierto.
     const gebco = ee.Image('projects/residenciaproject-443903/assets/gebco_2025').select('b1').rename('elevation');
-    const deepWaterMask = gebco.lte(-15);
+    const deepWaterMask = gebco.lte(-5);
 
     // La máscara final requiere que un píxel sea AGUA PERMANENTE Y PROFUNDA.
     // Esto elimina la costa y las lagunas turbias.
