@@ -15,13 +15,13 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
 
     // 2. FUNCIÓN AUXILIAR PARA CALCULAR FAI Y MÁSCARA DE NUBES
     const calculateFAI = (image) => {
-        const scaledImage = image.divide(1000); // Factor de escala obligatorio
+        const scaledImage = image.divide(10000); // Factor de escala obligatorio
         const qa = image.select('QA60');
         const cloudMask = qa.bitwiseAnd(1 << 10).eq(0).and(qa.bitwiseAnd(1 << 11).eq(0));
         
         const fai = scaledImage.expression(
             'NIR - (RED + (SWIR - RED) * (865 - 665) / (1610 - 665))', {
-            'NIR': scaledImage.select('B8A'),
+            'NIR': scaledImage.select('B8'),
             'RED': scaledImage.select('B4'),
             'SWIR': scaledImage.select('B12')
         }).rename('FAI');
