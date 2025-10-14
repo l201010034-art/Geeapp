@@ -753,9 +753,12 @@ async function introduceGeoAfterVideo() {
         await typeWriter(introTextContainer, fallbackText);
     }
     
-    // Espera 3 segundos y luego cierra el overlay
     setTimeout(() => {
         introOverlay.classList.remove('visible');
+        
+        // ▼▼▼ AÑADE ESTA LÍNEA NUEVA ▼▼▼
+        addWelcomeMessageToChat(); // <-- Esta es la nueva función que llamamos
+
     }, 3000);
 }
 
@@ -846,15 +849,9 @@ function createFullscreenIntro() {
     const overlay = document.createElement('div');
     overlay.id = 'geo-fullscreen-intro';
     
-    // SVG del logo de Gemini
-    const geminiLogo = `
-        <svg id="gemini-logo-intro" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" fill="white"/>
-        </svg>
-    `;
-
+    // CORRECCIÓN: Usamos una etiqueta <img> con la ruta al logo en la carpeta assets.
     overlay.innerHTML = `
-        ${geminiLogo}
+        <img id="gemini-logo-intro" src="assets/gemini-logo.svg" alt="Gemini AI Logo">
         <div id="intro-text-container"></div>
     `;
     
@@ -864,16 +861,20 @@ function createFullscreenIntro() {
 function typeWriter(element, text) {
     return new Promise(resolve => {
         let i = 0;
+        element.innerHTML = ''; // Limpia el contenedor antes de empezar
         function typing() {
             if (i < text.length) {
                 element.innerHTML += text.charAt(i);
                 i++;
-                setTimeout(typing, 50); // Velocidad de escritura
+                setTimeout(typing, 40);
             } else {
-                element.style.borderRight = 'none'; // Oculta el cursor al terminar
+                // Elimina el cursor parpadeante al final
+                element.parentElement.style.setProperty('--blink-display', 'none');
                 resolve();
             }
         }
+        // Restaura el cursor al inicio
+        element.parentElement.style.setProperty('--blink-display', 'inline');
         typing();
     });
 }
@@ -920,3 +921,21 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.addEventListener('keydown', handleChatInput);
     }
 });
+
+// ... al final de platform-main.js
+
+/**
+ * Añade el mensaje de bienvenida por defecto al chat
+ * después de que la presentación principal ha terminado.
+ */
+function addWelcomeMessageToChat() {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+
+    const welcomeMessage = document.createElement('div');
+    welcomeMessage.className = 'chat-message bot initial-message';
+    welcomeMessage.innerHTML = `<p>Ahora que ya me conoces, ¡estoy listo para ayudar! Puedes hacerme una pregunta sobre geografía o pedirme ayuda para usar la plataforma.</p>`;
+    
+    chatMessages.appendChild(welcomeMessage);
+    chatMessages.scrollTop = chatMessages.scrollHeight; // Asegura que el mensaje sea visible
+}
