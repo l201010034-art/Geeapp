@@ -171,33 +171,28 @@ async function handleLabExecution() {
         labOverlay.classList.add('hidden');
         applyLabResultToMap(); // Llama a la función que renderiza el mapa
         // El loader se ocultará automáticamente por la función addGeeLayer
-
-    } catch (error) {
-        //resultDisplay.textContent = `// Ocurrió un error:\n// ${error.message}`;
-        Loader.hide(); // <--- CAMBIO CLAVE
+} catch (error) {
+    // ¡LA CORRECCIÓN CLAVE! Mostramos el error en una alerta para el usuario.
+    alert(`Ocurrió un error al ejecutar el análisis del laboratorio:\n\n${error.message}`);
+    
+    // Mantenemos el log en la consola para depuración avanzada.
+    console.error("Error detallado del laboratorio:", error);
+    
+    // Ocultamos el loader después de notificar al usuario.
+    Loader.hide();
+    
     } finally {
         executeButton.disabled = false;
         executeButton.textContent = "🚀 Ejecutar Análisis";
     }
 }
 
-// UBICACIÓN: ai-connector.js
-
 function applyLabResultToMap() {
     if (lastLabResult) {
-        // ▼▼▼ CÓDIGO CORREGIDO ▼▼▼
-        if (lastLabResult.mapId) {
-            window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
-        }
-        if (window.legendControl && lastLabResult.visParams) {
-            window.legendControl.update(lastLabResult.visParams);
-        }
-        if (lastLabResult.stats) {
-            window.updateStatsPanel(lastLabResult.stats);
-        }
-        if (lastLabResult.chartData) {
-            window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
-        }
+        if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
+        if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
+        if (lastLabResult.stats) window.updateStatsPanel(lastLabResult.stats);
+        if (lastLabResult.chartData) window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
     }
     document.getElementById('lab-execute-button').classList.remove('hidden');
     document.getElementById('lab-apply-button').classList.add('hidden');
