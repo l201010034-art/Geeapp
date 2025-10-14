@@ -375,6 +375,59 @@
     from, to { color: transparent; }
     50% { color: white; }
 }
+
+/* UBICACIÓN: plataforma.html, dentro de <style> */
+
+/* ▼▼▼ AÑADE TODO ESTE BLOQUE DE CSS NUEVO ▼▼▼ */
+
+/* Contenedor principal para el FAB y sus adornos */
+#chat-fab-container {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Alinea los elementos a la derecha */
+}
+
+/* Contenedor del texto que se tipea */
+#fab-text-container {
+    background-color: rgba(44, 49, 56, 0.9); /* Un fondo semitransparente */
+    padding: 10px 15px;
+    border-radius: 20px;
+    margin-left: -20px; /* Se solapa ligeramente con el FAB */
+    padding-left: 30px; /* Espacio para el solapamiento */
+    color: var(--chat-text-light);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    white-space: nowrap; /* Evita que el texto se parta en dos líneas */
+}
+
+/* El texto tipeado con su cursor parpadeante */
+#fab-typing-text::after {
+    content: '|';
+    animation: blink 1s step-end infinite;
+}
+
+/* Contenedor para los mini-tips */
+#fab-tip-container {
+    position: absolute;
+    bottom: 110%; /* Lo posiciona justo encima del FAB */
+    right: 0;
+    background-color: var(--chat-primary-color);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    white-space: nowrap;
+    opacity: 0; /* Empieza oculto para la animación */
+    transition: opacity 0.5s ease-in-out;
+}
+
+#fab-tip-container.visible {
+    opacity: 1; /* Clase para hacerlo visible con una transición suave */
+}
 /* =============================================== */
 /* FIN: NUEVOS ESTILOS PARA GEO-CHAT BOT     */
 /* =============================================== */
@@ -597,8 +650,18 @@
     </script>
 
 
-<div id="chat-fab">
-    <img src="assets/geo-avatar.jpg" alt="Asistente Geo">
+<div id="chat-fab-container">
+    <div id="fab-tip-container" class="hidden">
+        <span id="fab-tip-text"></span>
+    </div>
+
+    <div id="chat-fab">
+        <img src="assets/geo-avatar.jpg" alt="Asistente Geo">
+    </div>
+
+    <div id="fab-text-container">
+        <p id="fab-typing-text"></p>
+    </div>
 </div>
 
 <div id="chat-window">

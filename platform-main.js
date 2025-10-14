@@ -12,6 +12,14 @@ import {
 let hasWelcomed = false;
 let hasBeenWelcomed = false;
 let briefingController = new AbortController();
+let fabTipInterval; // Para controlar el ciclo de tips
+let fabTypewriterTimeout; // Para controlar la animación de escritura
+const fabTips = [
+    "Pregúntame '¿qué es NDVI?'",
+    "Dibuja un área en el mapa para analizarla.",
+    "Usa el Laboratorio de IA para análisis avanzados.",
+    "Pide 'lluvia en Campeche la semana pasada'."
+];
 
 // UBICACIÓN: platform-main.js (antes de la exposición de funciones globales)
 
@@ -119,6 +127,7 @@ export function initPlatform() {
         }
     });
 
+    startFabAnimations(); // <-- AÑADE ESTA LÍNEA AL FINAL DE LA FUNCIÓN
 
 }
 function initMap() {
@@ -751,15 +760,76 @@ function setupGeoBot() {
     if (chatInput) chatInput.addEventListener('keydown', handleChatInput);
 }
 
+// UBICACIÓN: platform-main.js
+
+// ▼▼▼ REEMPLAZA LA FUNCIÓN toggleChat COMPLETA ▼▼▼
 function toggleChat() {
     const chatWindow = document.getElementById('chat-window');
+    const fabTextContainer = document.getElementById('fab-text-container');
+    const fabTipContainer = document.getElementById('fab-tip-container');
     const isOpening = chatWindow.style.display !== 'flex';
     
     chatWindow.style.display = isOpening ? 'flex' : 'none';
 
-    if (isOpening && !hasBeenWelcomed) {
-        showPresentationButton();
-        hasBeenWelcomed = true;
+    if (isOpening) {
+        // --- AL ABRIR EL CHAT ---
+        // Ocultamos los adornos
+        fabTextContainer.classList.add('hidden');
+        fabTipContainer.classList.add('hidden');
+        // Detenemos las animaciones para no consumir recursos
+        clearTimeout(fabTypewriterTimeout);
+        clearInterval(fabTipInterval);
+        
+        if (!hasBeenWelcomed) {
+            showPresentationButton();
+            hasBeenWelcomed = true;
+        }
+    } else {
+        // --- AL CERRAR EL CHAT ---
+        // Mostramos los adornos de nuevo
+        fabTextContainer.classList.remove('hidden');
+        // Reiniciamos las animaciones
+        startFabAnimations();
+    }
+}
+
+/**
+ * Inicia las animaciones del FAB (texto tipeado y ciclo de tips).
+ * Se llama al cargar la página y cada vez que se cierra el chat.
+ */
+function startFabAnimations() {
+    const fabTextElement = document.getElementById('fab-typing-text');
+    const fabTipElement = document.getElementById('fab-tip-text');
+    const fabTipContainer = document.getElementById('fab-tip-container');
+    
+    // 1. Inicia la animación de escritura
+    if (fabTextElement) {
+        // Usamos un timeout para que la escritura se "reinicie" visualmente
+        clearTimeout(fabTypewriterTimeout);
+        fabTypewriterTimeout = setTimeout(() => {
+            typeWriter(fabTextElement, "Asistente Virtual Geo Bot");
+        }, 100);
+    }
+
+    // 2. Inicia el ciclo de tips
+    if (fabTipElement && fabTipContainer) {
+        let currentTipIndex = 0;
+        clearInterval(fabTipInterval); // Limpia cualquier intervalo anterior
+        
+        // Muestra el primer tip inmediatamente
+        fabTipContainer.classList.remove('hidden');
+        fabTipElement.textContent = fabTips[currentTipIndex];
+        fabTipContainer.classList.add('visible');
+
+        // Configura el intervalo para ciclar los tips
+        fabTipInterval = setInterval(() => {
+            fabTipContainer.classList.remove('visible'); // Oculta para la transición
+            setTimeout(() => {
+                currentTipIndex = (currentTipIndex + 1) % fabTips.length;
+                fabTipElement.textContent = fabTips[currentTipIndex];
+                fabTipContainer.classList.add('visible'); // Muestra el nuevo tip
+            }, 500); // 0.5s para la transición de fade-out
+        }, 4000); // Cambia de tip cada 4 segundos
     }
 }
 
