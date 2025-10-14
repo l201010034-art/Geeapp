@@ -169,7 +169,7 @@ async function handleLabExecution() {
 
     } catch (error) {
         resultDisplay.textContent = `// Ocurrió un error:\n// ${error.message}`;
-        window.hideIntelligentLoader(); // Oculta el loader en caso de error
+        Loader.hide(); // <--- CAMBIO CLAVE
     } finally {
         executeButton.disabled = false;
         executeButton.textContent = "🚀 Ejecutar Análisis";
