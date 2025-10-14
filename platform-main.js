@@ -148,43 +148,38 @@ function initMap() {
     layerControl = L.control.layers({ "Híbrido": googleHybrid, "Satélite": googleSat }, {}).addTo(map);
     legendControl = L.control({position: 'bottomright'});
     legendControl.onAdd = function (map) { this._div = L.DomUtil.create('div', 'legend'); this.update(); return this._div; };
-// UBICACIÓN: platform-main.js
-// REEMPLAZA la función legendControl.update completa con esta versión final.
 
+
+// ▼▼▼ BLOQUE CORREGIDO Y ROBUSTO ▼▼▼
     legendControl.update = function (varInfo) {
-        // Si no hay información, limpia la leyenda y termina.
+        // Si no hay información de ningún tipo, limpia la leyenda y termina.
         if (!varInfo) {
             this._div.innerHTML = '';
             return;
         }
 
-        // --- PRIORIDAD 1: Usar el HTML pre-generado ---
-        // Si el backend nos envía una 'description' (como hacen el Lab de IA y Huracanes),
-        // la usamos directamente. Es el método más fiable para leyendas complejas.
+        // --- PRIORIDAD 1: Usar el HTML pre-generado del Laboratorio de IA ---
+        // Si el backend nos envía una 'description', la usamos directamente.
+        // Este es el método preferido para leyendas complejas (NDVI, Sargazo, etc.).
         if (varInfo.description && typeof varInfo.description === 'string' && varInfo.description.trim() !== '') {
             this._div.innerHTML = varInfo.description;
             return; // ¡Importante! Si usamos la descripción, no hacemos nada más.
         }
 
-        // --- PRIORIDAD 2 (FALLBACK): Construir la leyenda manualmente ---
+        // --- PRIORIDAD 2 (Respaldo): Construir la leyenda manualmente ---
         // Si no hay 'description', construimos la leyenda a partir de sus partes.
-        // Esto asegura que los análisis predefinidos sigan funcionando perfectamente.
+        // Esto asegura que los análisis predefinidos del panel principal sigan funcionando.
         const title = varInfo.bandName || 'Leyenda';
         const unit = varInfo.unit ? `(${varInfo.unit})` : '';
-        
-        // Usamos '??' para manejar correctamente el valor 0.
-        const min = varInfo.min ?? '';
+        const min = varInfo.min ?? ''; // Usamos '??' para manejar el valor 0 correctamente
         const max = varInfo.max ?? '';
-
-        // Verificamos que la paleta sea un array con contenido.
         const hasPalette = Array.isArray(varInfo.palette) && varInfo.palette.length > 0;
         
-        // Si hay paleta, la usamos. Si no, mostramos un gradiente por defecto.
         const gradient = hasPalette
             ? `linear-gradient(to right, ${varInfo.palette.join(', ')})`
             : `linear-gradient(to right, #FFFFFF, #000000)`;
 
-        // Construimos el HTML final.
+        // Construimos el HTML final para el caso manual.
         this._div.innerHTML = `
             <div class="legend-title">${title} ${unit}</div>
             <div class="legend-scale-bar" style="background: ${gradient};"></div>
