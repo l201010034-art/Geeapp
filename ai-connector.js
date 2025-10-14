@@ -63,6 +63,15 @@ commandForm.addEventListener('submit', async (event) => {
     commandBar.disabled = true;
     commandBar.placeholder = "Procesando...";
     
+    // ▼▼▼ LÍNEAS NUEVAS ▼▼▼
+    // Mostramos el loader inmediatamente con mensajes específicos para este proceso.
+    Loader.show([
+        "Interpretando tu comando...",
+        "Conectando con el modelo de IA Gemini...",
+        "Traduciendo lenguaje natural a parámetros...",
+        "Configurando el análisis solicitado..."
+    ]);
+    
     try {
         const prompt = buildConversationalPrompt(userQuery);
         const response = await fetch(AI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
@@ -96,6 +105,7 @@ commandForm.addEventListener('submit', async (event) => {
     } catch (error) {
         console.error("Error al procesar el comando de IA:", error);
         commandBar.value = `Error: ${error.message}`;
+        Loader.hide(); // <-- AÑADE ESTA LÍNEA para ocultar el loader si hay un error
     } finally {
         commandBar.disabled = false;
         commandBar.placeholder = "Ej: Lluvia en Chiná el mes pasado...";
