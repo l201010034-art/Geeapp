@@ -13,6 +13,38 @@ let hasWelcomed = false;
 let hasBeenWelcomed = false;
 let briefingController = new AbortController();
 
+// UBICACIÓN: platform-main.js (antes de la exposición de funciones globales)
+
+/**
+ * Gestiona y muestra errores de toda la plataforma a través del chat de GeoBot.
+ * @param {string} technicalMessage El mensaje de error técnico.
+ * @param {string} userFriendlyPrefix Un prefijo amigable opcional para el mensaje.
+ */
+function reportErrorToGeo(technicalMessage, userFriendlyPrefix = "¡Vaya! Parece que hemos encontrado un problema: ") {
+    // 1. Asegurarse de que el chat esté visible.
+    const chatWindow = document.getElementById('chat-window');
+    if (chatWindow.style.display !== 'flex') {
+        toggleChat();
+    }
+
+    // 2. Crear dinámicamente la burbuja de mensaje del bot.
+    const chatMessages = document.getElementById('chat-messages');
+    const botMessageContainer = document.createElement('div');
+    botMessageContainer.className = 'chat-message bot';
+    const messageParagraph = document.createElement('p');
+    botMessageContainer.appendChild(messageParagraph);
+    chatMessages.appendChild(botMessageContainer);
+
+    // 3. Usar el efecto de máquina de escribir para mostrar el error.
+    typeWriter(messageParagraph, userFriendlyPrefix + technicalMessage);
+
+    // 4. Hacer scroll para que el nuevo mensaje sea visible.
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // 5. También registrar el error en la consola para los desarrolladores.
+    console.error("Error reportado a Geo:", technicalMessage);
+}
+
 
 
 
@@ -352,14 +384,15 @@ async function handleAnalysis(type, overrideRoi = null) {
     generateAiAnalysis(aiData); // Se elimina 'window.'
 }
 
+// UBICACIÓN: platform-main.js, dentro de handleAnalysis
+
     } catch (error) {
-        console.error("Error en el análisis:", error);
-        updateStatsPanel(`Error: ${error.message}`);
+        // Llama al nuevo sistema de errores de GeoBot
+        reportErrorToGeo(error.message, "¡Oh, no! No pude completar el análisis. ");
         legendControl.update(null);
-        // Si hay un error, siempre ocultamos el loader.
+        // Oculta el loader después de reportar el error
         showLoading(false);
     }
-    // ¡IMPORTANTE! Hemos eliminado el bloque 'finally' que ocultaba el loader prematuramente.
 }
 
 function getActiveROIs() {
@@ -918,6 +951,7 @@ window.downloadAiAnalysis = downloadAiAnalysis;
 window.handleLabAnalysisChange = handleLabAnalysisChange;
 window.showLoading = showLoading;
 window.legendControl = legendControl;
+window.reportErrorToGeo = reportErrorToGeo; // <-- AÑADE ESTA LÍNEA
 
 
 // =======================================================

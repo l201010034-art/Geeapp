@@ -171,15 +171,13 @@ async function handleLabExecution() {
         labOverlay.classList.add('hidden');
         applyLabResultToMap(); // Llama a la función que renderiza el mapa
         // El loader se ocultará automáticamente por la función addGeeLayer
-} catch (error) {
-    // ¡LA CORRECCIÓN CLAVE! Mostramos el error en una alerta para el usuario.
-    alert(`Ocurrió un error al ejecutar el análisis del laboratorio:\n\n${error.message}`);
-    
-    // Mantenemos el log en la consola para depuración avanzada.
-    console.error("Error detallado del laboratorio:", error);
-    
-    // Ocultamos el loader después de notificar al usuario.
-    Loader.hide();
+// UBICACIÓN: ai-connector.js, dentro de handleLabExecution
+
+    } catch (error) {
+        // Llama al nuevo sistema de errores de GeoBot
+        window.reportErrorToGeo(error.message, "¡Ups! El análisis del laboratorio no pudo completarse. ");
+        // Oculta el loader después de reportar el error
+        Loader.hide();
 
     } finally {
         executeButton.disabled = false;
