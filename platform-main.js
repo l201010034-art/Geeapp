@@ -54,6 +54,27 @@ export function initPlatform() {
     });
 }
 
+// Dentro de tu función de inicialización (ej: initPlatform o DOMContentLoaded)
+
+// Crea la versión debounced de la función de briefing. Espera 750ms de inactividad.
+const debouncedBriefingUpdate = debounce(updateIntelligenceBriefing, 750);
+
+// Selecciona todos los controles que deben activar el briefing
+const labControls = [
+    document.getElementById('lab-analysis-type'),
+    document.getElementById('lab-region-selector-municipalities'),
+    document.getElementById('lab-region-selector-marine'),
+    document.getElementById('lab-start-date'),
+    document.getElementById('lab-end-date')
+];
+
+// Asigna el mismo listener a todos los controles
+labControls.forEach(control => {
+    if (control) {
+        control.addEventListener('change', debouncedBriefingUpdate);
+    }
+});
+
 function initMap() {
     const googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{ maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'], attribution: 'Google Satellite' });
     const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{ maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'], attribution: 'Google Hybrid' });
