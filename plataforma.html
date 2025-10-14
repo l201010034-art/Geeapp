@@ -146,6 +146,41 @@
         #chat-fab-container:hover {
             opacity: 1; /* Se vuelve opaco al interactuar */
         }
+        /* ====================================================== */
+/* INICIO: Estilos adaptables para el chat en móviles   */
+/* ====================================================== */
+    @media (max-width: 767px) {
+        #chat-window {
+            /* Hacemos que ocupe la parte inferior de la pantalla */
+            bottom: 0;
+            right: 0;
+            left: 0;
+            top: auto; /* Nos aseguramos que no esté anclado arriba */
+            
+            /* Ajustamos el tamaño para una mejor experiencia móvil */
+            width: 100%;
+            max-width: 100%;
+            height: 85vh; /* Ocupará el 85% de la altura de la pantalla */
+            max-height: 85vh;
+            
+            /* Damos una apariencia de panel con esquinas redondeadas solo arriba */
+            border-radius: 20px 20px 0 0;
+            border: 1px solid #444;
+
+            /* Reemplazamos la animación por una que deslice desde abajo */
+            animation: slideUpFromBottom 0.4s ease-out;
+        }
+
+        /* Nueva animación para el panel móvil */
+        @keyframes slideUpFromBottom {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+    }
     </style>
 </head>
 <body class="bg-gray-800 text-white flex flex-col h-screen">
