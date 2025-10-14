@@ -54,8 +54,8 @@
             --accent-color: #f0ad4e;
         }
         html, body {
-            height: 100vh; /* Asegura que el cuerpo ocupe toda la altura de la pantalla */
-            overflow: hidden; /* Evita el scroll en el body, el scroll se manejará internamente */
+            height: 100%; /* <-- Cambio clave para la compatibilidad móvil */
+            overflow: hidden; /* <-- Esto es correcto, lo mantenemos */
             font-family: 'Inter', sans-serif;
         }
 
@@ -184,6 +184,8 @@
         <a href="index.html" class="bg-transparent border border-white hover:bg-white hover:text-black py-2 px-4 rounded transition text-sm">Página Principal</a>
     </nav>
 
+        <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-60 z-[1049] hidden md:hidden"></div>
+    
     <div class="flex flex-1 relative overflow-hidden">
         <aside id="control-panel" class="absolute md:relative z-[1050] top-0 left-0 h-full w-80 md:w-96 bg-[var(--maroon-color)] p-4 overflow-y-auto flex-col space-y-4 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out pb-24 md:pb-4" role="navigation" aria-label="Panel de controles">
             <form id="ai-command-form" class="p-2 bg-black bg-opacity-20 rounded-lg">
@@ -278,8 +280,16 @@
                     <h3 class="text-lg font-semibold">1. Construye tu Análisis</h3>
                     <div>
                         <label for="lab-analysis-type" class="block mb-1 text-sm font-medium text-gray-300">Tipo de Análisis</label>
-                        <select id="lab-analysis-type" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white"></select>
-                    </div>
+                        <select id="lab-analysis-type" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
+                            <option value="NDVI">Índice de Vegetación (NDVI)</option>
+                            <option value="LST">Mapa de Calor Urbano (LST)</option>
+                            <option value="NDWI">Índice de Humedad y Agua (NDWI)</option>
+                            <option value="FIRE">Mapa de Densidad de Incendios (VIIRS)</option>
+                            <option value="FAI">Índice de Algas Flotantes (Sargazo)</option>
+                            <option value="AIR_QUALITY">Calidad del Aire (NO2)</option>
+                            <option value="HURRICANE">Visualizador de Huracanes (GOES & IBTrACS)</option>
+                        </select>                    
+                        </div>
                     <div id="lab-step-region" class="hidden">
                         <label for="lab-region-selector-municipalities" class="block mb-1 text-sm font-medium text-gray-300">Región de Interés</label>
                         <select id="lab-region-selector-municipalities" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white"></select>
@@ -349,6 +359,44 @@
     <script type="module" defer>
         import { initPlatform } from './platform-main.js';
         document.addEventListener('DOMContentLoaded', initPlatform);
+    </script>
+    <script type_ ="module" src="platform-main.js"></script>
+
+    <script>
+        // Script para manejar la visibilidad del menú lateral en móviles
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuToggle = document.getElementById('menu-toggle');
+            const controlPanel = document.getElementById('control-panel');
+            const menuOverlay = document.getElementById('menu-overlay');
+
+            const openMenu = () => {
+                controlPanel.classList.remove('-translate-x-full');
+                controlPanel.classList.add('translate-x-0');
+                menuOverlay.classList.remove('hidden');
+            };
+
+            const closeMenu = () => {
+                controlPanel.classList.add('-translate-x-full');
+                controlPanel.classList.remove('translate-x-0');
+                menuOverlay.classList.add('hidden');
+            };
+
+            if (menuToggle && controlPanel && menuOverlay) {
+                // Abrir/cerrar con el botón de hamburguesa
+                menuToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Revisa si el panel está oculto para decidir si abrirlo o cerrarlo
+                    if (controlPanel.classList.contains('-translate-x-full')) {
+                        openMenu();
+                    } else {
+                        closeMenu();
+                    }
+                });
+
+                // Cerrar el menú al hacer clic en el overlay
+                menuOverlay.addEventListener('click', closeMenu);
+            }
+        });
     </script>
 
 </body>
