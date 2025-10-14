@@ -172,7 +172,7 @@ async function handleLabExecution() {
         // El loader se ocultará automáticamente por la función addGeeLayer
 
     } catch (error) {
-        resultDisplay.textContent = `// Ocurrió un error:\n// ${error.message}`;
+        //resultDisplay.textContent = `// Ocurrió un error:\n// ${error.message}`;
         Loader.hide(); // <--- CAMBIO CLAVE
     } finally {
         executeButton.disabled = false;
