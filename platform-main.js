@@ -851,7 +851,7 @@ function createFullscreenIntro() {
     
     // CORRECCIÓN: Usamos una etiqueta <img> con la ruta al logo en la carpeta assets.
     overlay.innerHTML = `
-        <img id="gemini-logo-intro" src="assets/gemini-logo.svg" alt="Gemini AI Logo">
+        <img id="gemini-logo-intro" src="assets/gemini-logo.png" alt="Gemini AI Logo">
         <div id="intro-text-container"></div>
     `;
     
