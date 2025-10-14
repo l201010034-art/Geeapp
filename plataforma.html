@@ -393,14 +393,16 @@
 
 /* Contenedor del texto que se tipea */
 #fab-text-container {
-    background-color: rgba(44, 49, 56, 0.9); /* Un fondo semitransparente */
+    background-color: rgba(44, 49, 56, 0.9);
     padding: 10px 15px;
     border-radius: 20px;
-    margin-left: -20px; /* Se solapa ligeramente con el FAB */
-    padding-left: 30px; /* Espacio para el solapamiento */
+    /* Cambiamos el margen para que funcione con el nuevo orden */
+    margin-right: -20px;
+    /* Y el padding para que el texto no se pegue al borde */
+    padding-right: 30px;
     color: var(--chat-text-light);
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    white-space: nowrap; /* Evita que el texto se parta en dos líneas */
+    white-space: nowrap;
 }
 
 /* El texto tipeado con su cursor parpadeante */
@@ -651,19 +653,14 @@
 
 
 <div id="chat-fab-container">
-    <div id="fab-tip-container" class="hidden">
-        <span id="fab-tip-text"></span>
-    </div>
-
-    <div id="chat-fab">
-        <img src="assets/geo-avatar.jpg" alt="Asistente Geo">
-    </div>
-
+    <div id="fab-tip-container" class="hidden"> ... </div>
     <div id="fab-text-container">
         <p id="fab-typing-text"></p>
     </div>
+    <div id="chat-fab">
+        <img src="assets/geo-avatar.jpg" alt="Asistente Geo">
+    </div>
 </div>
-
 <div id="chat-window">
     <div class="chat-header">
         <h5>Asistente Geo</h5>
