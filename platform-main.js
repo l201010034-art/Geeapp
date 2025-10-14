@@ -329,14 +329,14 @@ function resetApp() {
 
 async function handleAnalysis(type, overrideRoi = null) {
     if (type === 'general' && getActiveROIs().length > 1) {
-        updateStatsPanel('Error: Para "Cargar Datos", selecciona solo una zona o dibuja una sola área.');
+        reportErrorToGeo('Error: Para "Cargar Datos", selecciona solo una zona o dibuja una sola área.');
         return;
     }
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
     const activeROIs = overrideRoi ? [overrideRoi] : getActiveROIs();
     if (!startDate || !endDate || activeROIs.length === 0) {
-        updateStatsPanel('Error: Asegúrate de seleccionar fechas y al menos una zona de interés.');
+        reportErrorToGeo('Error: Asegúrate de seleccionar fechas y al menos una zona de interés.');
         return;
     }
     if (type === 'compare' && activeROIs.length < 2) {
@@ -370,7 +370,19 @@ async function handleAnalysis(type, overrideRoi = null) {
             // ocultamos el loader nosotros mismos.
             showLoading(false);
         }
-        if (response.stats) updateStatsPanel(response.stats);
+        // UBICACIÓN: platform-main.js, dentro de handleAnalysis
+
+// ▼▼▼ BLOQUE CORREGIDO ▼▼▼
+        if (response.stats) {
+            // Comprobamos si el mensaje de estadísticas es en realidad un aviso de error.
+            if (response.stats.includes("No se pudieron calcular estadísticas")) {
+                // Si lo es, lo reportamos a Geo en lugar de mostrarlo en el panel.
+                reportErrorToGeo(response.stats, "¡Atención! ");
+            } else {
+                // Si son estadísticas válidas, las mostramos como siempre.
+                updateStatsPanel(response.stats);
+            }
+        }
         if (response.chartData && response.chartData.length >= 2) {
             updateChartAndData(response.chartData, response.chartOptions);
         } else {
