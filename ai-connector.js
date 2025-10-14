@@ -180,7 +180,7 @@ async function handleLabExecution() {
     
     // Ocultamos el loader después de notificar al usuario.
     Loader.hide();
-    
+
     } finally {
         executeButton.disabled = false;
         executeButton.textContent = "🚀 Ejecutar Análisis";
@@ -196,7 +196,7 @@ function applyLabResultToMap() {
     }
     document.getElementById('lab-execute-button').classList.remove('hidden');
     document.getElementById('lab-apply-button').classList.add('hidden');
-    document.getElementById('lab-preview-overlay').classList.add('hidden');
+    //document.getElementById('lab-preview-overlay').classList.add('hidden');
 }
 
 async function fetchHurricaneList() {
