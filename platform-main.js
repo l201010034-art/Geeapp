@@ -329,14 +329,14 @@ function resetApp() {
 
 async function handleAnalysis(type, overrideRoi = null) {
     if (type === 'general' && getActiveROIs().length > 1) {
-        reportErrorToGeo('Error: Para "Cargar Datos", selecciona solo una zona o dibuja una sola área.');
+        reportErrorToGeo('Para "Cargar Datos", selecciona solo una zona o dibuja una sola área.');
         return;
     }
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
     const activeROIs = overrideRoi ? [overrideRoi] : getActiveROIs();
     if (!startDate || !endDate || activeROIs.length === 0) {
-        reportErrorToGeo('Error: Asegúrate de seleccionar fechas y al menos una zona de interés.');
+        reportErrorToGeo('Asegúrate de seleccionar fechas y al menos una zona de interés.');
         return;
     }
     if (type === 'compare' && activeROIs.length < 2) {
