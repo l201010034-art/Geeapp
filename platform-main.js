@@ -10,6 +10,8 @@ import {
 } from './ai-connector.js';
 
 let hasWelcomed = false;
+let hasBeenWelcomed = false;
+
 
 
 // --- VARIABLES GLOBALES ---
