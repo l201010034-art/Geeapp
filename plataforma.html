@@ -15,47 +15,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <style>
-
-        #loader-animation {
-            animation: float 3s ease-in-out infinite;
-        }
-        #sat-beam {
-            animation: beam-scan 4s linear infinite;
-            transform-origin: 50% 30%;
-        }
-        #loader-progress {
-            width: 100%;
-            background-size: 200% 100%;
-            animation: progress-indeterminate 2s linear infinite;
-            background-image: linear-gradient(to right, 
-                rgba(240, 173, 78, 0.5) 0%, 
-                rgba(240, 173, 78, 1) 50%, 
-                rgba(240, 173, 78, 0.5) 100%);
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        @keyframes beam-scan {
-            0% { transform: scaleY(0); opacity: 0; }
-            50% { transform: scaleY(1); opacity: 1; }
-            100% { transform: scaleY(0); opacity: 0; }
-        }
-        @keyframes progress-indeterminate {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
         :root {
             --maroon-color: #800000;
             --lighter-maroon: #a04040;
             --accent-color: #f0ad4e;
+            --chat-primary-color: #007bff;
+            --chat-bg-dark: #1a1d21;
+            --chat-bg-header: #2c3138;
+            --chat-text-light: #e1e3e6;
+            --chat-bubble-bot: #333842;
+            --chat-bubble-user: var(--chat-primary-color);
         }
         html, body {
             height: 100vh;
-            overflow: auto;
-            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Previene el scroll en el body principal */
+            font-family: 'Inter', sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
         .loader {
             border: 5px solid #f3f3f3; border-top: 5px solid var(--accent-color);
@@ -63,393 +37,74 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        #opacity-slider-container {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            z-index: 1000;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 8px;
-            border-radius: 5px;
-            color: white;
-        }
-        #opacity-slider-container label {
-            display: block; font-size: 12px; font-weight: bold;
-            margin-bottom: 4px; text-align: center;
-        }
-        #opacity-slider { width: 120px; }
-
+        #loader-animation { animation: float 3s ease-in-out infinite; }
+        #sat-beam { animation: beam-scan 4s linear infinite; transform-origin: 50% 30%; }
+        #loader-progress { width: 100%; background-size: 200% 100%; animation: progress-indeterminate 2s linear infinite; background-image: linear-gradient(to right, rgba(240, 173, 78, 0.5) 0%, rgba(240, 173, 78, 1) 50%, rgba(240, 173, 78, 0.5) 100%); }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        @keyframes beam-scan { 0% { transform: scaleY(0); opacity: 0; } 50% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(0); opacity: 0; } }
+        @keyframes progress-indeterminate { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         .legend { background: rgba(255, 255, 255, 0.85); border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.2); padding: 6px 10px; color: #333; }
         .legend-title { font-weight: bold; margin-bottom: 5px; font-size: 14px; }
         .legend-scale-bar { height: 10px; border-radius: 5px; }
         .legend-labels { display: flex; justify-content: space-between; font-size: 12px; }
-        
         #control-panel { transition: transform 0.3s ease-in-out; }
         .control-panel-hidden { transform: translateX(-100%); }
         summary { cursor: pointer; font-weight: 600; padding: 0.75rem; background-color: rgba(0,0,0,0.1); border-radius: 5px; }
         details > div { padding: 0.75rem; background-color: rgba(0,0,0,0.2); border-radius: 0 0 5px 5px; }
-        
-        /* Estilos para el Laboratorio de IA */
         #lab-modal pre { margin: 0; }
         #lab-modal code { display: block; white-space: pre-wrap; padding: 1rem; color: #c5c8c6; }
-
-/* =============================================== */
-/* INICIO: NUEVOS ESTILOS PARA GEO-CHAT BOT    */
-/* =============================================== */
-:root {
-    --chat-primary-color: #007bff; /* Azul brillante principal */
-    --chat-bg-dark: #1a1d21;      /* Fondo oscuro del chat */
-    --chat-bg-header: #2c3138;   /* Fondo de la cabecera */
-    --chat-text-light: #e1e3e6;   /* Color de texto principal */
-    --chat-bubble-bot: #333842;   /* Burbuja de chat del bot */
-    --chat-bubble-user: var(--chat-primary-color); /* Burbuja de chat del usuario */
-}
-
-/* ▼▼▼ ESTILO CORREGIDO ▼▼▼ */
-#chat-fab {
-    position: relative; /* <-- Esto es necesario para anclar los tips */
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(145deg, var(--chat-primary-color), #0056b3);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 24px;
-    cursor: pointer;
-    box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
-    z-index: 1000;
-    transition: transform 0.2s ease-in-out;
-}
-
-/* ▼▼▼ AÑADE ESTE NUEVO BLOQUE DE CÓDIGO ▼▼▼ */
-#chat-fab img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* Asegura que la imagen cubra el círculo sin deformarse */
-}
-
-#chat-fab:hover {
-    transform: scale(1.1);
-}
-
-#chat-window {
-    position: fixed;
-    bottom: 100px;
-    right: 25px;
-    width: 370px;
-    max-width: 90vw;
-    height: 550px;
-    background-color: var(--chat-bg-dark);
-    border-radius: 15px;
-    border: 1px solid #444;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    display: none;
-    flex-direction: column;
-    z-index: 1001;
-    overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.chat-header {
-    padding: 15px 20px;
-    background-color: var(--chat-bg-header);
-    border-bottom: 1px solid #444;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: var(--chat-text-light);
-}
-
-.chat-header h5 {
-    margin: 0;
-    font-weight: 600;
-}
-
-#chat-close-btn {
-    background: none;
-    border: none;
-    color: var(--chat-text-light);
-    font-size: 24px;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-}
-
-#chat-close-btn:hover {
-    opacity: 1;
-}
-
-.chat-messages {
-    flex-grow: 1;
-    padding: 20px;
-    overflow-y: auto;
-    color: var(--chat-text-light);
-}
-
-/* Estilo para la barra de scroll */
-.chat-messages::-webkit-scrollbar {
-    width: 6px;
-}
-.chat-messages::-webkit-scrollbar-track {
-    background: transparent;
-}
-.chat-messages::-webkit-scrollbar-thumb {
-    background: #555;
-    border-radius: 3px;
-}
-
-.chat-message {
-    margin-bottom: 15px;
-    display: flex;
-    flex-direction: column;
-}
-
-.chat-message p {
-    padding: 12px 16px;
-    border-radius: 18px;
-    max-width: 85%;
-    line-height: 1.5;
-    word-wrap: break-word;
-}
-
-.chat-message.user {
-    align-items: flex-end;
-}
-
-.chat-message.user p {
-    background-color: var(--chat-bubble-user);
-    color: white;
-    border-bottom-right-radius: 4px;
-}
-
-.chat-message.bot {
-    align-items: flex-start;
-}
-
-.chat-message.bot p {
-    background-color: var(--chat-bubble-bot);
-    border-bottom-left-radius: 4px;
-}
-
-.chat-input-container {
-    display: flex;
-    padding: 15px 20px;
-    border-top: 1px solid #444;
-    background-color: var(--chat-bg-header);
-}
-
-#chat-input {
-    flex-grow: 1;
-    background-color: #3e444f;
-    border: 1px solid #555;
-    border-radius: 20px;
-    padding: 10px 18px;
-    color: var(--chat-text-light);
-    font-size: 14px;
-}
-
-#chat-input::placeholder {
-    color: #888;
-}
-
-#chat-send-btn {
-    background: var(--chat-primary-color);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    margin-left: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s;
-}
-
-#chat-send-btn:hover {
-    background-color: #0056b3;
-}
-
-.typing-indicator {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px !important; /* Asegura el padding correcto */
-}
-.typing-indicator span {
-    height: 8px;
-    width: 8px;
-    background-color: #9ca3af;
-    border-radius: 50%;
-    display: inline-block;
-    margin: 0 2px;
-    animation: bounce 1.4s infinite ease-in-out both;
-}
-.typing-indicator span:nth-of-type(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-of-type(2) { animation-delay: -0.16s; }
-@keyframes bounce {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1.0); }
-}
-
-/* Animación para el mensaje de bienvenida */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-.initial-message {
-    animation: fadeIn 0.5s ease-out;
-}
-#chat-send-btn svg {
-    width: 20px;
-    height: 20px;
-}
-
-#geo-fullscreen-intro {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.85);
-    z-index: 10000;
-    display: none; /* Se activa con JS */
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-}
-
-#geo-fullscreen-intro.visible {
-    display: flex;
-    opacity: 1;
-}
-
-#gemini-logo-intro {
-    width: 80px;
-    height: 80px;
-    margin-bottom: 20px;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-#intro-text-container {
-    max-width: 600px;
-    text-align: center;
-    font-size: 1.2rem;
-    line-height: 1.6;
-}
-
-/* Cursor parpadeante para el efecto de escritura */
-#intro-text-container::after {
-    content: '|';
-    animation: blink 1s step-end infinite;
-}
-
-@keyframes blink {
-    from, to { color: transparent; }
-    50% { color: white; }
-}
-
-/* UBICACIÓN: plataforma.html, dentro de <style> */
-
-/* ▼▼▼ AÑADE TODO ESTE BLOQUE DE CSS NUEVO ▼▼▼ */
-
-/* Contenedor principal para el FAB y sus adornos */
-#chat-fab-container {
-    position: fixed;
-    bottom: 25px;
-    right: 25px;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end; /* Alinea los elementos a la derecha */
-}
-
-/* ▼▼▼ REEMPLAZA ESTE SELECTOR COMPLETO ▼▼▼ */
-#fab-text-container {
-    /* Eliminamos fondo, padding y sombra */
-    background-color: transparent;
-    box-shadow: none;
-    /* Ajustamos el margen para dar un espacio limpio */
-    margin-right: 15px;
-    color: var(--chat-text-light);
-    white-space: nowrap;
-    /* Sombra de texto para mejorar la legibilidad sobre cualquier fondo */
-    text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.7);
-}
-
-/* El texto tipeado con su cursor parpadeante */
-#fab-typing-text::after {
-    content: '|';
-    animation: blink 1s step-end infinite;
-}
-
-/* UBICACIÓN: plataforma.html, dentro de <style> */
-/* UBICACIÓN: plataforma.html, dentro de <style> */
-
-/* ▼▼▼ ESTILO CORREGIDO ▼▼▼ */
-#fab-tip-container {
-    position: absolute;
-    bottom: 110%;
-    right: 0; /* <-- LA SOLUCIÓN: Alinea el borde derecho del tip con el borde derecho del ícono */
-    /* Se eliminan 'left' y 'transform' */
-    background-color: transparent;
-    box-shadow: none;
-    color: var(--chat-primary-color);
-    font-weight: bold;
-    padding: 6px 12px;
-    font-size: 0.8rem;
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-    text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.5);
-}
-
-
-#fab-tip-container.visible {
-    opacity: 1; /* Clase para hacerlo visible con una transición suave */
-}
-/* =============================================== */
-/* FIN: NUEVOS ESTILOS PARA GEO-CHAT BOT     */
-/* =============================================== */
-
+        
+        /* Estilos del Chat Bot */
+        #chat-fab { position: relative; width: 60px; height: 60px; background: linear-gradient(145deg, var(--chat-primary-color), #0056b3); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4); z-index: 1000; transition: transform 0.2s ease-in-out; }
+        #chat-fab img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        #chat-fab:hover { transform: scale(1.1); }
+        #chat-window { position: fixed; bottom: 100px; right: 15px; width: 370px; max-width: 90vw; height: 550px; background-color: var(--chat-bg-dark); border-radius: 15px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: none; flex-direction: column; z-index: 1001; overflow: hidden; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-header { padding: 15px 20px; background-color: var(--chat-bg-header); border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; color: var(--chat-text-light); }
+        .chat-header h5 { margin: 0; font-weight: 600; }
+        #chat-close-btn { background: none; border: none; color: var(--chat-text-light); font-size: 24px; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+        #chat-close-btn:hover { opacity: 1; }
+        .chat-messages { flex-grow: 1; padding: 20px; overflow-y: auto; color: var(--chat-text-light); }
+        .chat-messages::-webkit-scrollbar { width: 6px; }
+        .chat-messages::-webkit-scrollbar-track { background: transparent; }
+        .chat-messages::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+        .chat-message { margin-bottom: 15px; display: flex; flex-direction: column; }
+        .chat-message p { padding: 12px 16px; border-radius: 18px; max-width: 85%; line-height: 1.5; word-wrap: break-word; }
+        .chat-message.user { align-items: flex-end; }
+        .chat-message.user p { background-color: var(--chat-bubble-user); color: white; border-bottom-right-radius: 4px; }
+        .chat-message.bot { align-items: flex-start; }
+        .chat-message.bot p { background-color: var(--chat-bubble-bot); border-bottom-left-radius: 4px; }
+        .chat-input-container { display: flex; padding: 15px 20px; border-top: 1px solid #444; background-color: var(--chat-bg-header); }
+        #chat-input { flex-grow: 1; background-color: #3e444f; border: 1px solid #555; border-radius: 20px; padding: 10px 18px; color: var(--chat-text-light); font-size: 14px; }
+        #chat-input::placeholder { color: #888; }
+        #chat-send-btn { background: var(--chat-primary-color); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; margin-left: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
+        #chat-send-btn:hover { background-color: #0056b3; }
+        .typing-indicator { display: flex; align-items: center; padding: 12px 16px !important; }
+        .typing-indicator span { height: 8px; width: 8px; background-color: #9ca3af; border-radius: 50%; display: inline-block; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
+        .typing-indicator span:nth-of-type(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-of-type(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+        .initial-message { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        #chat-send-btn svg { width: 20px; height: 20px; }
+        
+        /* Estilos de adornos del FAB */
+        #chat-fab-container { position: fixed; bottom: 15px; right: 15px; z-index: 1000; display: flex; align-items: center; justify-content: flex-end; }
+        #fab-text-container { background-color: transparent; box-shadow: none; margin-right: 15px; color: var(--chat-text-light); white-space: nowrap; text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.7); }
+        #fab-typing-text::after { content: '|'; animation: blink 1s step-end infinite; }
+        @keyframes blink { from, to { color: transparent; } 50% { color: white; } }
+        #fab-tip-container { position: absolute; bottom: 110%; right: 0; background-color: transparent; box-shadow: none; color: var(--chat-primary-color); font-weight: bold; padding: 6px 12px; font-size: 0.8rem; white-space: nowrap; opacity: 0; transition: opacity 0.5s ease-in-out; text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.5); }
+        #fab-tip-container.visible { opacity: 1; }
     </style>
 </head>
 <body class="bg-gray-800 text-white flex flex-col h-screen"> 
     <div id="intelligent-loader" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[9999]">
         <div class="bg-gray-800 border-2 border-[var(--accent-color)] rounded-lg shadow-xl p-8 w-11/12 max-w-md text-center flex flex-col items-center">
-            
             <div id="loader-stage-1">
                 <div id="loader-animation" class="w-24 h-24 mb-4 mx-auto">
                     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
                         <defs><path id="sat-body" d="M 20 40 H 80 L 70 60 H 30 Z" fill="#cccccc"/><path id="sat-wing" d="M 0 30 H 20 V 70 H 0 Z" fill="#4a90e2"/></defs>
-                        <use href="#sat-body"/>
-                        <use href="#sat-wing" transform="translate(0, 0)"/>
-                        <use href="#sat-wing" transform="translate(80, 0)"/>
+                        <use href="#sat-body"/><use href="#sat-wing" transform="translate(0, 0)"/><use href="#sat-wing" transform="translate(80, 0)"/>
                         <circle id="sat-dish" cx="50" cy="30" r="10" fill="none" stroke="#f0ad4e" stroke-width="3"/>
                         <line id="sat-beam" x1="50" y1="30" x2="50" y2="100" stroke="#f0ad4e" stroke-width="2" stroke-dasharray="5 5"/>
                     </svg>
@@ -460,7 +115,6 @@
                     <div id="loader-progress" class="bg-[var(--accent-color)] h-2.5 rounded-full"></div>
                 </div>
             </div>
-
             <div id="loader-stage-2" class="hidden">
                 <div class="w-24 h-24 mb-4 mx-auto animate-pulse">
                     <svg class="w-full h-full text-[var(--accent-color)]" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12 1.586l-4 4v2.828l-4 4V18.5a1.5 1.5 0 002.121 1.414L10 18.414l7.879 1.5a1.5 1.5 0 001.527-1.905l-1.414-7.071-4-4H12V1.586zM10 16.414L3 17.5V14l4-4V8l4-4v2.586l4 4V15l-5-1.086z" clip-rule="evenodd"></path></svg>
@@ -468,21 +122,21 @@
                 <p class="text-lg font-semibold text-white">Renderizando mapa satelital...</p>
                 <p class="text-sm text-gray-400">Este proceso puede tardar unos segundos.</p>
             </div>
-
         </div>
     </div>
+
     <nav class="bg-black bg-opacity-70 text-white p-3 flex justify-between items-center z-[1100] w-full flex-shrink-0">
         <div class="flex items-center space-x-4">
             <button id="menu-toggle" class="md:hidden p-2" aria-label="Abrir menú de controles">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
             </button>
-            <h1 class="text-lg font-bold">Plataforma de Monitoreo Climático</h1>
+            <h1 class="text-md md:text-lg font-bold">Monitoreo Climático Campeche</h1>
         </div>
         <a href="index.html" class="bg-transparent border border-white hover:bg-white hover:text-black py-2 px-4 rounded transition text-sm">Página Principal</a>
     </nav>
     
     <div class="flex flex-1 overflow-hidden relative">
-        <aside id="control-panel" class="absolute md:relative z-[1050] top-0 left-0 h-full w-80 md:w-96 bg-[var(--maroon-color)] p-4 overflow-y-auto flex-col space-y-4 control-panel-hidden md:transform-none pb-24 md:pb-4" role="navigation" aria-label="Panel de controles">
+        <aside id="control-panel" class="absolute md:relative z-[1050] top-0 left-0 h-full w-full sm:w-80 md:w-96 bg-[var(--maroon-color)] p-4 overflow-y-auto flex-col space-y-4 control-panel-hidden md:transform-none pb-24 md:pb-4" role="navigation" aria-label="Panel de controles">
             <form id="ai-command-form" class="p-2 bg-black bg-opacity-20 rounded-lg">
                 <label for="ai-command-bar" class="text-sm font-bold text-gray-300 block mb-1">Comando de IA</label>
                 <input type="text" id="ai-command-bar" placeholder="Ej: Lluvia en Chiná el mes pasado..." class="w-full p-2 rounded bg-[var(--lighter-maroon)] text-white border-gray-500 placeholder-gray-400 focus:ring-2 focus:ring-[var(--accent-color)]">
@@ -528,7 +182,6 @@
                     <button id="downloadChartButton" class="w-full p-2 font-bold bg-blue-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled title="Descargar el gráfico actual como imagen PNG">Descargar Gráfico</button>
                 </div>
                 <button id="downloadPdfButton" class="w-full mt-2 p-2 font-bold bg-red-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled title="Generar un reporte completo en formato PDF">📄 Generar PDF</button>
-
             </div></details>
         </aside>
         
@@ -543,7 +196,6 @@
                 <h2 class="text-lg font-bold mb-2 text-center flex-shrink-0">Análisis de Datos</h2>
                 <div class="space-y-4">
                     <div id="stats-panel" class="bg-gray-800 p-3 rounded text-sm whitespace-pre-wrap overflow-y-auto flex-shrink-0" aria-live="polite">Selecciona opciones y carga datos.</div>
-                    
                     <div id="ai-analysis-panel" class="hidden bg-gray-800 p-3 rounded border border-[#f0ad4e] max-h-60 overflow-y-auto">
                         <div class="flex justify-between items-center mb-2">
                             <h3 class="text-md font-bold text-[#f0ad4e] flex items-center">
@@ -557,7 +209,6 @@
                         </div>
                         <div id="ai-summary" class="text-sm text-gray-300" aria-live="polite"><p>Esperando análisis...</p></div>
                     </div>
-
                     <div id="chart-panel" class="bg-gray-800 p-2 rounded flex items-center justify-center min-h-[250px]">
                         <span class="text-gray-400">El gráfico aparecerá aquí</span>
                     </div>
@@ -567,16 +218,14 @@
     </div>
 
     <div id="lab-overlay" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[3000]">
-        <div id="lab-modal" class="bg-gray-800 rounded-lg shadow-xl p-6 w-11/12 max-w-4xl h-5/6 flex flex-col">
+        <div id="lab-modal" class="bg-gray-800 rounded-lg shadow-xl p-4 md:p-6 w-11/12 h-[90%] md:h-5/6 flex flex-col">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-[var(--accent-color)]">Laboratorio de IA 🧪</h2>
+                <h2 class="text-xl md:text-2xl font-bold text-[var(--accent-color)]">Laboratorio de IA 🧪</h2>
                 <button id="lab-close-button" class="text-3xl font-bold hover:text-white" aria-label="Cerrar laboratorio">&times;</button>
             </div>
-    
-            <div class="flex-1 flex gap-4 overflow-hidden">
-                <div class="w-1/3 flex flex-col space-y-4">
+            <div class="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
+                <div class="w-full md:w-1/3 flex flex-col space-y-4 overflow-y-auto pr-2">
                     <h3 class="text-lg font-semibold">1. Construye tu Análisis</h3>
-                    
                     <div>
                         <label for="lab-analysis-type" class="block mb-1 text-sm font-medium text-gray-300">Tipo de Análisis</label>
                         <select id="lab-analysis-type" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
@@ -589,99 +238,79 @@
                             <option value="HURRICANE">Visualizador de Huracanes (GOES & IBTrACS)</option>
                         </select>
                     </div>
-
-                    <div id="lab-step-region" class="hidden">
-                        <label for="lab-region-selector-municipalities" class="block mb-1 text-sm font-medium text-gray-300">Región de Interés</label>
-                        
-                        <select id="lab-region-selector-municipalities" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
-                            </select>
-
-                        <div id="lab-hurricane-options" class="hidden w-full space-y-3">
-                            <div>
-                            </div>
+                    <div id="lab-step-region">
+                        <label class="block mb-1 text-sm font-medium text-gray-300">Región de Interés</label>
+                        <select id="lab-region-selector-municipalities" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white"></select>
+                        <div id="lab-hurricane-options" class="hidden w-full space-y-3 mt-2">
                             <div>
                                 <label for="lab-hurricane-year" class="block mb-1 text-sm font-medium text-gray-300">Año del Huracán</label>
                                 <input type="number" id="lab-hurricane-year" placeholder="Ej: 2023" value="2023" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
                             </div>
                             <button id="lab-fetch-hurricanes-button" class="w-full p-2 font-bold bg-blue-600 text-white rounded">1. Buscar Huracanes</button>
-                            <div id="lab-hurricane-selector-container" class="hidden">
+                            <div id="lab-hurricane-selector-container" class="hidden mt-2">
                                 <label for="lab-hurricane-selector" class="block mb-1 text-sm font-medium text-gray-300">Selecciona el Huracán</label>
-                                <select id="lab-hurricane-selector" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
-                                    </select>
+                                <select id="lab-hurricane-selector" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white"></select>
                             </div>
                         </div>
-
                         <select id="lab-region-selector-marine" class="hidden w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
                             <option value="Línea Costera (Sonda de Campeche)">Línea Costera (Sonda de Campeche)</option>
                             <option value="Golfo de México (Zona Campeche)">Golfo de México (Zona Campeche)</option>
                         </select>
                     </div>
-
-                    <div id="lab-step-dates" class="hidden">
+                    <div id="lab-step-dates">
                         <label class="block mb-1 text-sm font-medium text-gray-300">Rango de Fechas</label>
                         <input type="date" id="lab-start-date" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white" aria-label="Fecha de inicio para laboratorio">
                         <input type="date" id="lab-end-date" class="w-full mt-2 p-2 rounded bg-gray-900 border border-gray-600 text-white" aria-label="Fecha de fin para laboratorio">
                     </div>
-
-                    <div id="lab-step-actions" class="hidden">
+                    <div id="lab-step-actions">
                         <button id="lab-execute-button" class="w-full mt-4 p-2 font-bold bg-blue-600 text-white rounded">🚀 Ejecutar Análisis</button>
                         <button id="lab-apply-button" class="hidden w-full mt-2 p-2 font-bold bg-green-600 text-white rounded">Cerrar y Aplicar al Mapa</button>
                     </div>
                 </div>
-    
-                    <div class="w-2/3 flex flex-col">
-                        <h3 class="text-lg font-semibold">2. Informe de Misión IA</h3>
-                        <div id="lab-intelligence-panel" class="bg-gray-900 rounded p-4 flex-1 overflow-auto mt-2">
-                            <div id="lab-briefing-placeholder" class="text-center text-gray-400 h-full flex items-center justify-center">
-                                <p>Selecciona un tipo de análisis, región y fechas para generar el informe de misión.</p>
-                            </div>
-                            <div id="lab-briefing-result" class="hidden text-sm prose prose-invert">
-                                </div>
+                <div class="w-full md:w-2/3 flex flex-col">
+                    <h3 class="text-lg font-semibold">2. Informe de Misión IA</h3>
+                    <div id="lab-intelligence-panel" class="bg-gray-900 rounded p-4 flex-1 overflow-auto mt-2">
+                        <div id="lab-briefing-placeholder" class="text-center text-gray-400 h-full flex items-center justify-center">
+                            <p>Selecciona un tipo de análisis, región y fechas para generar el informe de misión.</p>
                         </div>
+                        <div id="lab-briefing-result" class="hidden text-sm prose prose-invert max-w-none"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-<script type="module" src="intelligent-loader.js" defer></script> 
-    
+    <script type="module" src="intelligent-loader.js" defer></script> 
     <script type="module" src="ai-connector.js" defer></script>
-
     <script type="module" defer>
         import { initPlatform } from './platform-main.js';
-        // Ahora que usamos 'defer', podemos estar 100% seguros de que el DOM está listo.
         initPlatform();
     </script>
 
-
-<div id="chat-fab-container">
-    <div id="fab-text-container">
-        <p id="fab-typing-text"></p>
-    </div>
-    <div id="chat-fab">
-        <div id="fab-tip-container" class="hidden">
-            <span id="fab-tip-text"></span>
+    <div id="chat-fab-container">
+        <div id="fab-text-container">
+            <p id="fab-typing-text"></p>
         </div>
-        <img src="assets/geo-avatar.jpg" alt="Asistente Geo">
-    </div>
-</div>
-
-<div id="chat-window">
-    <div class="chat-header">
-        <h5>Asistente Geo</h5>
-        <button id="chat-close-btn">×</button> </div>
-    <div id="chat-messages" class="chat-messages">
+        <div id="chat-fab">
+            <div id="fab-tip-container" class="hidden">
+                <span id="fab-tip-text"></span>
+            </div>
+            <img src="assets/geo-avatar.jpg" alt="Asistente Geo">
         </div>
-    <div class="chat-input-container">
-        <input type="text" id="chat-input" placeholder="Escribe tu pregunta...">
-        <button id="chat-send-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M3.105 2.289a.75.75 0 00-.826.95l1.414 4.949a.75.75 0 00.95.826L11.25 9.25v1.5L4.643 11.94a.75.75 0 00-.95.826l-1.414 4.949a.75.75 0 00.826.95l14.433-5.25a.75.75 0 000-1.418L3.105 2.289z" />
-            </svg>
-        </button>
     </div>
-</div>
-<script type="module" src="platform-main.js"></script>
+    <div id="chat-window">
+        <div class="chat-header">
+            <h5>Asistente Geo</h5>
+            <button id="chat-close-btn">×</button> 
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-container">
+            <input type="text" id="chat-input" placeholder="Escribe tu pregunta...">
+            <button id="chat-send-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3.105 2.289a.75.75 0 00-.826.95l1.414 4.949a.75.75 0 00.95.826L11.25 9.25v1.5L4.643 11.94a.75.75 0 00-.95.826l-1.414 4.949a.75.75 0 00.826.95l14.433-5.25a.75.75 0 000-1.418L3.105 2.289z" /></svg>
+            </button>
+        </div>
+    </div>
+    <script type="module" src="platform-main.js"></script>
 </body>
 </html>
