@@ -329,7 +329,7 @@ function resetApp() {
 
 async function handleAnalysis(type, overrideRoi = null) {
     if (type === 'general' && getActiveROIs().length > 1) {
-        reportErrorToGeo('Para "Cargar Datos", selecciona solo una zona o dibuja una sola área.');
+        updateStatsPanel('Error: Para análisis general, selecciona solo una zona o dibuja un área.');
         return;
     }
     const startDate = document.getElementById('startDate').value;
