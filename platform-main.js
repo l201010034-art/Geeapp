@@ -1001,20 +1001,28 @@ async function updateIntelligenceBriefing() {
         Usa formato HTML con un título <h4> y párrafos <p>.
     `;
 
+// UBICACIÓN: platform-main.js, dentro de updateIntelligenceBriefing
+
     try {
         const response = await fetch('/api/generate-text', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt }),
-            signal // Pasa la señal de cancelación a fetch
+            signal 
         });
         if (!response.ok) throw new Error('No se pudo generar el briefing.');
 
         const data = await response.json();
-        briefingResult.innerHTML = data.text;
+        
+        // ▼▼▼ LÍNEAS DE CORRECCIÓN ▼▼▼
+        // Limpiamos la respuesta de la IA para quitarle el formato de código Markdown.
+        let cleanHtml = data.text.replace(/^```html\s*/, '').replace(/```$/, '');
+        
+        briefingResult.innerHTML = cleanHtml; // Usamos el HTML ya limpio.
+
     } catch (error) {
         if (error.name === 'AbortError') {
-            console.log('Briefing request cancelled.'); // Esto es normal, no un error
+            console.log('Briefing request cancelled.');
             return;
         }
         briefingResult.innerHTML = `<p class="text-red-400">Error al generar el informe: ${error.message}</p>`;

@@ -181,16 +181,23 @@ async function handleLabExecution() {
     }
 }
 
+// UBICACIÓN: ai-connector.js
+
 function applyLabResultToMap() {
     if (lastLabResult) {
-        Loader.show([
-            "Renderizando resultado del laboratorio...", 
-            "Generando capa de datos geoespaciales...", 
-            "Aplicando simbología al mapa..."]);
-        if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
-        if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
-        if (lastLabResult.stats) window.updateStatsPanel(lastLabResult.stats);
-        if (lastLabResult.chartData) window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
+        // ▼▼▼ CÓDIGO CORREGIDO ▼▼▼
+        if (lastLabResult.mapId) {
+            window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
+        }
+        if (window.legendControl && lastLabResult.visParams) {
+            window.legendControl.update(lastLabResult.visParams);
+        }
+        if (lastLabResult.stats) {
+            window.updateStatsPanel(lastLabResult.stats);
+        }
+        if (lastLabResult.chartData) {
+            window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
+        }
     }
     document.getElementById('lab-execute-button').classList.remove('hidden');
     document.getElementById('lab-apply-button').classList.add('hidden');
