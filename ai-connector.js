@@ -183,6 +183,10 @@ async function handleLabExecution() {
 
 function applyLabResultToMap() {
     if (lastLabResult) {
+        Loader.show([
+            "Renderizando resultado del laboratorio...", 
+            "Generando capa de datos geoespaciales...", 
+            "Aplicando simbología al mapa..."]);
         if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
         if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
         if (lastLabResult.stats) window.updateStatsPanel(lastLabResult.stats);
