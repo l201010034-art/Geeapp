@@ -409,17 +409,16 @@
 }
 
 /* UBICACIÓN: plataforma.html, dentro de <style> */
+/* UBICACIÓN: plataforma.html, dentro de <style> */
 
-/* ▼▼▼ REEMPLAZA ESTE SELECTOR COMPLETO ▼▼▼ */
+/* ▼▼▼ ESTILO CORREGIDO ▼▼▼ */
 #fab-tip-container {
     position: absolute;
     bottom: 110%;
-    left: 50%;
-    transform: translateX(-50%);
-    /* Eliminamos fondo y sombra */
+    right: 0; /* <-- LA SOLUCIÓN: Alinea el borde derecho del tip con el borde derecho del ícono */
+    /* Se eliminan 'left' y 'transform' */
     background-color: transparent;
     box-shadow: none;
-    /* Cambiamos el color del texto para que sea más vibrante */
     color: var(--chat-primary-color);
     font-weight: bold;
     padding: 6px 12px;
@@ -427,9 +426,9 @@
     white-space: nowrap;
     opacity: 0;
     transition: opacity 0.5s ease-in-out;
-    /* Sombra de texto para mejorar la legibilidad */
     text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.5);
 }
+
 
 #fab-tip-container.visible {
     opacity: 1; /* Clase para hacerlo visible con una transición suave */
