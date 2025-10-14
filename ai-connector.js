@@ -105,6 +105,7 @@ commandForm.addEventListener('submit', async (event) => {
 
 
 async function handleLabExecution() {
+    const labOverlay = document.getElementById('lab-overlay'); // <-- AÑADE ESTA LÍNEA
     const executeButton = document.getElementById('lab-execute-button');
     //const applyButton = document.getElementById('lab-apply-button');
     //const resultDisplay = document.getElementById('lab-result-display');

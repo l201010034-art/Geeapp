@@ -933,6 +933,8 @@ window.copyAiAnalysis = copyAiAnalysis;
 window.downloadAiAnalysis = downloadAiAnalysis;
 window.handleLabAnalysisChange = handleLabAnalysisChange;
 window.showLoading = showLoading;
+window.legendControl = legendControl;
+
 
 // =======================================================
 // INICIALIZACIÓN DE EVENTOS PARA EL CHAT (SOLUCIÓN FINAL)
