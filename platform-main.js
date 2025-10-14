@@ -232,22 +232,7 @@ function setupEventListeners() {
 
     // Ahora usamos las funciones importadas directamente, sin 'window'.
     document.getElementById('lab-fetch-hurricanes-button').addEventListener('click', fetchHurricaneList);
-    document.getElementById('lab-execute-button').addEventListener('click', async () => {
-        // 1. Muestra el loader pasándole el tipo 'lab' para los mensajes correctos.
-        showLoading(true, 'lab');
-        
-        try {
-            // 2. Espera a que la función de análisis termine.
-            await handleLabExecution();
-        } catch (error) {
-            // 3. Si hay un error, lo mostramos en la consola.
-            console.error("Fallo en la ejecución del Laboratorio:", error.message);
-        } finally {
-            // 4. Pase lo que pase, ocultamos la Etapa 1 del loader.
-            // La Etapa 2 se activará cuando el usuario presione "Aplicar al Mapa".
-            showLoading(false);
-        }
-    });
+    document.getElementById('lab-execute-button').addEventListener('click', handleLabExecution);
     
     document.getElementById('lab-apply-button').addEventListener('click', () => {
         applyLabResultToMap();
