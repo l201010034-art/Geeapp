@@ -102,8 +102,8 @@ commandForm.addEventListener('submit', async (event) => {
 
 async function handleLabExecution() {
     const executeButton = document.getElementById('lab-execute-button');
-    const applyButton = document.getElementById('lab-apply-button');
-    const resultDisplay = document.getElementById('lab-result-display');
+    //const applyButton = document.getElementById('lab-apply-button');
+    //const resultDisplay = document.getElementById('lab-result-display');
 
     const analysisType = document.getElementById('lab-analysis-type').value;
     let requestBody;
@@ -134,8 +134,8 @@ async function handleLabExecution() {
     }
 
     executeButton.disabled = true;
-    executeButton.textContent = "Ejecutando...";
-    resultDisplay.textContent = `// Solicitando análisis '${analysisType}' al servidor...`;
+    //executeButton.textContent = "Ejecutando...";
+    //resultDisplay.textContent = `// Solicitando análisis '${analysisType}' al servidor...`;
 
     // Usamos el loader inteligente global
     window.showIntelligentLoader('Ejecutando análisis del laboratorio...', 'Contactando a Google Earth Engine...');
