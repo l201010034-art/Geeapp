@@ -329,7 +329,7 @@ function resetApp() {
 
 async function handleAnalysis(type, overrideRoi = null) {
     if (type === 'general' && getActiveROIs().length > 1) {
-        updateStatsPanel('Error: Para análisis general, selecciona solo una zona o dibuja un área.');
+        reportErrorToGeo('Error: Para análisis general, selecciona solo una zona o dibuja un área.');
         return;
     }
     const startDate = document.getElementById('startDate').value;
@@ -340,7 +340,7 @@ async function handleAnalysis(type, overrideRoi = null) {
         return;
     }
     if (type === 'compare' && activeROIs.length < 2) {
-        reportErrorToGeo(error.message, 'Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
+        reportErrorToGeo('Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
         //updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
         return;
     }
