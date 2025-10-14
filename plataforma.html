@@ -107,7 +107,8 @@
 }
 
 #chat-fab {
-    position: fixed;
+    position: relative; /* <-- AÑADE ESTA LÍNEA */
+   /* position: fixed;*/
     bottom: 25px;
     right: 25px;
     width: 60px;
@@ -411,11 +412,12 @@
     animation: blink 1s step-end infinite;
 }
 
-/* Contenedor para los mini-tips */
+/* ▼▼▼ REEMPLAZA EL SELECTOR COMPLETO ▼▼▼ */
 #fab-tip-container {
     position: absolute;
     bottom: 110%; /* Lo posiciona justo encima del FAB */
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%);
     background-color: var(--chat-primary-color);
     color: white;
     padding: 6px 12px;
@@ -423,7 +425,7 @@
     font-size: 0.8rem;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     white-space: nowrap;
-    opacity: 0; /* Empieza oculto para la animación */
+    opacity: 0;
     transition: opacity 0.5s ease-in-out;
 }
 
@@ -653,14 +655,17 @@
 
 
 <div id="chat-fab-container">
-    <div id="fab-tip-container" class="hidden"> ... </div>
     <div id="fab-text-container">
         <p id="fab-typing-text"></p>
     </div>
     <div id="chat-fab">
+        <div id="fab-tip-container" class="hidden">
+            <span id="fab-tip-text"></span>
+        </div>
         <img src="assets/geo-avatar.jpg" alt="Asistente Geo">
     </div>
 </div>
+
 <div id="chat-window">
     <div class="chat-header">
         <h5>Asistente Geo</h5>
