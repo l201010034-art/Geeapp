@@ -106,11 +106,9 @@
     --chat-bubble-user: var(--chat-primary-color); /* Burbuja de chat del usuario */
 }
 
+/* ▼▼▼ ESTILO CORREGIDO ▼▼▼ */
 #chat-fab {
-    position: relative; /* <-- AÑADE ESTA LÍNEA */
-   /* position: fixed;*/
-    bottom: 25px;
-    right: 25px;
+    position: relative; /* <-- Esto es necesario para anclar los tips */
     width: 60px;
     height: 60px;
     background: linear-gradient(145deg, var(--chat-primary-color), #0056b3);
@@ -124,7 +122,7 @@
     box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
     z-index: 1000;
     transition: transform 0.2s ease-in-out;
-    overflow: hidden; /* <-- AÑADE ESTA LÍNEA */
+    overflow: hidden;
 }
 
 /* ▼▼▼ AÑADE ESTE NUEVO BLOQUE DE CÓDIGO ▼▼▼ */
@@ -392,18 +390,17 @@
     justify-content: flex-end; /* Alinea los elementos a la derecha */
 }
 
-/* Contenedor del texto que se tipea */
+/* ▼▼▼ REEMPLAZA ESTE SELECTOR COMPLETO ▼▼▼ */
 #fab-text-container {
-    background-color: rgba(44, 49, 56, 0.9);
-    padding: 10px 15px;
-    border-radius: 20px;
-    /* Cambiamos el margen para que funcione con el nuevo orden */
-    margin-right: -20px;
-    /* Y el padding para que el texto no se pegue al borde */
-    padding-right: 30px;
+    /* Eliminamos fondo, padding y sombra */
+    background-color: transparent;
+    box-shadow: none;
+    /* Ajustamos el margen para dar un espacio limpio */
+    margin-right: 15px;
     color: var(--chat-text-light);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     white-space: nowrap;
+    /* Sombra de texto para mejorar la legibilidad sobre cualquier fondo */
+    text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 /* El texto tipeado con su cursor parpadeante */
@@ -412,21 +409,27 @@
     animation: blink 1s step-end infinite;
 }
 
-/* ▼▼▼ REEMPLAZA EL SELECTOR COMPLETO ▼▼▼ */
+/* UBICACIÓN: plataforma.html, dentro de <style> */
+
+/* ▼▼▼ REEMPLAZA ESTE SELECTOR COMPLETO ▼▼▼ */
 #fab-tip-container {
     position: absolute;
-    bottom: 110%; /* Lo posiciona justo encima del FAB */
+    bottom: 110%;
     left: 50%;
     transform: translateX(-50%);
-    background-color: var(--chat-primary-color);
-    color: white;
+    /* Eliminamos fondo y sombra */
+    background-color: transparent;
+    box-shadow: none;
+    /* Cambiamos el color del texto para que sea más vibrante */
+    color: var(--chat-primary-color);
+    font-weight: bold;
     padding: 6px 12px;
-    border-radius: 15px;
     font-size: 0.8rem;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     white-space: nowrap;
     opacity: 0;
     transition: opacity 0.5s ease-in-out;
+    /* Sombra de texto para mejorar la legibilidad */
+    text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 #fab-tip-container.visible {
