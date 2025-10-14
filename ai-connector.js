@@ -189,8 +189,37 @@ function applyLabResultToMap() {
     if (lastLabResult) {
         if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
         if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
-        if (lastLabResult.stats) window.updateStatsPanel(lastLabResult.stats);
-        if (lastLabResult.chartData) window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
+        let hasValidData = false; // Para evitar mensajes duplicados
+
+        // 1. Revisa las estadísticas
+        if (lastLabResult.stats) {
+            // Comprueba si el texto de estadísticas es en realidad un aviso de "sin datos".
+            if (lastLabResult.stats.includes("No se pudieron calcular estadísticas")) {
+                // Si es así, lo reporta a Geo en lugar de al panel.
+                window.reportErrorToGeo(lastLabResult.stats, "¡Atención! ");
+            } else {
+                // Si son estadísticas válidas, las muestra y marca que tenemos datos.
+                window.updateStatsPanel(lastLabResult.stats);
+                hasValidData = true;
+            }
+        }
+
+        // 2. Revisa los datos del gráfico
+        if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
+            // Si hay más de una fila (el encabezado + datos), muestra el gráfico.
+            window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
+            hasValidData = true;
+        }
+
+        // 3. Si después de ambas revisiones no encontramos ningún dato válido, lo notificamos.
+        if (!hasValidData) {
+            // Limpia el panel del gráfico para que no muestre "No hay datos suficientes".
+            window.clearChartAndAi(); 
+            // Y si no se había reportado un error de estadísticas, reportamos el del gráfico.
+            if (!lastLabResult.stats.includes("No se pudieron calcular")) {
+                window.reportErrorToGeo("No se encontraron datos suficientes para generar un gráfico en el período seleccionado.", "¡Vaya! ");
+            }
+        }
     }
     document.getElementById('lab-execute-button').classList.remove('hidden');
     document.getElementById('lab-apply-button').classList.add('hidden');
