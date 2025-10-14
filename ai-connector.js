@@ -135,8 +135,10 @@ async function handleLabExecution() {
 
     executeButton.disabled = true;
     executeButton.textContent = "Ejecutando...";
-    applyButton.classList.add('hidden');
     resultDisplay.textContent = `// Solicitando análisis '${analysisType}' al servidor...`;
+
+    // Usamos el loader inteligente global
+    window.showIntelligentLoader('Ejecutando análisis del laboratorio...', 'Contactando a Google Earth Engine...');
 
     try {
         const response = await fetch('/api/gee-lab', {
@@ -144,21 +146,24 @@ async function handleLabExecution() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
         });
+
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.details || "Error al ejecutar el análisis en el servidor.");
+            throw new Error(errorData.details || "Error al ejecutar el análisis.");
         }
-        lastLabResult = await response.json();
-        resultDisplay.textContent = `// Análisis '${analysisType}' completado exitosamente.`;
-        applyButton.classList.remove('hidden');
-        executeButton.classList.add('hidden');
+
+        lastLabResult = await response.json(); // Guardamos el resultado
+
+        // ---- ¡CAMBIO CLAVE! ----
+        // Si todo salió bien, cerramos el modal y aplicamos el resultado inmediatamente.
+        labOverlay.classList.add('hidden');
+        applyLabResultToMap(); // Llama a la función que renderiza el mapa
+        // El loader se ocultará automáticamente por la función addGeeLayer
+
     } catch (error) {
         resultDisplay.textContent = `// Ocurrió un error:\n// ${error.message}`;
-        executeButton.classList.remove('hidden'); // Re-habilita el botón en caso de error
+        window.hideIntelligentLoader(); // Oculta el loader en caso de error
     } finally {
-        // Ocultamos el loader global al finalizar
-        showLoading(false);
-        // La re-habilitación del botón ya se maneja en el bloque 'catch', así que lo mantenemos simple aquí.
         executeButton.disabled = false;
         executeButton.textContent = "🚀 Ejecutar Análisis";
     }

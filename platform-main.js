@@ -251,7 +251,8 @@ function setupEventListeners() {
     
     document.getElementById('lab-apply-button').addEventListener('click', () => {
         applyLabResultToMap();
-        labOverlay.classList.add('hidden');
+        // Cierra el modal automáticamente
+        document.getElementById('lab-overlay').classList.add('hidden'); 
     });
 
 }
