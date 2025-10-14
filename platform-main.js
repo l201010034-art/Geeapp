@@ -665,43 +665,107 @@ function handleLabAnalysisChange() {
         munSelector.classList.remove('hidden');
         datesStep.classList.remove('hidden');
     }
+    setupGeoBot();
 }
 
-// ... todo tu código existente de platform-main.js ...
+function setupGeoBot() {
+    // --- Creación dinámica de elementos ---
+    createVideoPlayer();
 
-// Por ejemplo, después de la última llave de cierre `}` de tu última función.
+    // --- Vinculación de eventos ---
+    const chatFab = document.getElementById('chat-fab');
+    const chatCloseBtn = document.getElementById('chat-close-btn');
+    const chatSendBtn = document.getElementById('chat-send-btn');
+    const chatInput = document.getElementById('chat-input');
 
-
-// ===============================================
-//         LÓGICA DEL GEOCHAT BOT
-// ===============================================
+    if (chatFab) chatFab.addEventListener('click', toggleChat);
+    if (chatCloseBtn) chatCloseBtn.addEventListener('click', toggleChat);
+    if (chatSendBtn) chatSendBtn.addEventListener('click', sendMessageToBot);
+    if (chatInput) chatInput.addEventListener('keydown', handleChatInput);
+}
 
 function toggleChat() {
     const chatWindow = document.getElementById('chat-window');
-    const chatMessages = document.getElementById('chat-messages');
     const isOpening = chatWindow.style.display !== 'flex';
     
     chatWindow.style.display = isOpening ? 'flex' : 'none';
 
-    // Si es la primera vez que se abre, Geo se presenta.
     if (isOpening && !hasWelcomed) {
-        setTimeout(() => {
-            const welcomeMessage = document.createElement('div');
-            welcomeMessage.className = 'chat-message bot initial-message';
-            welcomeMessage.innerHTML = `<p>¡Hola! Soy Geo, tu explorador geoespacial. Puedes preguntarme sobre conceptos de la plataforma o temas geoespaciales.</p>`;
-            chatMessages.appendChild(welcomeMessage);
-            hasWelcomed = true;
-        }, 500); // Un pequeño retraso para que la animación sea más agradable
+        showPresentationButton();
+        hasWelcomed = true;
     }
 }
 
+function showPresentationButton() {
+    const chatMessages = document.getElementById('chat-messages');
+    
+    // Mensaje con el botón para presentar a Geo
+    const presentationMessage = document.createElement('div');
+    presentationMessage.className = 'chat-message bot initial-message';
+    presentationMessage.innerHTML = `
+        <p>¡Bienvenido! Antes de empezar, ¿te gustaría conocer a tu asistente Geo?</p>
+        <button id="present-geo-btn" style="margin-top: 10px; padding: 8px 16px; background-color: var(--chat-primary-color); color: white; border: none; border-radius: 20px; cursor: pointer;">
+            ▶️ Presentar a Geo
+        </button>
+    `;
+    chatMessages.appendChild(presentationMessage);
+    
+    document.getElementById('present-geo-btn').addEventListener('click', () => {
+        presentationMessage.remove(); // Elimina el botón
+        playIntroVideo();
+    });
+}
+
+function playIntroVideo() {
+    const videoContainer = document.getElementById('geo-video-container');
+    const video = document.getElementById('geo-presentation-video');
+    if (videoContainer && video) {
+        videoContainer.style.display = 'flex';
+        video.play();
+    }
+}
+
+async function introduceGeoAfterVideo() {
+    const chatMessages = document.getElementById('chat-messages');
+    
+    // Crea la burbuja del bot donde se escribirá el texto
+    const botBubble = document.createElement('div');
+    botBubble.className = 'chat-message bot';
+    const messageParagraph = document.createElement('p');
+    botBubble.appendChild(messageParagraph);
+    chatMessages.appendChild(botBubble);
+    chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
+
+    // Prompt para que Gemini genere la presentación
+    const prompt = "Actúa como Geo, un asistente de IA. Preséntate en un párrafo corto. Menciona tu nombre, que eres un explorador geoespacial y que tu propósito es ayudar a analizar datos satelitales en esta plataforma. Tu tono debe ser amigable y un poco futurista.";
+
+    try {
+        const response = await fetch('/api/generate-text', { // Usamos el nuevo endpoint
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
+        });
+        
+        if (!response.ok) throw new Error('No se pudo obtener la presentación de la IA.');
+        
+        const data = await response.json();
+        await typeWriter(messageParagraph, data.text);
+
+    } catch (error) {
+        console.error("Error al introducir a Geo:", error);
+        const fallbackText = "¡Hola! Soy Geo. Estoy aquí para ayudarte a explorar el mundo a través de datos satelitales. ¡Pregúntame lo que quieras!";
+        await typeWriter(messageParagraph, fallbackText);
+    }
+}
+
+// --- Funciones del Chat (ya corregidas) ---
 
 function handleChatInput(event) {
     if (event.key === 'Enter') {
         sendMessageToBot();
     }
 }
-// REEMPLAZA tu función sendMessageToBot() con esta:
+
 async function sendMessageToBot() {
     const input = document.getElementById('chat-input');
     const messageText = input.value.trim();
@@ -718,17 +782,10 @@ async function sendMessageToBot() {
     input.value = '';
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    // Muestra el nuevo indicador de "escribiendo"
+    // Muestra el indicador de "escribiendo"
     const typingIndicator = document.createElement('div');
     typingIndicator.className = 'chat-message bot';
-    // Estructura correcta con el <p> y la animación dentro
-    typingIndicator.innerHTML = `
-        <p class="typing-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
-        </p>
-    `;
+    typingIndicator.innerHTML = `<p class="typing-indicator"><span></span><span></span><span></span></p>`;
     chatMessages.appendChild(typingIndicator);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -739,22 +796,73 @@ async function sendMessageToBot() {
             body: JSON.stringify({ question: messageText })
         });
 
-        if (!response.ok) {
-            throw new Error('Hubo un problema al contactar a Geo.');
-        }
+        if (!response.ok) throw new Error('Hubo un problema al contactar a Geo.');
 
         const { answer } = await response.json();
-
-        // Reemplaza el contenido del indicador de escritura con la respuesta final
         typingIndicator.querySelector('p').classList.remove('typing-indicator');
         typingIndicator.querySelector('p').innerHTML = answer;
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
     } catch (error) {
-        // Muestra el error en la misma burbuja
         typingIndicator.querySelector('p').classList.remove('typing-indicator');
-        typingIndicator.querySelector('p').innerHTML = `<span style="color: #ff8c8c;">Lo siento, tuve un problema para conectarme. Intenta de nuevo.</span>`;
+        typingIndicator.querySelector('p').innerHTML = `<span style="color: #ff8c8c;">Lo siento, tuve un problema para conectarme.</span>`;
     }
+}
+
+
+// --- Funciones de Utilidad (Video y Typewriter) ---
+
+function createVideoPlayer() {
+    const videoContainer = document.createElement('div');
+    videoContainer.id = 'geo-video-container';
+    Object.assign(videoContainer.style, {
+        position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.85)', zIndex: '9999',
+        display: 'none', alignItems: 'center', justifyContent: 'center'
+    });
+
+    const video = document.createElement('video');
+    video.id = 'geo-presentation-video';
+    video.src = 'assets/Video_de_Presentación_Minimalista_Profesional.mp4'; // Ruta al video
+    video.controls = true;
+    Object.assign(video.style, {
+        maxWidth: '80vw', maxHeight: '80vh', borderRadius: '10px'
+    });
+    
+    videoContainer.appendChild(video);
+    document.body.appendChild(videoContainer);
+
+    let introTriggered = false;
+    const endVideo = () => {
+        if (!introTriggered) {
+            introTriggered = true;
+            video.pause();
+            videoContainer.style.display = 'none';
+            introduceGeoAfterVideo();
+        }
+    };
+
+    video.addEventListener('ended', endVideo);
+    videoContainer.addEventListener('click', (e) => {
+        if (e.target === videoContainer) endVideo(); // Cierra si se hace clic en el fondo
+    });
+}
+
+function typeWriter(element, text) {
+    return new Promise(resolve => {
+        let i = 0;
+        function typing() {
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                i++;
+                document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+                setTimeout(typing, 30); // Velocidad de escritura (en milisegundos)
+            } else {
+                resolve();
+            }
+        }
+        typing();
+    });
 }
 
 // --- EXPOSICIÓN DE FUNCIONES GLOBALES ---
