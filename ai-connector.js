@@ -138,7 +138,14 @@ async function handleLabExecution() {
     //resultDisplay.textContent = `// Solicitando análisis '${analysisType}' al servidor...`;
 
     // Usamos el loader inteligente global
-    window.showIntelligentLoader('Ejecutando análisis del laboratorio...', 'Contactando a Google Earth Engine...');
+    Loader.show([ // <--- CAMBIO CLAVE
+        "Accediendo al Laboratorio de IA...",
+        "Configurando el entorno de análisis en el servidor...",
+        "Ejecutando el módulo de análisis especializado...",
+        "Compilando resultados para la previsualización...",
+        "Refinando contenido con IA avanzada...",
+        "¡Análisis completado!"
+]);
 
     try {
         const response = await fetch('/api/gee-lab', {
