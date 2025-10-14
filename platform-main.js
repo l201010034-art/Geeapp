@@ -236,6 +236,7 @@ function setupEventListeners() {
     
     document.getElementById('lab-apply-button').addEventListener('click', () => {
         applyLabResultToMap();
+        showStage2Loader(); // Muestra el loader de la Etapa 2
         // Cierra el modal automáticamente
         document.getElementById('lab-overlay').classList.add('hidden'); 
     });
