@@ -802,7 +802,7 @@ function startFabAnimations() {
         // Usamos un timeout para que la escritura se "reinicie" visualmente
         clearTimeout(fabTypewriterTimeout);
         fabTypewriterTimeout = setTimeout(() => {
-            typeWriter(fabTextElement, "AI Geo Bot");
+            typeWriter(fabTextElement, "AI Geo");
         }, 100);
     }
 
