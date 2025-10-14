@@ -1,4 +1,8 @@
+
+import { Loader } from './intelligent-loader.js'; // <-- AÑADE ESTA LÍNEA
+
 // --- 1. CONEXIÓN CON LA IA PARA ANÁLISIS (PANELES DERECHOS) ---
+
 const AI_API_URL = '/api/analyze';
 const aiPanel = document.getElementById('ai-analysis-panel');
 const aiSummaryDiv = document.getElementById('ai-summary');
