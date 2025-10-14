@@ -38,6 +38,18 @@ const zonas = {
 };
 const municipios = ["Calakmul", "Calkiní", "Campeche", "Candelaria", "Carmen", "Champotón", "Dzitbalché", "Escárcega", "Hecelchakán", "Hopelchén", "Palizada", "Seybaplaya", "Tenabo"];
 
+// --- UTILITY FUNCTION ---
+function debounce(func, delay) {
+    let timeoutId;
+    return function(...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            func.apply(this, args);
+        }, delay);
+    };
+}
+
+
 // --- INICIALIZACIÓN DE LA PLATAFORMA ---
 export function initPlatform() {
     Loader.init();
@@ -52,29 +64,29 @@ export function initPlatform() {
             handleZoneSelection(Object.keys(zonas)[0]);
         }
     });
+    // Dentro de tu función de inicialización (ej: initPlatform o DOMContentLoaded)
+
+    // Crea la versión debounced de la función de briefing. Espera 750ms de inactividad.
+    const debouncedBriefingUpdate = debounce(updateIntelligenceBriefing, 750);
+
+    // Selecciona todos los controles que deben activar el briefing
+    const labControls = [
+        document.getElementById('lab-analysis-type'),
+        document.getElementById('lab-region-selector-municipalities'),
+        document.getElementById('lab-region-selector-marine'),
+        document.getElementById('lab-start-date'),
+        document.getElementById('lab-end-date')
+    ];
+
+    // Asigna el mismo listener a todos los controles
+    labControls.forEach(control => {
+        if (control) {
+            control.addEventListener('change', debouncedBriefingUpdate);
+        }
+    });
+
+
 }
-
-// Dentro de tu función de inicialización (ej: initPlatform o DOMContentLoaded)
-
-// Crea la versión debounced de la función de briefing. Espera 750ms de inactividad.
-const debouncedBriefingUpdate = debounce(updateIntelligenceBriefing, 750);
-
-// Selecciona todos los controles que deben activar el briefing
-const labControls = [
-    document.getElementById('lab-analysis-type'),
-    document.getElementById('lab-region-selector-municipalities'),
-    document.getElementById('lab-region-selector-marine'),
-    document.getElementById('lab-start-date'),
-    document.getElementById('lab-end-date')
-];
-
-// Asigna el mismo listener a todos los controles
-labControls.forEach(control => {
-    if (control) {
-        control.addEventListener('change', debouncedBriefingUpdate);
-    }
-});
-
 function initMap() {
     const googleSat = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{ maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'], attribution: 'Google Satellite' });
     const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{ maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3'], attribution: 'Google Hybrid' });
