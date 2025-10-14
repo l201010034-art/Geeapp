@@ -669,10 +669,9 @@ function handleLabAnalysisChange() {
 }
 
 function setupGeoBot() {
-    // --- Creación dinámica de elementos ---
     createVideoPlayer();
+    createFullscreenIntro();
 
-    // --- Vinculación de eventos ---
     const chatFab = document.getElementById('chat-fab');
     const chatCloseBtn = document.getElementById('chat-close-btn');
     const chatSendBtn = document.getElementById('chat-send-btn');
@@ -690,16 +689,15 @@ function toggleChat() {
     
     chatWindow.style.display = isOpening ? 'flex' : 'none';
 
-    if (isOpening && !hasWelcomed) {
+    if (isOpening && !hasBeenWelcomed) {
         showPresentationButton();
-        hasWelcomed = true;
+        hasBeenWelcomed = true;
     }
 }
 
 function showPresentationButton() {
     const chatMessages = document.getElementById('chat-messages');
     
-    // Mensaje con el botón para presentar a Geo
     const presentationMessage = document.createElement('div');
     presentationMessage.className = 'chat-message bot initial-message';
     presentationMessage.innerHTML = `
@@ -711,7 +709,7 @@ function showPresentationButton() {
     chatMessages.appendChild(presentationMessage);
     
     document.getElementById('present-geo-btn').addEventListener('click', () => {
-        presentationMessage.remove(); // Elimina el botón
+        presentationMessage.remove();
         playIntroVideo();
     });
 }
@@ -726,21 +724,17 @@ function playIntroVideo() {
 }
 
 async function introduceGeoAfterVideo() {
-    const chatMessages = document.getElementById('chat-messages');
+    const introOverlay = document.getElementById('geo-fullscreen-intro');
+    const introTextContainer = document.getElementById('intro-text-container');
     
-    // Crea la burbuja del bot donde se escribirá el texto
-    const botBubble = document.createElement('div');
-    botBubble.className = 'chat-message bot';
-    const messageParagraph = document.createElement('p');
-    botBubble.appendChild(messageParagraph);
-    chatMessages.appendChild(botBubble);
-    chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
+    if (!introOverlay || !introTextContainer) return;
 
-    // Prompt para que Gemini genere la presentación
-    const prompt = "Actúa como Geo, un asistente de IA. Preséntate en un párrafo corto. Menciona tu nombre, que eres un explorador geoespacial y que tu propósito es ayudar a analizar datos satelitales en esta plataforma. Tu tono debe ser amigable y un poco futurista.";
+    introOverlay.classList.add('visible');
+
+    const prompt = "Actúa como Geo, un asistente de IA. Preséntate en un párrafo corto y amigable. Menciona tu nombre, que eres un explorador geoespacial impulsado por la IA de Gemini, y que tu propósito es ayudar a analizar datos satelitales en esta plataforma. Tu tono debe ser acogedor y un poco futurista.";
 
     try {
-        const response = await fetch('/api/generate-text', { // Usamos el nuevo endpoint
+        const response = await fetch('/api/generate-text', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt })
@@ -749,22 +743,25 @@ async function introduceGeoAfterVideo() {
         if (!response.ok) throw new Error('No se pudo obtener la presentación de la IA.');
         
         const data = await response.json();
-        await typeWriter(messageParagraph, data.text);
+        await typeWriter(introTextContainer, data.text);
 
     } catch (error) {
         console.error("Error al introducir a Geo:", error);
-        const fallbackText = "¡Hola! Soy Geo. Estoy aquí para ayudarte a explorar el mundo a través de datos satelitales. ¡Pregúntame lo que quieras!";
-        await typeWriter(messageParagraph, fallbackText);
+        const fallbackText = "¡Hola! Soy Geo, tu asistente geoespacial impulsado por IA. Estoy aquí para ayudarte a explorar el mundo a través de datos satelitales. ¡Pregúntame lo que quieras!";
+        await typeWriter(introTextContainer, fallbackText);
     }
+    
+    // Espera 3 segundos y luego cierra el overlay
+    setTimeout(() => {
+        introOverlay.classList.remove('visible');
+    }, 3000);
 }
 
-// --- Funciones del Chat (ya corregidas) ---
-
+// --- Funciones del Chat (sin cambios) ---
 function handleChatInput(event) {
-    if (event.key === 'Enter') {
-        sendMessageToBot();
-    }
+    if (event.key === 'Enter') sendMessageToBot();
 }
+
 
 async function sendMessageToBot() {
     const input = document.getElementById('chat-input');
@@ -810,8 +807,6 @@ async function sendMessageToBot() {
 }
 
 
-// --- Funciones de Utilidad (Video y Typewriter) ---
-
 function createVideoPlayer() {
     const videoContainer = document.createElement('div');
     videoContainer.id = 'geo-video-container';
@@ -823,8 +818,8 @@ function createVideoPlayer() {
 
     const video = document.createElement('video');
     video.id = 'geo-presentation-video';
-    video.src = 'assets/Video_de_Presentación_Minimalista_Profesional.mp4'; // Ruta al video
-    video.controls = true;
+    video.src = 'assets/Video_de_Presentacion_Minimalista_Profesional.mp4';
+    video.controls = false; // El video no necesita controles si se cierra solo
     Object.assign(video.style, {
         maxWidth: '80vw', maxHeight: '80vh', borderRadius: '10px'
     });
@@ -843,9 +838,25 @@ function createVideoPlayer() {
     };
 
     video.addEventListener('ended', endVideo);
-    videoContainer.addEventListener('click', (e) => {
-        if (e.target === videoContainer) endVideo(); // Cierra si se hace clic en el fondo
-    });
+}
+
+function createFullscreenIntro() {
+    const overlay = document.createElement('div');
+    overlay.id = 'geo-fullscreen-intro';
+    
+    // SVG del logo de Gemini
+    const geminiLogo = `
+        <svg id="gemini-logo-intro" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" fill="white"/>
+        </svg>
+    `;
+
+    overlay.innerHTML = `
+        ${geminiLogo}
+        <div id="intro-text-container"></div>
+    `;
+    
+    document.body.appendChild(overlay);
 }
 
 function typeWriter(element, text) {
@@ -855,9 +866,9 @@ function typeWriter(element, text) {
             if (i < text.length) {
                 element.innerHTML += text.charAt(i);
                 i++;
-                document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
-                setTimeout(typing, 30); // Velocidad de escritura (en milisegundos)
+                setTimeout(typing, 50); // Velocidad de escritura
             } else {
+                element.style.borderRight = 'none'; // Oculta el cursor al terminar
                 resolve();
             }
         }
