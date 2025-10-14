@@ -340,7 +340,8 @@ async function handleAnalysis(type, overrideRoi = null) {
         return;
     }
     if (type === 'compare' && activeROIs.length < 2) {
-        updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
+        reportErrorToGeo(error.message, 'Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
+        //updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
         return;
     }
     clearMapAndAi();
@@ -388,7 +389,7 @@ async function handleAnalysis(type, overrideRoi = null) {
 
     } catch (error) {
         // Llama al nuevo sistema de errores de GeoBot
-        reportErrorToGeo(error.message, "¡Oh, no! No pude completar el análisis. ");
+        reportErrorToGeo(error.message, "¡Oh, no! No pude completar el análisis. Prueba de nuevo o ajusta los parámetros, por lo general la fecha es uno de los principales problemas, prueba con un periodo mas largo. Detalles técnicos: ");
         legendControl.update(null);
         // Oculta el loader después de reportar el error
         showLoading(false);
