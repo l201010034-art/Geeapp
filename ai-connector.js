@@ -179,10 +179,9 @@ async function handleLabExecution() {
         // ---- ¡CAMBIO CLAVE! ----
         // Si todo salió bien, cerramos el modal y aplicamos el resultado inmediatamente.
         labOverlay.classList.add('hidden');
-        applyLabResultToMap(); // Llama a la función que renderiza el mapa
+        applyLabResultToMap(requestBody); 
         // El loader se ocultará automáticamente por la función addGeeLayer
-// UBICACIÓN: ai-connector.js, dentro de handleLabExecution
-
+        // ---- FIN DEL CAMBIO CLAVE ----
     } catch (error) {
         // Llama al nuevo sistema de errores de GeoBot
         window.reportErrorToGeo(error.message, "¡Ups! El análisis del laboratorio no pudo completarse. ");
@@ -195,45 +194,51 @@ async function handleLabExecution() {
     }
 }
 
-function applyLabResultToMap() {
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA la función applyLabResultToMap completa con esta versión.
+function applyLabResultToMap(requestBody) {
     if (lastLabResult) {
+        // Renderiza el mapa y la leyenda como siempre
         if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
         if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
-        let hasValidData = false; // Para evitar mensajes duplicados
+        
+        let hasValidData = false;
 
-        // 1. Revisa las estadísticas
-        if (lastLabResult.stats) {
-            // Comprueba si el texto de estadísticas es en realidad un aviso de "sin datos".
-            if (lastLabResult.stats.includes("No se pudieron calcular estadísticas")) {
-                // Si es así, lo reporta a Geo en lugar de al panel.
-                window.reportErrorToGeo(lastLabResult.stats, "¡Atención! ");
-            } else {
-                // Si son estadísticas válidas, las muestra y marca que tenemos datos.
-                window.updateStatsPanel(lastLabResult.stats);
-                hasValidData = true;
-            }
+        if (lastLabResult.stats && !lastLabResult.stats.includes("No se pudieron calcular estadísticas")) {
+            window.updateStatsPanel(lastLabResult.stats);
+            hasValidData = true;
         }
 
-        // 2. Revisa los datos del gráfico
         if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
-            // Si hay más de una fila (el encabezado + datos), muestra el gráfico.
             window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
             hasValidData = true;
         }
 
-        // 3. Si después de ambas revisiones no encontramos ningún dato válido, lo notificamos.
+        // --- ▼▼▼ LÓGICA AÑADIDA PARA ACTIVAR LA IA ▼▼▼ ---
+        // Si el análisis fue exitoso, construimos el prompt y llamamos a la IA.
+        const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
+        const prompt = buildLabAnalysisPrompt(
+            lastLabResult,
+            analysisName,
+            requestBody.roi,
+            requestBody.startDate,
+            requestBody.endDate
+        );
+        // Usamos la función existente que ya se encarga de mostrar el panel,
+        // el estado de carga y el resultado final.
+        callAndDisplayAnalysis(prompt);
+        // --- ▲▲▲ FIN DE LA LÓGICA AÑADIDA ▲▲▲ ---
+
+        // Lógica de manejo de errores de datos (sin cambios)
         if (!hasValidData) {
-            // Limpia el panel del gráfico para que no muestre "No hay datos suficientes".
             window.clearChartAndAi(); 
-            // Y si no se había reportado un error de estadísticas, reportamos el del gráfico.
-            if (!lastLabResult.stats.includes("No se pudieron calcular")) {
+            if (!lastLabResult.stats || !lastLabResult.stats.includes("No se pudieron calcular")) {
                 window.reportErrorToGeo("No se encontraron datos suficientes para generar un gráfico en el período seleccionado.", "¡Vaya! ");
             }
         }
     }
     document.getElementById('lab-execute-button').classList.remove('hidden');
     document.getElementById('lab-apply-button').classList.add('hidden');
-    //document.getElementById('lab-preview-overlay').classList.add('hidden');
 }
 
 async function fetchHurricaneList() {
@@ -336,3 +341,21 @@ export {
     fetchHurricaneList
 };
 
+// UBICACIÓN: ai-connector.js
+// AÑADE esta función al final del archivo.
+function buildLabAnalysisPrompt(labResult, analysisType, roi, startDate, endDate) {
+    const { stats } = labResult;
+    return `
+        Eres un analista geoespacial experto. Interpreta el resultado de un análisis avanzado del "Laboratorio de IA".
+        - **Tipo de Análisis:** ${analysisType}
+        - **Región de Interés:** ${roi}
+        - **Periodo:** ${startDate} a ${endDate}
+        - **Estadísticas Clave:** ${stats || "No se generaron estadísticas numéricas, es un análisis visual."}
+
+        **Instrucciones:**
+        1.  Explica en un párrafo qué es este tipo de análisis y para qué sirve (ej. "El NDVI mide la salud de la vegetación...").
+        2.  Basado en las estadísticas y tu conocimiento del análisis, genera un resumen ejecutivo conciso (máx 2 párrafos).
+        3.  Finaliza con una **Conclusión Clave** en negritas sobre lo que los resultados implican para la región.
+        **Formato de Salida:** Usa formato Markdown simple (párrafos y **negritas**).
+    `;
+}

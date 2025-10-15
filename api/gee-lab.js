@@ -16,25 +16,6 @@ function getMunicipalityCvegeo(municipalityName) {
     return cvegeoMap[normalizedInput] || null;
 }
 
-function ensureLegendDescription(visParams) {
-    if (visParams && typeof visParams.description === 'string' && visParams.description.trim() !== '') {
-        return visParams;
-    }
-    const newVisParams = { ...visParams };
-    const title = newVisParams.bandName || 'Resultado del Laboratorio';
-    const unit = newVisParams.unit ? `(${newVisParams.unit})` : '';
-    const min = newVisParams.min ?? '';
-    const max = newVisParams.max ?? '';
-    const palette = newVisParams.palette;
-
-    if (palette && Array.isArray(palette)) {
-        const gradient = `linear-gradient(to right, ${palette.join(', ')})`;
-        newVisParams.description = `<div class="legend-title">${title} ${unit}</div><div class="legend-scale-bar" style="background: ${gradient};"></div><div class="legend-labels"><span>${min}</span><span>${max}</span></div>`;
-    } else {
-        newVisParams.description = `<div class="legend-title">${title} ${unit}</div>`;
-    }
-    return newVisParams;
-}
 
 async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio") {
     return new Promise((resolve, reject) => {
@@ -163,7 +144,6 @@ async function executeAnalysis(params) {
     
     // 3. Procesar resultados
     let { laImagenResultante, collectionForChart, bandNameForChart, visParams } = analysisResult;
-    visParams = ensureLegendDescription(visParams);
 
     const imageToDisplay = (params.analysisType === 'HURRICANE' || params.analysisType === 'FAI')
         ? laImagenResultante
