@@ -55,7 +55,7 @@ module.exports = async (req, res) => {
         `;
         // --- ▲▲▲ FIN DE LA INGENIERÍA DE PROMPTS AVANZADA ▲▲▲ ---
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
         const result = await model.generateContent(promptForGeo);
         const response = await result.response;
         const answer = response.text();
