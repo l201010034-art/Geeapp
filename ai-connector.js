@@ -205,21 +205,16 @@ async function handleLabExecution() {
     }
 }
 
-// UBICACIÓN: ai-connector.js
+// UBICACIÓN: /ai-connector.js
 // REEMPLAZA la función applyLabResultToMap completa.
-function applyLabResultToMap(requestBody) {
-    // --- ▼▼▼ DEBUG CHECKPOINT 2 (NAVEGADOR) ▼▼▼ ---
-    console.log('[DEBUG-BROWSER 2/4] Ingresando a applyLabResultToMap con:', { requestBody, lastLabResult });
 
+function applyLabResultToMap(requestBody) {
     if (lastLabResult) {
         if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
         
-        // --- ▼▼▼ DEBUG CHECKPOINT 3 (NAVEGADOR) ▼▼▼ ---
-        console.log('[DEBUG-BROWSER 3/4] Intentando actualizar la leyenda con visParams:', lastLabResult.visParams);
         if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
         
         let hasValidData = false;
-
         if (lastLabResult.stats && !lastLabResult.stats.includes("No se pudieron calcular")) {
             hasValidData = true;
         }
@@ -227,19 +222,24 @@ function applyLabResultToMap(requestBody) {
             hasValidData = true;
         }
 
-        // --- ▼▼▼ DEBUG CHECKPOINT 4 (NAVEGADOR) ▼▼▼ ---
-        console.log('[DEBUG-BROWSER 4/4] El resultado de hasValidData es:', hasValidData);
-
         if (hasValidData) {
             window.updateStatsPanel(lastLabResult.stats);
             if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
                 window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
             }
+            // ▼▼▼ NUEVA LÓGICA AÑADIDA ▼▼▼
+            // Obtenemos el nombre legible del análisis y los parámetros de la solicitud.
             const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
             const prompt = buildLabAnalysisPrompt(lastLabResult, analysisName, requestBody.roi, requestBody.startDate, requestBody.endDate);
+            
+            // Llamamos a la misma función que usan los análisis generales para mostrar la interpretación.
             callAndDisplayAnalysis(prompt);
+            // ▲▲▲ FIN DE LA NUEVA LÓGICA ▲▲▲
         } else {
             window.clearChartAndAi();
+            // Opcional: Informar al usuario si no hay datos para analizar.
+            aiPanel.classList.remove('hidden');
+            aiSummaryDiv.innerHTML = `<p class="text-gray-400">No se encontraron datos suficientes en la región y fechas seleccionadas para generar un análisis de IA.</p>`;
         }
     }
 }
@@ -346,8 +346,9 @@ export {
 
 };
 
-// UBICACIÓN: ai-connector.js
+// UBICACIÓN: /ai-connector.js
 // AÑADE esta función al final del archivo.
+
 function buildLabAnalysisPrompt(labResult, analysisType, roi, startDate, endDate) {
     const { stats } = labResult;
     return `
