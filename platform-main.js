@@ -1,4 +1,5 @@
 import { Loader } from './intelligent-loader.js';
+import { initTourGuide } from './tour-guide.js';
 // ▼▼▼ REEMPLAZA TU BLOQUE DE IMPORTACIÓN DE AI-CONNECTOR CON ESTE ▼▼▼
 import {
     fetchHurricaneList,
@@ -128,6 +129,8 @@ export function initPlatform() {
     });
 
     startFabAnimations(); // <-- AÑADE ESTA LÍNEA AL FINAL DE LA FUNCIÓN
+    initTourGuide();
+
 
 }
 function initMap() {
