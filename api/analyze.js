@@ -1,11 +1,5 @@
-// /api/analyze.js
-
-// Importas el paquete de Google. Asegúrate de instalarlo en tu proyecto.
-// (ej: npm install @google/generative-ai)
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Inicializas el cliente de forma segura, leyendo la variable de entorno del servidor.
-// ¡Aquí SÍ funciona process.env!
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" }); // Usamos flash, es más rápido y económico para esta tarea
 

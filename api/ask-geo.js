@@ -1,6 +1,3 @@
-// UBICACIÓN: /api/ask-geo.js
-// REEMPLAZA el contenido completo de este archivo.
-
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Inicializamos la IA con tu clave de API
@@ -18,7 +15,6 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: 'No se recibió ninguna pregunta.' });
         }
 
-        // --- ▼▼▼ INGENIERÍA DE PROMPTS AVANZADA PARA "GEO" v7.0 (FLEXIBLE Y AMIGABLE) ▼▼▼ ---
         const promptForGeo = `
             Actúa como "Geo", un asistente de IA amigable, experto y servicial en una plataforma de análisis geoespacial para Campeche. Tu personalidad es didáctica, proactiva y paciente.
 
@@ -53,7 +49,6 @@ module.exports = async (req, res) => {
 
             PREGUNTA DEL USUARIO: "${question}"
         `;
-        // --- ▲▲▲ FIN DE LA INGENIERÍA DE PROMPTS AVANZADA ▲▲▲ ---
 
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
         const result = await model.generateContent(promptForGeo);

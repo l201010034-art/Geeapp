@@ -1,5 +1,3 @@
-// tour-guide.js (Versión con todos los pasos)
-
 import { driver } from 'https://cdn.jsdelivr.net/npm/driver.js@1.0.1/+esm';
 
 export function initTourGuide() {
@@ -20,7 +18,6 @@ export function initTourGuide() {
                 description: createPopoverContent(geoBotImageSrc, '¡Hola! Soy GeoBot. Usa esta barra para hacer preguntas directas, como "Muéstrame la temperatura máxima en Campeche la semana pasada".')
             } 
         },
-        // ▼▼▼ PASO AÑADIDO ▼▼▼
         { 
             element: 'details:nth-of-type(1)',
             popover: { 
@@ -29,7 +26,6 @@ export function initTourGuide() {
             },
             side: 'right'
         },
-        // ▲▲▲ FIN DEL PASO AÑADIDO ▲▲▲
         { 
             element: 'details:nth-of-type(2)',
             popover: { 

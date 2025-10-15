@@ -1,4 +1,3 @@
-// /api/lab/lst.js - VERSIÓN ESCALABLE FINAL
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {

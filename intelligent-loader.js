@@ -1,5 +1,3 @@
-// /intelligent-loader.js - Módulo Autónomo para el Loader Inteligente de Dos Etapas
-
 // Encapsulamos toda la lógica en un objeto 'Loader' para evitar conflictos.
 const Loader = {
     // Referencias a los elementos del DOM (se inicializan en null)

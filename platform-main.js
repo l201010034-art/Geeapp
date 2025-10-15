@@ -1,13 +1,12 @@
 import { Loader } from './intelligent-loader.js';
 import { initTourGuide } from './tour-guide.js';
-// ▼▼▼ REEMPLAZA TU BLOQUE DE IMPORTACIÓN DE AI-CONNECTOR CON ESTE ▼▼▼
 import {
     fetchHurricaneList,
     handleLabExecution,
     applyLabResultToMap,
-    generateAiAnalysis,    // <-- Función que faltaba importar
-    generatePrediction,      // <-- Función que faltaba importar
-    generateFireRiskAnalysis, // <-- Función que faltaba importar
+    generateAiAnalysis,    
+    generatePrediction,      
+    generateFireRiskAnalysis,
     resetAiPanel
 } from './ai-connector.js';
 
@@ -24,8 +23,6 @@ const fabTips = [
     "Usa el Laboratorio de IA para análisis avanzados.",
     "Pide 'lluvia en Campeche la semana pasada'."
 ];
-
-// UBICACIÓN: platform-main.js (antes de la exposición de funciones globales)
 
 /**
  * Gestiona y muestra errores de toda la plataforma a través del chat de GeoBot.
@@ -110,7 +107,6 @@ export function initPlatform() {
             handleZoneSelection(Object.keys(zonas)[0]);
         }
     });
-    // Dentro de tu función de inicialización (ej: initPlatform o DOMContentLoaded)
 
     // Crea la versión debounced de la función de briefing. Espera 750ms de inactividad.
     const debouncedBriefingUpdate = debounce(updateIntelligenceBriefing, 750);
@@ -131,7 +127,7 @@ export function initPlatform() {
         }
     });
 
-    startFabAnimations(); // <-- AÑADE ESTA LÍNEA AL FINAL DE LA FUNCIÓN
+    startFabAnimations(); 
     initTourGuide();
 
 
@@ -155,10 +151,6 @@ function initMap() {
     legendControl = L.control({position: 'bottomright'});
     legendControl.onAdd = function (map) { this._div = L.DomUtil.create('div', 'legend'); this.update(); return this._div; };
 
-
-// UBICACIÓN: platform-main.js
-// REEMPLAZA la función legendControl.update completa.
-
 legendControl.update = function (varInfo) {
     console.log('[DEBUG] La función legendControl.update fue llamada con:', varInfo);
 
@@ -171,7 +163,6 @@ legendControl.update = function (varInfo) {
     if (varInfo.customLegend && varInfo.customLegend.type === 'hurricane') {
         let html = `<div class="legend-title">${varInfo.bandName}</div>`;
         
-        // ▼▼▼ CORRECCIÓN CLAVE ▼▼▼
         // La paleta y los rangos de SST están definidos aquí, ya no dependen del backend.
         const sstPalette = ['#000080', '#00FFFF', '#FFFF00', '#FF0000'].join(', ');
         const sstMin = 20;
@@ -180,7 +171,6 @@ legendControl.update = function (varInfo) {
         html += `<div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
                 <div class="legend-scale-bar" style="background: linear-gradient(to right, ${sstPalette});"></div>
                 <div class="legend-labels" style="font-size: 11px;"><span>${sstMin}</span><span>${sstMax}</span></div>`;
-        // ▲▲▲ FIN DE LA CORRECCIÓN ▲▲▲
         
         html += `<div style="font-size: 11px; margin-top: 4px;"><strong>Intensidad (Saffir-Simpson)</strong></div>`;
         varInfo.customLegend.items.forEach(item => {
@@ -249,9 +239,6 @@ function populateSelectors() {
     document.getElementById('lab-start-date').value = aMonthAgo;
     document.getElementById('lab-end-date').value = today;
 }
-
-// UBICACIÓN: platform-main.js
-// REEMPLAZA la función setupEventListeners completa con esta versión.
 
 function setupEventListeners() {
     const menuToggle = document.getElementById('menu-toggle');
@@ -380,9 +367,7 @@ async function handleAnalysis(type, overrideRoi = null) {
     
     clearMapAndAi();
     
-    // --- ▼▼▼ MEJORA 1: REACTIVAR ANIMACIÓN DE IA ▼▼▼ ---
     resetAiPanel(); 
-    // --- ▲▲▲ FIN DE LA MEJORA 1 ▲▲▲ ---
 
     showLoading(true, type);
 
@@ -419,13 +404,11 @@ async function handleAnalysis(type, overrideRoi = null) {
             }
         }
 
-        // --- ▼▼▼ MEJORA 2: OCULTAR GRÁFICO SI NO HAY DATOS ▼▼▼ ---
         if (response.chartData && response.chartData.length >= 2) {
             updateChartAndData(response.chartData, response.chartOptions);
         } else {
             clearChartAndAi(); // <-- Oculta el panel del gráfico
         }
-        // --- ▲▲▲ FIN DE LA MEJORA 2 ▲▲▲ ---
 
         const aiData = { stats: response.stats, chartData: response.chartData, chartOptions: response.chartOptions, variable: selectedVar, roi: activeROIs[0]?.name || "área seleccionada", startDate, endDate };
         
@@ -467,8 +450,6 @@ async function callGeeApi(action, params) {
     try { return JSON.parse(responseText); }
     catch (e) { throw new Error(`Respuesta inválida del servidor.`); }
 }
-
-// UBICACIÓN: platform-main.js
 
 function downloadCSV() {
     // 1. Usa la variable global directamente, como en la versión antigua.
@@ -650,8 +631,6 @@ function clearMapAndAi() {
     clearChartAndAi();
 }
 
-// UBICACIÓN: platform-main.js
-
 function clearChartAndAi() {
     const chartPanel = document.getElementById('chart-panel');
     chartPanel.innerHTML = '<span class="text-gray-300">El gráfico aparecerá aquí</span>';
@@ -669,16 +648,12 @@ function clearChartAndAi() {
     document.getElementById('ai-actions-container').classList.add('hidden');
 }
 
-// UBICACIÓN: platform-main.js
-// REEMPLAZA la función addGeeLayer completa.
-
 function addGeeLayer(url, varName) {
     if (currentGEELayer) {
         map.removeLayer(currentGEELayer);
         layerControl.removeLayer(currentGEELayer);
     }
     
-    // --- LA CORRECCIÓN CLAVE ---
     // 1. Antes de crear la capa, cambiamos el loader a la Etapa 2.
     Loader.showStage2();
 
@@ -698,12 +673,9 @@ function addGeeLayer(url, varName) {
     document.getElementById('opacity-slider').value = 1;
 }
 
-// UBICACIÓN: platform-main.js
-
 function updateChartAndData(data, options) {
     console.log("GUARDANDO DATOS (antes de la copia):", data);
 
-    // --- LA CORRECCIÓN CLAVE Y DEFINITIVA ---
     // Creamos una copia profunda de los datos solo para la descarga.
     // Esto lo aísla de cualquier modificación inesperada por otras funciones o librerías.
     currentChartData = data.map(row => [...row]);
@@ -747,9 +719,6 @@ function drawChart(data, options) {
     currentChart.draw(dataTable, {...defaultOptions, ...options});
 }
 
-// UBICACIÓN: platform-main.js
-// REEMPLAZA la función handleLabAnalysisChange completa con esta versión.
-
 function handleLabAnalysisChange() {
     const analysisType = document.getElementById('lab-analysis-type').value;
     const regionStep = document.getElementById('lab-step-region');
@@ -780,7 +749,6 @@ function handleLabAnalysisChange() {
         hurricaneOptions.classList.remove('hidden');
         hurricaneSelectorContainer.classList.add('hidden'); // Se oculta hasta la búsqueda
     } else if (analysisType === 'FAI') {
-        // ▼▼▼ LÓGICA PARA SARGAZO ▼▼▼
         // Para sargazo, mostramos el selector de zonas marinas y las fechas.
         marineSelector.classList.remove('hidden');
         datesStep.classList.remove('hidden');
@@ -807,8 +775,6 @@ function setupGeoBot() {
     if (chatInput) chatInput.addEventListener('keydown', handleChatInput);
 }
 
-// UBICACIÓN: platform-main.js
-// REEMPLAZA la función toggleChat completa con esta nueva versión.
 function toggleChat() {
     const chatWindow = document.getElementById('chat-window');
     const fabTextContainer = document.getElementById('fab-text-container');
@@ -818,7 +784,6 @@ function toggleChat() {
     chatWindow.style.display = isOpening ? 'flex' : 'none';
 
     if (isOpening) {
-        // --- ▼▼▼ LÓGICA DINÁMICA AÑADIDA (LA SOLUCIÓN DEFINITIVA) ▼▼▼ ---
         // Aplicamos este ajuste solo en pantallas móviles.
         if (window.innerWidth < 768) {
             const navBar = document.querySelector('nav');
@@ -829,8 +794,6 @@ function toggleChat() {
                 chatWindow.style.top = `${navHeight}px`;
             }
         }
-        // --- ▲▲▲ FIN DE LA LÓGICA AÑADIDA ▲▲▲ ---
-
         // Ocultamos los adornos del FAB
         fabTextContainer.classList.add('hidden');
         fabTipContainer.classList.add('hidden');
@@ -950,13 +913,12 @@ async function introduceGeoAfterVideo() {
     setTimeout(() => {
         introOverlay.classList.remove('visible');
         
-        // ▼▼▼ AÑADE ESTA LÍNEA NUEVA ▼▼▼
         addWelcomeMessageToChat(); // <-- Esta es la nueva función que llamamos
 
     }, 3000);
 }
 
-// --- Funciones del Chat (sin cambios) ---
+// --- Funciones del Chatß ---
 function handleChatInput(event) {
     if (event.key === 'Enter') sendMessageToBot();
 }
@@ -1043,7 +1005,6 @@ function createFullscreenIntro() {
     const overlay = document.createElement('div');
     overlay.id = 'geo-fullscreen-intro';
     
-    // CORRECCIÓN: Usamos una etiqueta <img> con la ruta al logo en la carpeta assets.
     overlay.innerHTML = `
         <img id="gemini-logo-intro" src="assets/gemini-logo.png" alt="Gemini AI Logo">
         <div id="intro-text-container"></div>
@@ -1118,8 +1079,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ... al final de platform-main.js
-
 /**
  * Añade el mensaje de bienvenida por defecto al chat
  * después de que la presentación principal ha terminado.
@@ -1135,9 +1094,6 @@ function addWelcomeMessageToChat() {
     chatMessages.appendChild(welcomeMessage);
     chatMessages.scrollTop = chatMessages.scrollHeight; // Asegura que el mensaje sea visible
 }
-
-// UBICACIÓN: platform-main.js
-// REEMPLAZA la función updateIntelligenceBriefing completa
 
 async function updateIntelligenceBriefing() {
     const briefingResult = document.getElementById('lab-briefing-result');

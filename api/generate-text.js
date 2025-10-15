@@ -1,5 +1,3 @@
-// api/generate-text.js - Nuevo endpoint genérico para Gemini
-
 // Importamos la librería oficial de Google AI
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 

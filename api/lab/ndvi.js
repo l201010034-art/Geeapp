@@ -1,4 +1,3 @@
-// /api/lab/ndvi.js - VERSIÓN ESCALABLE FINAL (ROBUSTA Y OPTIMIZADA)
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
@@ -6,14 +5,13 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
     const start = ee.Date(startDate);
     const end = ee.Date(endDate);
 
-    // 1️⃣ Filtramos la colección UNA SOLA VEZ al principio.
-    // Esto es mucho más eficiente que filtrar el catálogo mundial de Sentinel-2 cada mes.
+    // 1️ Filtramos la colección UNA SOLA VEZ al principio.
     const s2Collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
         .filterBounds(region)
         .filterDate(start, end)
-        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 40)); // Un filtro de nubes razonable
+        .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 40)); 
 
-    // 2️⃣ Función auxiliar para enmascarar nubes y calcular NDVI.
+    // 2️ Función auxiliar para enmascarar nubes y calcular NDVI.
     const maskAndNDVI = (image) => {
         const qa = image.select('QA60');
         const cloudMask = qa.bitwiseAnd(1 << 10).eq(0).and(qa.bitwiseAnd(1 << 11).eq(0));
@@ -21,7 +19,6 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
     };
     
     // 3️⃣ Generamos la lista de meses para iterar.
-    // Este método es flexible y funciona para cualquier rango de fechas, no solo años completos.
     const months = ee.List.sequence(0, end.difference(start, 'month').subtract(1));
 
     // 4️⃣ Mapeamos sobre cada mes para crear un compuesto mensual (mediana).
@@ -33,8 +30,6 @@ module.exports.handleAnalysis = async function ({ roi, startDate, endDate }) {
         const monthlyCollection = s2Collection.filterDate(ini, fin);
 
         // 5️⃣ Manejo robusto de meses sin datos (completamente nublados).
-        // Si hay imágenes, calculamos la mediana. Si no, devolvemos null.
-        // Usamos la mediana porque es menos sensible a valores atípicos (nubes no detectadas).
         return ee.Algorithms.If(
             monthlyCollection.size().gt(0),
             monthlyCollection.map(maskAndNDVI).median().set('system:time_start', ini.millis()),

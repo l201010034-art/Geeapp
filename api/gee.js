@@ -92,9 +92,6 @@ function aggregateCollection(collection, unit, reducer, startDate, endDate) {
     return ee.ImageCollection.fromImages(imageList);
 }
 
-// UBICACIÓN: /api/gee.js
-// REEMPLAZA la función handleHurricaneList completa
-
 async function handleHurricaneList({ year }) {
     if (!year) {
         throw new Error("El año es un parámetro requerido.");
@@ -110,7 +107,6 @@ async function handleHurricaneList({ year }) {
         const firstPoint = hurricanesInYear.filter(ee.Filter.eq('SID', sid)).first();
         return ee.Feature(null, {
             'sid': firstPoint.get('SID'),
-            // CORREGIDO: Se usa 'NAME' en mayúsculas para obtener el nombre.
             'name': firstPoint.get('NAME') 
         });
     }));
@@ -123,9 +119,7 @@ async function handleHurricaneList({ year }) {
             
             const hurricaneList = fc.features
                 .map(f => f.properties)
-                // CORREGIDO: Se filtra por storm.name y se compara con 'UNNAMED'.
                 .filter(storm => storm.name && storm.name !== 'UNNAMED') 
-                // CORREGIDO: Se ordena por storm.name.
                 .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
             if (hurricaneList.length === 0) {
@@ -140,11 +134,6 @@ async function handleHurricaneList({ year }) {
 // =========================================================================================
 // === LÓGICA DE BÚSQUEDA DE MUNICIPIOS ====================================================
 // =========================================================================================
-
-// =========================================================================================
-// === LÓGICA DE BÚSQUEDA DE MUNICIPIOS (VERSIÓN CORREGIDA Y ROBUSTA) =======================
-// =========================================================================================
-// REEMPLAZA la función getOfficialMunicipalityName con esta:
 function getMunicipalityCvegeo(municipalityName) {
     const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const normalizedInput = normalize(municipalityName);
@@ -170,7 +159,7 @@ function getMunicipalityCvegeo(municipalityName) {
 }
 
 // =========================================================================================
-// === MANEJADOR PRINCIPAL DE LA API (VERSIÓN CORREGIDA) ===================================
+// === MANEJADOR PRINCIPAL DE LA API ===================================
 // =========================================================================================
 module.exports = async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -190,18 +179,13 @@ module.exports = async function handler(req, res) {
             throw new Error('Solicitud incorrecta: Falta "action" o "params".');
         }
 
-                // --- CORRECCIÓN CLAVE ---
         // Se manejan primero las acciones que NO necesitan un ROI geográfico.
         if (action === 'getHurricaneList') {
             const responseData = await handleHurricaneList(params);
             // Se envía la respuesta y se detiene la ejecución para evitar el error de ROI.
             return res.status(200).json(responseData);
         }
-        // --- FIN DE LA CORRECCIÓN ---
 
-
-
-        // ▼▼▼ REEMPLAZA EL BLOQUE DE LÓGICA DEL ROI DENTRO DEL HANDLER CON ESTO ▼▼▼
         let eeRoi;
         const roiParam = params.roi || (params.rois ? params.rois[0] : null);
 
@@ -234,11 +218,8 @@ module.exports = async function handler(req, res) {
         } else {
             throw new Error('Formato de Región de Interés (ROI) no reconocido o ausente.');
         }
-        // --- FIN DEL NUEVO BLOQUE ---
 
-        // CORRECCIÓN CLAVE: Añadimos la geometría procesada a los parámetros
         params.eeRoi = eeRoi;
-        // --- FIN DE LA LÓGICA CORREGIDA ---
 
         let responseData;
         // Pasamos tanto los parámetros originales ({...params}) como el eeRoi calculado

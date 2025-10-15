@@ -1,4 +1,3 @@
-// /api/lab/fai.js - Adaptado para la plataforma GeeApp con lógica NDVI.
 const ee = require('@google/earthengine');
 
 /**

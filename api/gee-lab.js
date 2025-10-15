@@ -1,5 +1,3 @@
-// /api/gee-lab.js - ¡NUEVA VERSIÓN MODULAR!
-
 const ee = require('@google/earthengine');
 
 // --- Funciones de Utilidad (Helpers) ---
@@ -33,9 +31,6 @@ async function getStats(image, roi, bandName, unit, zoneName, prefix = "Promedio
         });
     });
 }
-
-// UBICACIÓN: /api/gee-lab.js
-// REEMPLAZA la función getOptimizedChartData completa.
 
 async function getOptimizedChartData(collection, roi, bandName, startDate, endDate) {
     const eeStartDate = ee.Date(startDate);
@@ -83,7 +78,6 @@ async function getOptimizedChartData(collection, roi, bandName, startDate, endDa
         });
 
         series.evaluate((fc, error) => {
-            // --- ESTA ES LA LÍNEA CORREGIDA ---
             if (error) return reject(new Error('Error al evaluar los datos del gráfico: ' + (error.message || 'Error desconocido de GEE.')));
             
             const header = [['Fecha', bandName]];
@@ -97,8 +91,6 @@ async function getOptimizedChartData(collection, roi, bandName, startDate, endDa
         });
     });
 }
-
-// --- Función Principal de Ejecución (El Nuevo Enrutador) ---
 
 async function executeAnalysis(params) {
     // 1. Inicializar GEE y preparar el ROI
@@ -149,14 +141,11 @@ async function executeAnalysis(params) {
         ? laImagenResultante
         : laImagenResultante.clip(eeRoi);
 
-    // ▼▼▼ LÍNEA CORREGIDA ▼▼▼
     // Si visParams tiene una paleta, úsalo; si no, usa un objeto vacío {}.
     const visualizationOptions = visParams.palette ? visParams : {};
     const mapId = await new Promise((resolve, reject) => {
         imageToDisplay.getMapId(visualizationOptions, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
     });
-    // ▲▲▲ FIN DE LA LÍNEA CORREGIDA ▲▲▲
-
 
     // 4. Calcular estadísticas y datos de gráfico
     let stats = `Análisis visual para: ${visParams.bandName || 'Resultado del Laboratorio'}`;

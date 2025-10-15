@@ -1,5 +1,3 @@
-// UBICACIÓN: /api/lab/hurricane.js
-// REEMPLAZA TODO EL CONTENIDO DEL ARCHIVO CON ESTE CÓDIGO.
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ hurricaneSid, hurricaneName, year }) {
@@ -13,19 +11,14 @@ module.exports.handleAnalysis = async function ({ hurricaneSid, hurricaneName, y
         .mean()
         .multiply(0.01);
 
-    // --- ▼▼▼ LA CORRECCIÓN MÁS IMPORTANTE Y DEFINITIVA ▼▼▼ ---
 
-    // 1. En lugar de visualizar 'sst' directamente, creamos una nueva imagen
-    //    que es explícitamente y únicamente la banda 'sst'.
-    //    Esto crea un "clon limpio" de la imagen, eliminando cualquier metadato fantasma.
+
     const sstDeUnaSolaBanda = sst.select('sst');
 
     // 2. Ahora, visualizamos este clon limpio y garantizado de una sola banda.
     const sstImage = sstDeUnaSolaBanda.visualize({
         min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']
     });
-
-    // --- ▲▲▲ FIN DE LA CORRECCIÓN ▲▲▲ ---
 
     const line = ee.Geometry.LineString(points.sort('ISO_TIME').geometry().coordinates());
     const trajectoryLine = ee.FeatureCollection(line).style({color: 'FFFFFF', width: 1.5});
@@ -44,7 +37,6 @@ module.exports.handleAnalysis = async function ({ hurricaneSid, hurricaneName, y
         visParams: {
             bandName: `Huracán: ${hurricaneName} (${year})`,
             unit: 'SST',
-            // NO debe haber min, max, ni palette aquí.
             customLegend: {
                 type: 'hurricane',
                 items: [
@@ -57,6 +49,5 @@ module.exports.handleAnalysis = async function ({ hurricaneSid, hurricaneName, y
                 ]
             }
         }
-        // ▲▲▲ FIN DE LA SECCIÓN CORREGIDA ▲▲▲
     };
 }
