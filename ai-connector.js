@@ -172,17 +172,23 @@ async function handleLabExecution() {
             throw new Error(errorData.details || "Error al ejecutar el análisis.");
         }
 
-        lastLabResult = await response.json(); 
+        lastLabResult = await response.json();
+        console.log('[DEBUG 1/4] Respuesta del Servidor:', lastLabResult);
+
 
         labOverlay.classList.add('hidden');
         applyLabResultToMap(requestBody); 
     
     } catch (error) {
-        // --- ESTE ES EL BLOQUE CORREGIDO ---
         // 1. Reportamos el error a GeoBot PRIMERO.
         window.reportErrorToGeo(error.message, "¡Ups! El análisis del laboratorio no pudo completarse. ");
+        
         // 2. DESPUÉS, ocultamos el loader.
         Loader.hide();
+        
+        // --- ▼▼▼ LÍNEA AÑADIDA ▼▼▼ ---
+        // 3. Finalmente, cerramos la ventana del Laboratorio.
+        labOverlay.classList.add('hidden');
 
     } finally {
         // Esto se ejecuta siempre, asegurando que el botón se reactive.
@@ -192,9 +198,16 @@ async function handleLabExecution() {
 }
 
 function applyLabResultToMap(requestBody) {
+    console.log('[DEBUG 2/4] Ingresando a applyLabResultToMap. El request original fue:', requestBody);
+
     if (lastLabResult) {
+        
         // Renderiza el mapa y la leyenda como siempre
         if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
+        console.log('[DEBUG 3/4] Intentando actualizar la leyenda con visParams:', lastLabResult.visParams);
+
+
+    
         if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
         
         let hasValidData = false;
@@ -213,6 +226,8 @@ function applyLabResultToMap(requestBody) {
 
         // Si encontramos datos válidos (gráfico o estadísticas), generamos el análisis de IA.
         if (hasValidData) {
+            console.log('[DEBUG 4/4] Condición hasValidData CUMPLIDA. Se procederá a generar el análisis de IA.');
+
             const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
             const prompt = buildLabAnalysisPrompt(
                 lastLabResult,
@@ -228,6 +243,7 @@ function applyLabResultToMap(requestBody) {
             // y reportamos un error genérico, ya que el backend debería haber enviado el error específico.
             window.clearChartAndAi();
             window.reportErrorToGeo("No se encontraron datos suficientes para el análisis en el período seleccionado.", "¡Vaya! ");
+            
         }
     }
     document.getElementById('lab-execute-button').classList.remove('hidden');
