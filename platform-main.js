@@ -156,60 +156,58 @@ function initMap() {
     legendControl.onAdd = function (map) { this._div = L.DomUtil.create('div', 'legend'); this.update(); return this._div; };
 
 
-// ▼▼▼ BLOQUE CORREGIDO Y ROBUSTO ▼▼▼
 // UBICACIÓN: platform-main.js
 // REEMPLAZA la función legendControl.update completa.
-    legendControl.update = function (varInfo) {
-        console.log('[DEBUG] La función legendControl.update fue llamada con:', varInfo);
+legendControl.update = function (varInfo) {
+    // Si no hay información, limpia la leyenda y termina.
+    if (!varInfo || !varInfo.bandName) {
+        this._div.innerHTML = '';
+        return;
+    }
 
-        // Si no hay información, limpia la leyenda.
-        if (!varInfo) {
-            this._div.innerHTML = '';
-            return;
-        }
-
-        // --- CASO 1: LEYENDA PERSONALIZADA (EJ. HURACÁN) ---
-        if (varInfo.customLegend) {
-            let html = `<div class="legend-title">${varInfo.bandName || 'Leyenda'}</div>`;
-            
-            // Construye la leyenda de temperatura del mar
-            html += `<div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
-                    <div class="legend-scale-bar" style="background: linear-gradient(to right, ${varInfo.palette.join(', ')});"></div>
-                    <div class="legend-labels" style="font-size: 11px;"><span>${varInfo.min}</span><span>${varInfo.max}</span></div>`;
-            
-            // Construye la leyenda de categorías
-            html += `<div style="font-size: 11px; margin-top: 4px;"><strong>Intensidad (Saffir-Simpson)</strong></div>`;
-            varInfo.customLegend.items.forEach(item => {
-                html += `<div style="display: flex; align-items: center; font-size: 11px;">
-                            <div style="width: 10px; height: 10px; background-color: ${item.color}; border-radius: 50%; margin-right: 5px;"></div>
-                            ${item.label}
-                        </div>`;
-            });
-            
-            this._div.innerHTML = html;
-            return; // Termina la ejecución aquí.
-        }
-
-        // --- CASO 2: LEYENDA ESTÁNDAR (PARA TODO LO DEMÁS) ---
-        const title = varInfo.bandName || 'Leyenda';
-        const unit = varInfo.unit ? `(${varInfo.unit})` : '';
-        const min = varInfo.min ?? '';
-        const max = varInfo.max ?? '';
-        const hasPalette = Array.isArray(varInfo.palette) && varInfo.palette.length > 0;
+    // --- CASO 1: LEYENDA PERSONALIZADA (PARA HURACANES) ---
+    if (varInfo.customLegend && varInfo.customLegend.type === 'hurricane') {
+        let html = `<div class="legend-title">${varInfo.bandName}</div>`;
         
-        const gradient = hasPalette
-            ? `linear-gradient(to right, ${varInfo.palette.join(', ')})`
-            : `linear-gradient(to right, #FFFFFF, #000000)`;
+        // Construye la sub-leyenda de temperatura del mar (SST)
+        html += `<div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
+                <div class="legend-scale-bar" style="background: linear-gradient(to right, ${varInfo.palette.join(', ')});"></div>
+                <div class="legend-labels" style="font-size: 11px;"><span>${varInfo.min}</span><span>${varInfo.max}</span></div>`;
+        
+        // Construye la sub-leyenda de categorías de intensidad
+        html += `<div style="font-size: 11px; margin-top: 4px;"><strong>Intensidad (Saffir-Simpson)</strong></div>`;
+        varInfo.customLegend.items.forEach(item => {
+            html += `<div style="display: flex; align-items: center; font-size: 11px;">
+                        <div style="width: 10px; height: 10px; background-color: ${item.color}; border-radius: 50%; margin-right: 5px;"></div>
+                        ${item.label}
+                    </div>`;
+        });
+        
+        this._div.innerHTML = html;
+        return; // Termina la ejecución aquí para no procesar la leyenda estándar.
+    }
 
-        this._div.innerHTML = `
-            <div class="legend-title">${title} ${unit}</div>
-            <div class="legend-scale-bar" style="background: ${gradient};"></div>
-            <div class="legend-labels">
-                <span>${min}</span>
-                <span>${max}</span>
-            </div>
-        `;
-    };
+    // --- CASO 2: LEYENDA ESTÁNDAR (PARA TODOS LOS DEMÁS ANÁLISIS) ---
+    const title = varInfo.bandName || 'Leyenda';
+    const unit = varInfo.unit ? `(${varInfo.unit})` : '';
+    const min = varInfo.min ?? '';
+    const max = varInfo.max ?? '';
+    // Verificación de seguridad para la paleta de colores
+    const hasPalette = Array.isArray(varInfo.palette) && varInfo.palette.length > 0;
+    
+    const gradient = hasPalette
+        ? `linear-gradient(to right, ${varInfo.palette.join(', ')})`
+        : `linear-gradient(to right, #FFFFFF, #000000)`; // Un gradiente por defecto
+
+    this._div.innerHTML = `
+        <div class="legend-title">${title} ${unit}</div>
+        <div class="legend-scale-bar" style="background: ${gradient};"></div>
+        <div class="legend-labels">
+            <span>${min}</span>
+            <span>${max}</span>
+        </div>
+    `;
+};
     legendControl.addTo(map);
     window.legendControl = legendControl;
 
