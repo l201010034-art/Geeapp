@@ -395,64 +395,62 @@
             </button>
         </div>
     </div>
-    
-    <script type="module" src="intelligent-loader.js" defer></script>
-    <script type="module" src="ai-connector.js" defer></script>
-    <script type="module" defer>
-        import { initPlatform } from './platform-main.js';
-        document.addEventListener('DOMContentLoaded', initPlatform);
-    </script>
 
-    <script>
-        // Script para manejar la visibilidad del menú lateral en móviles
-        document.addEventListener('DOMContentLoaded', () => {
-            const menuToggle = document.getElementById('menu-toggle');
-            const controlPanel = document.getElementById('control-panel');
-            const menuOverlay = document.getElementById('menu-overlay');
-            
-            // Seleccionamos todos los botones que ejecutan una acción
-            const actionButtons = document.querySelectorAll('.action-button, #openLabButton');
+        <script type="module">
+            // Importa las funciones necesarias de tus archivos modulares
+            import { initPlatform } from './platform-main.js';
+            import { initTourGuide } from './tour-guide.js';
 
-            const openMenu = () => {
-                controlPanel.classList.remove('-translate-x-full');
-                controlPanel.classList.add('translate-x-0');
-                menuOverlay.classList.remove('hidden');
-            };
+            // Este evento espera a que todo el documento HTML esté completamente cargado y listo
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log("DOM completamente cargado. Inicializando la aplicación...");
 
-            const closeMenu = () => {
-                controlPanel.classList.add('-translate-x-full');
-                controlPanel.classList.remove('translate-x-0');
-                menuOverlay.classList.add('hidden');
-            };
+                // 1. Inicializa las funciones principales de la plataforma
+                initPlatform();
 
-            if (menuToggle && controlPanel && menuOverlay) {
-                // Abrir/cerrar con el botón de hamburguesa
-                menuToggle.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (controlPanel.classList.contains('-translate-x-full')) {
-                        openMenu();
-                    } else {
-                        closeMenu();
-                    }
-                });
+                // 2. Inicializa el recorrido guiado
+                initTourGuide();
 
-                // Cerrar el menú al hacer clic en el overlay
-                menuOverlay.addEventListener('click', closeMenu);
+                // 3. Lógica para el menú lateral (hamburguesa)
+                const menuToggle = document.getElementById('menu-toggle');
+                const controlPanel = document.getElementById('control-panel');
+                const menuOverlay = document.getElementById('menu-overlay');
+                const actionButtons = document.querySelectorAll('.action-button, #openLabButton');
 
-                // ======================================================
-                //  NUEVO: Lógica para cerrar el panel automáticamente
-                // ======================================================
-                actionButtons.forEach(button => {
-                    button.addEventListener('click', () => {
-                        // Cierra el menú solo si estamos en vista móvil (ancho menor a 768px, el breakpoint 'md' de Tailwind)
-                        if (window.innerWidth < 768) {
+                const openMenu = () => {
+                    if (controlPanel) controlPanel.classList.remove('-translate-x-full');
+                    if (controlPanel) controlPanel.classList.add('translate-x-0');
+                    if (menuOverlay) menuOverlay.classList.remove('hidden');
+                };
+
+                const closeMenu = () => {
+                    if (controlPanel) controlPanel.classList.add('-translate-x-full');
+                    if (controlPanel) controlPanel.classList.remove('translate-x-0');
+                    if (menuOverlay) menuOverlay.classList.add('hidden');
+                };
+
+                if (menuToggle && controlPanel && menuOverlay) {
+                    menuToggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (controlPanel.classList.contains('-translate-x-full')) {
+                            openMenu();
+                        } else {
                             closeMenu();
                         }
                     });
-                });
-            }
-        });
-    </script>
 
-</body>
-</html>
+                    menuOverlay.addEventListener('click', closeMenu);
+
+                    actionButtons.forEach(button => {
+                        button.addEventListener('click', () => {
+                            if (window.innerWidth < 768) {
+                                closeMenu();
+                            }
+                        });
+                    });
+                }
+            });
+        </script>
+
+    </body>
+    </html>
