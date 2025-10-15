@@ -1,7 +1,7 @@
-// tour-guide.js (Versión Final con Módulos)
+// tour-guide.js (Versión corregida)
 
-// ▼▼▼ 1. IMPORTAMOS LA FUNCIÓN 'driver' DESDE LA VERSIÓN MODULAR DE LA LIBRERÍA ▼▼▼
-import { driver } from 'https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.esm.js';
+// ▼▼▼ LÍNEA CORREGIDA - USA ESTA URL ▼▼▼
+import { driver } from 'https://cdn.jsdelivr.net/npm/driver.js@1.0.1/+esm';
 
 export function initTourGuide() {
     const startTourBtn = document.getElementById('start-tour-btn');
@@ -13,7 +13,6 @@ export function initTourGuide() {
 
     const geoBotImageSrc = 'assets/GeoBot_Icon.png';
 
-    // ▼▼▼ 2. USAMOS LA FUNCIÓN 'driver' IMPORTADA DIRECTAMENTE, SIN 'window' ▼▼▼
     const driverObj = driver({
         showProgress: true,
         nextBtnText: 'Siguiente →',
@@ -21,6 +20,7 @@ export function initTourGuide() {
         doneBtnText: 'Finalizar',
     });
 
+    // ... el resto de tu código se mantiene exactamente igual ...
     const tourSteps = [
         { 
             element: '#ai-command-form',
@@ -68,15 +68,11 @@ export function initTourGuide() {
     ];
     
     startTourBtn.addEventListener('click', () => {
-        // Usamos el objeto que creamos
         driverObj.setSteps(tourSteps);
         driverObj.drive();
     });
 }
 
-/**
- * Función auxiliar para crear el contenido HTML del popover.
- */
 function createPopoverContent(imgSrc, text) {
     return `<div class="geobot-tour-step">
                 <img src="${imgSrc}" alt="GeoBot">
