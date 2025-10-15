@@ -996,7 +996,7 @@ async function sendMessageToBot() {
 
         const { answer } = await response.json();
         typingIndicator.querySelector('p').classList.remove('typing-indicator');
-        typingIndicator.querySelector('p').innerHTML = answer;
+        typeWriter(typingIndicator.querySelector('p'), answer); // <-- AHORA USAMOS LA FUNCIÓN DE ESCRITURA
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
     } catch (error) {
