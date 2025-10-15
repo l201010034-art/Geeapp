@@ -123,7 +123,7 @@ commandForm.addEventListener('submit', async (event) => {
 
 
 // UBICACIÓN: ai-connector.js
-// REEMPLAZA la función handleLabExecution completa con esta versión.
+// REEMPLAZA la función handleLabExecution completa con esta versión de DEBUG.
 async function handleLabExecution() {
     const labOverlay = document.getElementById('lab-overlay');
     const executeButton = document.getElementById('lab-execute-button');
@@ -131,13 +131,12 @@ async function handleLabExecution() {
     const analysisType = document.getElementById('lab-analysis-type').value;
     let requestBody;
 
-    try { // --- Se mueve el try/catch para envolver toda la lógica ---
+    try {
         if (analysisType === 'HURRICANE') {
             const hurricaneSelector = document.getElementById('lab-hurricane-selector');
             if (!hurricaneSelector.value || hurricaneSelector.options[hurricaneSelector.selectedIndex].text === 'No se encontraron huracanes') {
-                // Usamos el sistema de errores de Geo para notificaciones amigables.
                 window.reportErrorToGeo("Por favor, busca y selecciona un huracán válido.", "Aviso: ");
-                return; // Detenemos la ejecución
+                return;
             }
             requestBody = {
                 analysisType: 'HURRICANE',
@@ -176,32 +175,64 @@ async function handleLabExecution() {
 
         if (!response.ok) {
             const errorData = await response.json();
-            // Si la respuesta del servidor no es OK, lanzamos un error para ser atrapado por el CATCH.
             throw new Error(errorData.details || "Error al ejecutar el análisis.");
         }
 
         lastLabResult = await response.json();
-        console.log('[DEBUG 1/4] Respuesta del Servidor:', lastLabResult);
-
+        // ▼▼▼ DEBUG CHECKPOINT 1 (NAVEGADOR) ▼▼▼
+        console.log('[DEBUG-BROWSER 1/4] Respuesta recibida del Servidor:', lastLabResult);
 
         labOverlay.classList.add('hidden');
         applyLabResultToMap(requestBody); 
     
     } catch (error) {
-        // 1. Reportamos el error a GeoBot PRIMERO.
         window.reportErrorToGeo(error.message, "¡Ups! El análisis del laboratorio no pudo completarse. ");
-        
-        // 2. DESPUÉS, ocultamos el loader.
         Loader.hide();
-        
-        // --- ▼▼▼ LÍNEA AÑADIDA ▼▼▼ ---
-        // 3. Finalmente, cerramos la ventana del Laboratorio.
         labOverlay.classList.add('hidden');
 
     } finally {
-        // Esto se ejecuta siempre, asegurando que el botón se reactive.
         executeButton.disabled = false;
         executeButton.textContent = "🚀 Ejecutar Análisis";
+    }
+}
+
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA la función applyLabResultToMap completa con esta versión de DEBUG.
+function applyLabResultToMap(requestBody) {
+    // ▼▼▼ DEBUG CHECKPOINT 2 (NAVEGADOR) ▼▼▼
+    console.log('[DEBUG-BROWSER 2/4] Ingresando a applyLabResultToMap con:', { requestBody, lastLabResult });
+
+    if (lastLabResult) {
+        if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
+        
+        if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
+        
+        let hasValidData = false;
+        if (lastLabResult.stats && !lastLabResult.stats.includes("No se pudieron calcular")) {
+            hasValidData = true;
+        }
+        if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
+            hasValidData = true;
+        }
+
+        // ▼▼▼ DEBUG CHECKPOINT 3 (NAVEGADOR) ▼▼▼
+        console.log('[DEBUG-BROWSER 3/4] El resultado de la comprobación hasValidData es:', hasValidData);
+
+        if (hasValidData) {
+            window.updateStatsPanel(lastLabResult.stats);
+            if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
+                window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
+            }
+            
+            // ▼▼▼ DEBUG CHECKPOINT 4 (NAVEGADOR) ▼▼▼
+            console.log('[DEBUG-BROWSER 4/4] Preparando la llamada a la IA...');
+
+            const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
+            const prompt = buildLabAnalysisPrompt(lastLabResult, analysisName, requestBody.roi, requestBody.startDate, requestBody.endDate);
+            callAndDisplayAnalysis(prompt);
+        } else {
+            window.clearChartAndAi();
+        }
     }
 }
 
