@@ -1,95 +1,114 @@
+import { Loader } from './intelligent-loader.js';
 
-import { Loader } from './intelligent-loader.js'; // <-- AÑADE ESTA LÍNEA
-
-
-// --- 1. CONEXIÓN CON LA IA PARA ANÁLISIS (PANELES DERECHOS) ---
+// --- 1. CONEXIÓN CON LA IA (ANÁLISIS Y COMANDOS) ---
 
 const AI_API_URL = '/api/analyze';
-const aiPanel = document.getElementById('ai-analysis-panel');
-const aiSummaryDiv = document.getElementById('ai-summary');
-const aiActionsContainer = document.getElementById('ai-actions-container');
 const commandForm = document.getElementById('ai-command-form');
 const commandBar = document.getElementById('ai-command-bar');
 let lastLabResult = null;
 
-// AÑADE esta nueva función.
+/**
+ * Muestra el panel de IA con el mensaje "Analizando datos...".
+ * Obtiene los elementos del DOM justo cuando se necesita.
+ */
 function resetAiPanel() {
-    aiPanel.classList.remove('hidden');
-    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Analizando datos...</p>';
-    aiActionsContainer.classList.add('hidden');
+    const aiPanel = document.getElementById('ai-analysis-panel');
+    const aiSummaryDiv = document.getElementById('ai-summary');
+    const aiActionsContainer = document.getElementById('ai-actions-container');
+
+    if (aiPanel) aiPanel.classList.remove('hidden');
+    if (aiSummaryDiv) aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Analizando datos...</p>';
+    if (aiActionsContainer) aiActionsContainer.classList.add('hidden');
 }
 
-// --- CORRECCIÓN CLAVE: Se elimina 'window.' de las declaraciones de función ---
+/**
+ * Inicia la generación de un análisis de IA para los datos generales.
+ */
 async function generateAiAnalysis(data) {
     if (!data.stats && !data.chartData) return;
-    aiPanel.classList.remove('hidden');
-    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Analizando datos...</p>';
-    aiActionsContainer.classList.add('hidden');
     const prompt = buildPrompt(data);
     await callAndDisplayAnalysis(prompt);
 }
 
+/**
+ * Inicia la generación de una predicción de tendencia.
+ */
 async function generatePrediction(chartData) {
-    aiPanel.classList.remove('hidden');
-    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Generando pronóstico...</p>';
-    aiActionsContainer.classList.add('hidden');
     const prompt = buildPredictionPrompt(chartData);
     await callAndDisplayAnalysis(prompt);
 }
 
+/**
+ * Inicia la generación de un análisis para el mapa de riesgo de incendio.
+ */
 async function generateFireRiskAnalysis(data) {
-    aiPanel.classList.remove('hidden');
-    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Interpretando mapa de riesgo...</p>';
-    aiActionsContainer.classList.add('hidden');
     const prompt = buildFireRiskPrompt(data);
     await callAndDisplayAnalysis(prompt);
 }
 
+/**
+ * Función central que llama a la API de IA y muestra el resultado.
+ * Obtiene los elementos del DOM justo cuando se necesita para evitar errores.
+ */
 async function callAndDisplayAnalysis(prompt) {
+    const aiPanel = document.getElementById('ai-analysis-panel');
+    const aiSummaryDiv = document.getElementById('ai-summary');
+    const aiActionsContainer = document.getElementById('ai-actions-container');
+
+    if (!aiPanel || !aiSummaryDiv || !aiActionsContainer) {
+        console.error("Error crítico: No se encontraron los elementos del panel de IA en el DOM.");
+        return;
+    }
+
     try {
+        aiPanel.classList.remove('hidden');
+        aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Analizando datos...</p>';
+        aiActionsContainer.classList.add('hidden');
+
         const response = await fetch(AI_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt }),
         });
-        if (!response.ok) throw new Error(`Error en la API: ${response.statusText}`);
+
+        if (!response.ok) throw new Error(`Error en la API de IA: ${response.statusText}`);
+
         const result = await response.json();
         aiSummaryDiv.innerHTML = markdownToHtml(result.analysisText);
         if (result.analysisText) aiActionsContainer.classList.remove('hidden');
+
     } catch (error) {
         console.error("Error al generar análisis con IA:", error);
-        aiSummaryDiv.innerHTML = `<p class="text-red-400">Ocurrió un error: ${error.message}</p>`;
+        aiSummaryDiv.innerHTML = `<p class="text-red-400">Ocurrió un error al contactar a la IA: ${error.message}</p>`;
     }
 }
 
+
 // --- 2. LÓGICA DE LA INTERFAZ CONVERSACIONAL (BARRA SUPERIOR) ---
 commandForm.addEventListener('submit', async (event) => {
-    event.preventDefault(); 
+    event.preventDefault();
     const userQuery = commandBar.value;
     if (!userQuery) return;
-    
+
     commandBar.disabled = true;
     commandBar.placeholder = "Procesando...";
-    
-    // ▼▼▼ LÍNEAS NUEVAS ▼▼▼
-    // Mostramos el loader inmediatamente con mensajes específicos para este proceso.
     Loader.show([
         "Interpretando tu comando...",
         "Conectando con el modelo de IA Gemini...",
         "Traduciendo lenguaje natural a parámetros...",
         "Configurando el análisis solicitado..."
     ]);
-    
+
     try {
         const prompt = buildConversationalPrompt(userQuery);
         const response = await fetch(AI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
         const result = await response.json();
         const jsonMatch = result.analysisText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("La IA no devolvió un JSON válido.");
-        
+
         const params = JSON.parse(jsonMatch[0]);
         if (params.error) throw new Error(params.error);
-        
+
         document.getElementById('startDate').value = params.startDate;
         document.getElementById('endDate').value = params.endDate;
         document.getElementById('variableSelector').value = params.variable;
@@ -99,7 +118,7 @@ commandForm.addEventListener('submit', async (event) => {
 
         if (params.zona_type === 'predefinida') {
             const checkbox = window.zonaCheckboxes[params.zona_name];
-            if(checkbox) {
+            if (checkbox) {
                 checkbox.checked = true;
                 window.handleZoneSelection(params.zona_name);
                 window.handleAnalysis('general');
@@ -113,7 +132,8 @@ commandForm.addEventListener('submit', async (event) => {
     } catch (error) {
         console.error("Error al procesar el comando de IA:", error);
         commandBar.value = `Error: ${error.message}`;
-        Loader.hide(); // <-- AÑADE ESTA LÍNEA para ocultar el loader si hay un error
+        window.reportErrorToGeo(error.message, "No pude interpretar ese comando: ");
+        Loader.hide();
     } finally {
         commandBar.disabled = false;
         commandBar.placeholder = "Ej: Lluvia en Chiná el mes pasado...";
@@ -122,12 +142,11 @@ commandForm.addEventListener('submit', async (event) => {
 });
 
 
-// UBICACIÓN: ai-connector.js
-// REEMPLAZA la función handleLabExecution completa con esta versión de DEBUG.
+// --- 3. LÓGICA DEL LABORATORIO DE IA ---
+
 async function handleLabExecution() {
     const labOverlay = document.getElementById('lab-overlay');
     const executeButton = document.getElementById('lab-execute-button');
-
     const analysisType = document.getElementById('lab-analysis-type').value;
     let requestBody;
 
@@ -148,7 +167,7 @@ async function handleLabExecution() {
             const regionSelector = document.getElementById('lab-region-selector-municipalities');
             const marineRegionSelector = document.getElementById('lab-region-selector-marine');
             const regionName = !regionSelector.classList.contains('hidden') ? regionSelector.value : marineRegionSelector.value;
-            
+
             requestBody = {
                 analysisType: analysisType,
                 roi: regionName,
@@ -160,13 +179,12 @@ async function handleLabExecution() {
         executeButton.disabled = true;
         Loader.show([
             "Accediendo al Laboratorio de IA...",
-            "Configurando el entorno de análisis en el servidor...",
-            "Ejecutando el módulo de análisis especializado...",
-            "Compilando resultados para la previsualización...",
-            "Refinando contenido con IA avanzada...",
+            "Configurando el entorno de análisis...",
+            "Ejecutando el módulo especializado...",
+            "Compilando resultados...",
             "¡Análisis completado!"
         ]);
-        
+
         const response = await fetch('/api/gee-lab', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -179,12 +197,9 @@ async function handleLabExecution() {
         }
 
         lastLabResult = await response.json();
-        // ▼▼▼ DEBUG CHECKPOINT 1 (NAVEGADOR) ▼▼▼
-        console.log('[DEBUG-BROWSER 1/4] Respuesta recibida del Servidor:', lastLabResult);
-
         labOverlay.classList.add('hidden');
-        applyLabResultToMap(requestBody); 
-    
+        applyLabResultToMap(requestBody);
+
     } catch (error) {
         window.reportErrorToGeo(error.message, "¡Ups! El análisis del laboratorio no pudo completarse. ");
         Loader.hide();
@@ -196,43 +211,35 @@ async function handleLabExecution() {
     }
 }
 
-// UBICACIÓN: ai-connector.js
-// REEMPLAZA la función applyLabResultToMap completa con esta versión de DEBUG.
 function applyLabResultToMap(requestBody) {
-    // ▼▼▼ DEBUG CHECKPOINT 2 (NAVEGADOR) ▼▼▼
-    console.log('[DEBUG-BROWSER 2/4] Ingresando a applyLabResultToMap con:', { requestBody, lastLabResult });
+    if (!lastLabResult) return;
 
-    if (lastLabResult) {
-        if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
+    if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
+    if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
+
+    const hasStats = lastLabResult.stats && !lastLabResult.stats.includes("No se pudieron calcular");
+    const hasChart = lastLabResult.chartData && lastLabResult.chartData.length > 1;
+
+    if (hasStats || hasChart) {
+        if(hasStats) window.updateStatsPanel(lastLabResult.stats);
+        if (hasChart) window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
+
+        const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
         
-        if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
-        
-        let hasValidData = false;
-        if (lastLabResult.stats && !lastLabResult.stats.includes("No se pudieron calcular")) {
-            hasValidData = true;
-        }
-        if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
-            hasValidData = true;
-        }
-
-        // ▼▼▼ DEBUG CHECKPOINT 3 (NAVEGADOR) ▼▼▼
-        console.log('[DEBUG-BROWSER 3/4] El resultado de la comprobación hasValidData es:', hasValidData);
-
-        if (hasValidData) {
-            window.updateStatsPanel(lastLabResult.stats);
-            if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
-                window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
-            }
-            
-            // ▼▼▼ DEBUG CHECKPOINT 4 (NAVEGADOR) ▼▼▼
-            console.log('[DEBUG-BROWSER 4/4] Preparando la llamada a la IA...');
-
-            const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
-            const prompt = buildLabAnalysisPrompt(lastLabResult, analysisName, requestBody.roi, requestBody.startDate, requestBody.endDate);
-            callAndDisplayAnalysis(prompt);
-        } else {
-            window.clearChartAndAi();
-        }
+        // Esta llamada ahora es más robusta para manejar el caso de los huracanes
+        const prompt = buildLabAnalysisPrompt(
+            lastLabResult,
+            analysisName,
+            requestBody.roi || requestBody.hurricaneName, // Usa el nombre del huracán si no hay ROI
+            requestBody.startDate || requestBody.year,    // Usa el año si no hay fecha de inicio
+            requestBody.endDate || ''                     // Usa un string vacío si no hay fecha de fin
+        );
+        callAndDisplayAnalysis(prompt);
+    } else {
+        window.clearChartAndAi();
+        resetAiPanel(); // Muestra el panel
+        const aiSummaryDiv = document.getElementById('ai-summary');
+        if (aiSummaryDiv) aiSummaryDiv.innerHTML = `<p class="text-gray-400">No se encontraron datos suficientes en la región y fechas seleccionadas para generar un análisis de IA.</p>`;
     }
 }
 
@@ -271,7 +278,7 @@ async function fetchHurricaneList() {
                 selector.appendChild(option);
             });
         } else {
-             selector.innerHTML = `<option>No se encontraron huracanes</option>`;
+            selector.innerHTML = `<option>No se encontraron huracanes</option>`;
         }
     } catch (error) {
         console.error("Error al buscar huracanes:", error);
@@ -285,13 +292,14 @@ async function fetchHurricaneList() {
 
 // --- 4. CONSTRUCCIÓN DE PROMPTS PARA LA IA ---
 function markdownToHtml(text) {
-    return text?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('').replace(/<p>\*/g, '<ul>*').replace(/\* (.*?)(<br>|<\/p>)/g, '<li>$1</li>').replace(/<\/li><\/ul><\/p>/g, '</li></ul>');
+    if (!text) return '';
+    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('').replace(/<p>\*/g, '<ul>*').replace(/\* (.*?)(<br>|<\/p>)/g, '<li>$1</li>').replace(/<\/li><\/ul><\/p>/g, '</li></ul>');
 }
 
 function buildPrompt(data) {
     const { stats, chartData, variable, roi, startDate, endDate } = data;
     const chartSample = chartData ? `Los primeros 5 puntos de datos son: ${JSON.stringify(chartData.slice(0, 6))}` : "No hay datos de serie temporal.";
-    return `Eres un climatólogo experto en Campeche. Analiza los siguientes datos para un informe gubernamental. **Variable:** ${variable}. **Zona:** ${roi}. **Periodo:** ${startDate} a ${endDate}. **Estadísticas:** ${stats || "N/A"}. **Muestra de datos:** ${chartSample}. **Instrucciones:** Genera un resumen ejecutivo conciso (máx 3 párrafos). Enfócate en tendencias e implicaciones prácticas para Protección Civil, Desarrollo Agropecuario y **SEDECO**. Finaliza con una **Conclusión Clave** en negritas. Responde en texto simple.`;
+    return `Eres un climatólogo experto en Campeche. Analiza los siguientes datos para un informe gubernamental. **Variable:** ${variable}. **Zona:** ${roi}. **Periodo:** ${startDate} a ${endDate}. **Estadísticas:** ${stats || "N/A"}. **Muestra de datos:** ${chartSample}. **Instrucciones:** Genera un resumen ejecutivo conciso (máx 3 párrafos). Enfócate en tendencias e implicaciones prácticas para Protección Civil y Desarrollo Agropecuario. Finaliza con una **Conclusión Clave** en negritas. Responde en texto simple.`;
 }
 
 function buildConversationalPrompt(query) {
@@ -304,27 +312,29 @@ function buildPredictionPrompt(chartData) {
     const variableName = chartData[0][1];
     const dataOnly = chartData.slice(1);
     const recentDataSample = JSON.stringify(dataOnly.slice(-15));
-    return `
-        Eres un climatólogo experto en análisis de datos y modelado de tendencias para el estado de Campeche.
-        Tu tarea es analizar la siguiente serie temporal de datos climáticos y generar un pronóstico cualitativo a corto plazo (próximas 2-4 semanas).
-        **Datos de la Serie Temporal Reciente:**
-        - **Variable:** ${variableName}
-        - **Últimos 15 puntos de datos:** ${recentDataSample}
-        **Instrucciones para tu respuesta:**
-        1.  **Análisis de Tendencia:** Describe brevemente la tendencia observada en los datos más recientes.
-        2.  **Pronóstico a Corto Plazo:** Basado en esta tendencia y en tu conocimiento del clima de Campeche, proyecta cómo es probable que se comporte esta variable en las próximas 2 a 4 semanas.
-        3.  **Implicaciones y Recomendaciones:** ¿Qué significa este pronóstico para los sectores clave?
-            - **Si la tendencia es negativa:** Advierte sobre los riesgos y sugiere acciones preventivas para Protección Civil y la Secretaría de Desarrollo Agropecuario.
-            - **Si la tendencia es positiva:** Describe las condiciones favorables.
-            - **Si la tendencia es extrema:** Advierte sobre posibles riesgos de inundaciones.
-        **Formato de Salida:**
-        Usa formato Markdown. Inicia con un titular claro como "**Pronóstico de Tendencia**". Usa negritas para resaltar los puntos clave.
-    `;
+    return `Eres un climatólogo experto. Analiza la siguiente serie temporal para Campeche y genera un pronóstico cualitativo a corto plazo (2-4 semanas). **Variable:** ${variableName}. **Últimos 15 puntos:** ${recentDataSample}. **Instrucciones:** 1. Analiza la tendencia reciente. 2. Proyecta el comportamiento probable. 3. Menciona implicaciones para Protección Civil o Agricultura. **Formato:** Usa Markdown. Inicia con "**Pronóstico de Tendencia**".`;
 }
 
 function buildFireRiskPrompt(data) {
     const { roi, startDate, endDate } = data;
-    return `Eres un analista de riesgos para el gobierno de Campeche. Interpreta un mapa de "Riesgo de Incendio Promedio" para **${roi}** del **${startDate}** al **${endDate}**. La leyenda es: Verde (Bajo), Amarillo (Moderado), Naranja (Alto), Rojo (Extremo). **Instrucciones:** 1. Titula "Interpretación del Mapa de Riesgo de Incendio". 2. Explica qué implica ver manchas naranjas/rojas en zonas agrícolas o forestales. 3. Da recomendaciones accionables para SEPROCI (monitoreo, alertas), Desarrollo Agropecuario y **SEDECO** (impacto económico). Usa Markdown.`;
+    return `Eres un analista de riesgos para Campeche. Interpreta un mapa de "Riesgo de Incendio Promedio" para **${roi}** del **${startDate}** al **${endDate}**. La leyenda es: Verde (Bajo), Amarillo (Moderado), Naranja (Alto), Rojo (Extremo). **Instrucciones:** 1. Titula "Interpretación del Mapa de Riesgo de Incendio". 2. Explica qué implican manchas naranjas/rojas en zonas agrícolas/forestales. 3. Da recomendaciones para Protección Civil y Desarrollo Agropecuario. Usa Markdown.`;
+}
+
+function buildLabAnalysisPrompt(labResult, analysisType, roi, startDate, endDate) {
+    const { stats } = labResult;
+    return `_
+        Eres un analista geoespacial experto. Interpreta el resultado de un análisis avanzado del "Laboratorio de IA".
+        - **Tipo de Análisis:** ${analysisType}
+        - **Región de Interés:** ${roi}
+        - **Periodo:** de ${startDate} a ${endDate}
+        - **Estadísticas Clave:** ${stats || "No se generaron estadísticas numéricas, es un análisis visual."}
+
+        **Instrucciones:**
+        1. Explica en un párrafo qué es este tipo de análisis y para qué sirve (ej. "El NDVI mide la salud de la vegetación...").
+        2. Basado en las estadísticas y tu conocimiento del análisis, genera un resumen ejecutivo conciso (máx 2 párrafos).
+        3. Finaliza con una **Conclusión Clave** en negritas sobre lo que los resultados implican para la región.
+        **Formato de Salida:** Usa formato Markdown simple (párrafos y **negritas**).
+    `;
 }
 
 export {
@@ -334,26 +344,5 @@ export {
     handleLabExecution,
     applyLabResultToMap,
     fetchHurricaneList,
-    resetAiPanel // <-- AÑADE ESTA LÍNEA
-
+    resetAiPanel
 };
-
-// UBICACIÓN: /ai-connector.js
-// AÑADE esta función al final del archivo.
-
-function buildLabAnalysisPrompt(labResult, analysisType, roi, startDate, endDate) {
-    const { stats } = labResult;
-    return `
-        Eres un analista geoespacial experto. Interpreta el resultado de un análisis avanzado del "Laboratorio de IA".
-        - **Tipo de Análisis:** ${analysisType}
-        - **Región de Interés:** ${roi}
-        - **Periodo:** ${startDate} a ${endDate}
-        - **Estadísticas Clave:** ${stats || "No se generaron estadísticas numéricas, es un análisis visual."}
-
-        **Instrucciones:**
-        1.  Explica en un párrafo qué es este tipo de análisis y para qué sirve (ej. "El NDVI mide la salud de la vegetación...").
-        2.  Basado en las estadísticas y tu conocimiento del análisis, genera un resumen ejecutivo conciso (máx 2 párrafos).
-        3.  Finaliza con una **Conclusión Clave** en negritas sobre lo que los resultados implican para la región.
-        **Formato de Salida:** Usa formato Markdown simple (párrafos y **negritas**).
-    `;
-}
