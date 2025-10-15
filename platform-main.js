@@ -159,6 +159,8 @@ function initMap() {
 // UBICACIÓN: platform-main.js
 // REEMPLAZA la función legendControl.update completa.
 legendControl.update = function (varInfo) {
+    console.log('[DEBUG] La función legendControl.update fue llamada con:', varInfo);
+
     // Si no hay información, limpia la leyenda y termina.
     if (!varInfo || !varInfo.bandName) {
         this._div.innerHTML = '';
