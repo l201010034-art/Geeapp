@@ -236,45 +236,6 @@ function applyLabResultToMap(requestBody) {
     }
 }
 
-// UBICACIÓN: /ai-connector.js
-// REEMPLAZA la función applyLabResultToMap completa.
-
-function applyLabResultToMap(requestBody) {
-    if (lastLabResult) {
-        if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
-        
-        if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
-        
-        let hasValidData = false;
-        if (lastLabResult.stats && !lastLabResult.stats.includes("No se pudieron calcular")) {
-            hasValidData = true;
-        }
-        if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
-            hasValidData = true;
-        }
-
-        if (hasValidData) {
-            window.updateStatsPanel(lastLabResult.stats);
-            if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
-                window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
-            }
-            // ▼▼▼ NUEVA LÓGICA AÑADIDA ▼▼▼
-            // Obtenemos el nombre legible del análisis y los parámetros de la solicitud.
-            const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
-            const prompt = buildLabAnalysisPrompt(lastLabResult, analysisName, requestBody.roi, requestBody.startDate, requestBody.endDate);
-            
-            // Llamamos a la misma función que usan los análisis generales para mostrar la interpretación.
-            callAndDisplayAnalysis(prompt);
-            // ▲▲▲ FIN DE LA NUEVA LÓGICA ▲▲▲
-        } else {
-            window.clearChartAndAi();
-            // Opcional: Informar al usuario si no hay datos para analizar.
-            aiPanel.classList.remove('hidden');
-            aiSummaryDiv.innerHTML = `<p class="text-gray-400">No se encontraron datos suficientes en la región y fechas seleccionadas para generar un análisis de IA.</p>`;
-        }
-    }
-}
-
 async function fetchHurricaneList() {
     const year = document.getElementById('lab-hurricane-year').value;
     const selector = document.getElementById('lab-hurricane-selector');
