@@ -1,7 +1,7 @@
 const ee = require('@google/earthengine');
 
-// Para el caso de huracanes, la función recibe los parámetros específicos
-module.exports.handleAnalysis= async function ({ hurricaneSid, hurricaneName, year }) {
+module.exports.handleAnalysis = async function ({ hurricaneSid, hurricaneName, year }) {
+    // La lógica para obtener la trayectoria del huracán no cambia.
     const points = ee.FeatureCollection('NOAA/IBTrACS/v4')
         .filter(ee.Filter.eq('SID', hurricaneSid))
         .filter(ee.Filter.bounds(ee.Geometry.Point(0,0).buffer(2e7)));
@@ -9,11 +9,33 @@ module.exports.handleAnalysis= async function ({ hurricaneSid, hurricaneName, ye
     const maxTime = points.aggregate_max('system:time_start');
     const lastPointDate = ee.Date(ee.Algorithms.If(maxTime, maxTime, `${year}-12-31`));
     
+    // --- ▼▼▼ LÓGICA DE PROCESAMIENTO DE IMAGEN CORREGIDA Y ROBUSTA ▼▼▼ ---
+
+    // 1. Definimos una función que procesa CADA imagen de la colección.
+    const processSSTImage = function(image) {
+        // Para cada imagen, seleccionamos la banda 'sst', la escalamos,
+        // y nos aseguramos de que solo esta banda continúe en el proceso.
+        return image
+            .select('sst')        // Selecciona solo la banda de temperatura
+            .multiply(0.01)       // Aplica el factor de escala
+            .rename('sst');       // Asegura que el nombre de la banda sea consistente
+    };
+
+    // 2. Aplicamos esa función a toda la colección y luego calculamos la media.
+    // El resultado de esto es GARANTIZADO que será una imagen de una sola banda.
     const sst = ee.ImageCollection('NOAA/CDR/OISST/V2_1')
         .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
-        .select(['sst']).mean().multiply(0.01);
-    
-    const sstImage = sst.select('sst').visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
+        .map(processSSTImage) // <-- Aplicamos nuestra función de limpieza aquí
+        .mean();              // <-- Ahora la media se calcula sobre imágenes limpias
+
+    // 3. Visualizamos la imagen de una sola banda. Ya no se necesita el .select() aquí.
+    const sstImage = sst.visualize({
+        min: 20, 
+        max: 32, 
+        palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']
+    });
+
+    // --- ▲▲▲ FIN DE LA LÓGICA CORREGIDA ▲▲▲ ---
     
     const line = ee.Geometry.LineString(points.sort('ISO_TIME').geometry().coordinates());
     const trajectoryLine = ee.FeatureCollection(line).style({color: 'FFFFFF', width: 1.5});
