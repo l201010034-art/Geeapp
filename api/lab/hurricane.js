@@ -1,42 +1,33 @@
 // UBICACIÓN: /api/lab/hurricane.js
-// REEMPLAZA toda la función con esta versión.
+// REEMPLAZA TODO EL CONTENIDO DEL ARCHIVO CON ESTE CÓDIGO.
 const ee = require('@google/earthengine');
 
 module.exports.handleAnalysis = async function ({ hurricaneSid, hurricaneName, year }) {
-    // La lógica para obtener la trayectoria del huracán no cambia.
     const points = ee.FeatureCollection('NOAA/IBTrACS/v4').filter(ee.Filter.eq('SID', hurricaneSid));
     const maxTime = points.aggregate_max('system:time_start');
     const lastPointDate = ee.Date(ee.Algorithms.If(maxTime, maxTime, `${year}-12-31`));
     
-    // Lógica de procesamiento de la imagen.
     const sst = ee.ImageCollection('NOAA/CDR/OISST/V2_1')
         .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
         .select(['sst'])
         .mean()
         .multiply(0.01);
 
-    // --- ▼▼▼ DEBUG CHECKPOINT 1 (SERVIDOR) ▼▼▼ ---
-    // Este código se ejecutará en el servidor de Vercel y nos dirá las bandas de la imagen.
-    await new Promise((resolve, reject) => {
-        sst.bandNames().evaluate((bandas, error) => {
-            if (error) {
-                console.error('ERROR AL EVALUAR BANDAS:', error);
-                reject(error);
-            } else {
-                console.log('[DEBUG-SERVER 1/2] Bandas de la imagen "sst" ANTES de visualizar:', bandas);
-                resolve(bandas);
-            }
-        });
-    });
-    // --- ▲▲▲ FIN DEL DEBUG ▲▲▲ ---
+    // --- ▼▼▼ LA CORRECCIÓN MÁS IMPORTANTE Y DEFINITIVA ▼▼▼ ---
 
-    const sstImage = sst.select('sst').visualize({
+    // 1. En lugar de visualizar 'sst' directamente, creamos una nueva imagen
+    //    que es explícitamente y únicamente la banda 'sst'.
+    //    Esto crea un "clon limpio" de la imagen, eliminando cualquier metadato fantasma.
+    const sstDeUnaSolaBanda = sst.select('sst');
+
+    // 2. Ahora, visualizamos este clon limpio y garantizado de una sola banda.
+    const sstImage = sstDeUnaSolaBanda.visualize({
         min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']
     });
 
-    // El resto de la lógica no cambia.
+    // --- ▲▲▲ FIN DE LA CORRECCIÓN ▲▲▲ ---
+
     const line = ee.Geometry.LineString(points.sort('ISO_TIME').geometry().coordinates());
-    // ... (resto del código de la función sin cambios) ...
     const trajectoryLine = ee.FeatureCollection(line).style({color: 'FFFFFF', width: 1.5});
     const styles = { 'Tropical Storm': {color: '00FFFF', pointSize: 3}, 'Category 1': {color: '00FF00', pointSize: 4}, 'Category 2': {color: 'FFFF00', pointSize: 5}, 'Category 3': {color: 'FF8C00', pointSize: 6}, 'Category 4': {color: 'FF0000', pointSize: 7}, 'Category 5': {color: 'FF00FF', pointSize: 8}};
     const pointsStyled = points.map(function(feature) {
@@ -53,8 +44,7 @@ module.exports.handleAnalysis = async function ({ hurricaneSid, hurricaneName, y
         visParams: {
             bandName: `Huracán: ${hurricaneName} (${year})`,
             unit: 'SST',
-            min: 20,
-            max: 32,
+            min: 20, max: 32,
             palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
             customLegend: {
                 type: 'hurricane',
