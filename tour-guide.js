@@ -1,6 +1,5 @@
-// tour-guide.js (Versión corregida)
+// tour-guide.js (Versión Final y Funcional)
 
-// ▼▼▼ LÍNEA CORREGIDA - USA ESTA URL ▼▼▼
 import { driver } from 'https://cdn.jsdelivr.net/npm/driver.js@1.0.1/+esm';
 
 export function initTourGuide() {
@@ -12,15 +11,8 @@ export function initTourGuide() {
     }
 
     const geoBotImageSrc = 'assets/GeoBot_Icon.png';
-
-    const driverObj = driver({
-        showProgress: true,
-        nextBtnText: 'Siguiente →',
-        prevBtnText: '← Anterior',
-        doneBtnText: 'Finalizar',
-    });
-
-    // ... el resto de tu código se mantiene exactamente igual ...
+    
+    // ▼▼▼ 1. DEFINIMOS LOS PASOS ANTES DE CREAR EL DRIVER ▼▼▼
     const tourSteps = [
         { 
             element: '#ai-command-form',
@@ -66,13 +58,25 @@ export function initTourGuide() {
             } 
         }
     ];
+
+    // ▼▼▼ 2. PASAMOS LOS PASOS DIRECTAMENTE EN LA CONFIGURACIÓN ▼▼▼
+    const driverObj = driver({
+        showProgress: true,
+        nextBtnText: 'Siguiente →',
+        prevBtnText: '← Anterior',
+        doneBtnText: 'Finalizar',
+        steps: tourSteps // <--- ¡AQUÍ ESTÁ LA MAGIA!
+    });
     
+    // ▼▼▼ 3. EL BOTÓN AHORA SOLO NECESITA INICIAR EL TOUR ▼▼▼
     startTourBtn.addEventListener('click', () => {
-        driverObj.setSteps(tourSteps);
-        driverObj.drive();
+        driverObj.drive(); // Ya no se usa setSteps, solo se inicia.
     });
 }
 
+/**
+ * Función auxiliar para crear el contenido HTML del popover.
+ */
 function createPopoverContent(imgSrc, text) {
     return `<div class="geobot-tour-step">
                 <img src="${imgSrc}" alt="GeoBot">
