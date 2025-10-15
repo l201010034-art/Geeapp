@@ -9,7 +9,9 @@ export function initTourGuide() {
     // Ruta a la imagen de GeoBot. Asegúrate de que la ruta sea correcta.
     const geoBotImageSrc = 'assets/GeoBot_Icon.png'; 
 
-    const driver = driverjs.driver({
+    // ----> LA CORRECCIÓN ESTÁ AQUÍ <----
+    // Accedemos a la librería a través del objeto global 'window'
+    const driver = window.driverjs.driver({
         showProgress: true,
         nextBtnText: 'Siguiente →',
         prevBtnText: '← Anterior',
