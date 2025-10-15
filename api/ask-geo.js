@@ -1,7 +1,7 @@
 // UBICACIÓN: /api/ask-geo.js
 // REEMPLAZA el contenido completo de este archivo.
 
-const { GoogleGenerativeAI } = require('@google/gener-ai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Inicializamos la IA con tu clave de API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
