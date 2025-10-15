@@ -41,12 +41,12 @@ module.exports.handleAnalysis = async function ({ hurricaneSid, hurricaneName, y
         laImagenResultante: sstImage.blend(trajectoryLine).blend(intensityPoints),
         collectionForChart: null,
         bandNameForChart: null,
+        // ▼▼▼ SECCIÓN CORREGIDA ▼▼▼
         visParams: {
+            // Se eliminan las claves: min, max, y palette.
             bandName: `Huracán: ${hurricaneName} (${year})`,
             unit: 'SST',
-            min: 20, max: 32,
-            palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
-            customLegend: {
+            customLegend: { // La leyenda personalizada se mantiene para el frontend.
                 type: 'hurricane',
                 items: [
                     { label: 'Cat. 5', color: '#FF00FF' },
@@ -58,5 +58,6 @@ module.exports.handleAnalysis = async function ({ hurricaneSid, hurricaneName, y
                 ]
             }
         }
+        // ▲▲▲ FIN DE LA SECCIÓN CORREGIDA ▲▲▲
     };
 }

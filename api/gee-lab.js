@@ -149,9 +149,14 @@ async function executeAnalysis(params) {
         ? laImagenResultante
         : laImagenResultante.clip(eeRoi);
 
+    // ▼▼▼ LÍNEA CORREGIDA ▼▼▼
+    // Si visParams tiene una paleta, úsalo; si no, usa un objeto vacío {}.
+    const visualizationOptions = visParams.palette ? visParams : {};
     const mapId = await new Promise((resolve, reject) => {
-        imageToDisplay.getMapId(visParams, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
+        imageToDisplay.getMapId(visualizationOptions, (mapid, error) => error ? reject(new Error(error)) : resolve(mapid));
     });
+    // ▲▲▲ FIN DE LA LÍNEA CORREGIDA ▲▲▲
+
 
     // 4. Calcular estadísticas y datos de gráfico
     let stats = `Análisis visual para: ${visParams.bandName || 'Resultado del Laboratorio'}`;
