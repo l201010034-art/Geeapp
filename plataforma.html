@@ -363,12 +363,24 @@
                 </div>
                 <div class="w-full md:w-2/3 flex flex-col min-h-0">                    
                     <h3 class="text-lg font-semibold">2. Informe de Misión IA</h3>
-                    <div id="lab-intelligence-panel" class="bg-gray-900 rounded p-4 flex-1 overflow-auto mt-2">
+                    <div id="lab-intelligence-panel" class="bg-gray-900 rounded p-4 flex-1 overflow-auto mt-2 flex flex-col">
                         <div id="lab-briefing-placeholder" class="text-center text-gray-400 h-full flex items-center justify-center">
-                            <p>Selecciona un tipo de análisis, región y fechas para generar el informe.</p>
+                            <p>Aquí aparecerá el resumen de la misión generado por la IA una vez que configures tu análisis.</p>
                         </div>
+
+                        <div id="lab-briefing-loader" class="hidden flex-1 flex flex-col items-center justify-center text-center">
+                            <div class="w-20 h-20 mb-4 text-[#f0ad4e] animate-pulse">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 21v-1.5M15.75 3v1.5M12 4.5v-1.5m0 18v-1.5M5.636 5.636l-1.06-1.06M5.636 18.364l-1.06 1.06M18.364 5.636l1.06-1.06M18.364 18.364l1.06 1.06M12 12.75a4.5 4.5 0 01-4.5-4.5H3a9 9 0 009 9v-1.5c-2.485 0-4.5-2.015-4.5-4.5zm0-4.5a4.5 4.5 0 00-4.5 4.5H3a9 9 0 019-9v1.5c-2.485 0-4.5 2.015-4.5 4.5zm4.5 4.5a4.5 4.5 0 01-4.5 4.5v1.5a9 9 0 009-9h-1.5a4.5 4.5 0 01-4.5 4.5zm0-9a4.5 4.5 0 00-4.5-4.5v1.5a9 9 0 019 9h-1.5a4.5 4.5 0 00-4.5-4.5z" />
+                                </svg>
+                            </div>
+                            <p id="briefing-loader-status" class="text-lg font-semibold text-white transition-opacity duration-500">Generando informe...</p>
+                            <p class="text-sm text-gray-400 mt-2">Geo está consultando los parámetros...</p>
+                        </div>
+
                         <div id="lab-briefing-result" class="hidden text-sm prose prose-invert max-w-none"></div>
                     </div>
+
                 </div>
             </div>
         </div>

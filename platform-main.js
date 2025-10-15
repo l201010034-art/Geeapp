@@ -15,6 +15,8 @@ let hasBeenWelcomed = false;
 let briefingController = new AbortController();
 let fabTipInterval; // Para controlar el ciclo de tips
 let fabTypewriterTimeout; // Para controlar la animación de escritura
+let briefingStatusInterval = null;
+
 const fabTips = [
     "Pregúntame '¿qué es NDVI?'",
     "Dibuja un área en el mapa para analizarla.",
@@ -1078,9 +1080,13 @@ function addWelcomeMessageToChat() {
 }
 
 
+// UBICACIÓN: platform-main.js
+// REEMPLAZA la función updateIntelligenceBriefing completa con esta nueva versión.
 async function updateIntelligenceBriefing() {
     const briefingResult = document.getElementById('lab-briefing-result');
     const placeholder = document.getElementById('lab-briefing-placeholder');
+    const briefingLoader = document.getElementById('lab-briefing-loader'); // <-- Nuevo loader
+    const briefingStatusElement = document.getElementById('briefing-loader-status'); // <-- Elemento de texto del loader
 
     // Cancelar cualquier solicitud de briefing anterior
     briefingController.abort();
@@ -1088,23 +1094,48 @@ async function updateIntelligenceBriefing() {
     const signal = briefingController.signal;
 
     const analysisTypeSelect = document.getElementById('lab-analysis-type');
-    const regionSelect = document.getElementById('lab-region-selector-municipalities'); // Ajusta si usas el marino
+    const regionSelect = document.getElementById('lab-region-selector-municipalities');
+    const marineRegionSelect = document.getElementById('lab-region-selector-marine');
     const startDate = document.getElementById('lab-start-date').value;
     const endDate = document.getElementById('lab-end-date').value;
 
-    // Comprueba si todos los campos necesarios están listos
-    if (!analysisTypeSelect.value || !regionSelect.value || !startDate || !endDate) {
+    const regionName = !regionSelect.classList.contains('hidden') ? regionSelect.value : marineRegionSelect.value;
+    const analysisName = analysisTypeSelect.selectedOptions[0].text;
+
+    // Si falta algún campo, volvemos al placeholder inicial y no hacemos nada más.
+    if (!analysisTypeSelect.value || !regionName || !startDate || !endDate) {
         placeholder.classList.remove('hidden');
         briefingResult.classList.add('hidden');
+        briefingLoader.classList.add('hidden');
         return;
     }
 
-    const analysisName = analysisTypeSelect.selectedOptions[0].text;
-    const regionName = regionSelect.value;
-
+    // --- LÓGICA DEL NUEVO LOADER ---
     placeholder.classList.add('hidden');
-    briefingResult.classList.remove('hidden');
-    briefingResult.innerHTML = `<div class="loader mx-auto"></div>`;
+    briefingResult.classList.add('hidden');
+    briefingLoader.classList.remove('hidden');
+
+    // Detenemos cualquier ciclo de mensajes anterior
+    clearInterval(briefingStatusInterval);
+
+    // Mensajes específicos para la generación del informe de misión
+    const statusMessages = [
+        "Interpretando selección de análisis...",
+        "Consultando contexto geoespacial para la región...",
+        "Compilando datos históricos relevantes...",
+        "Contactando a la IA de Gemini para la redacción...",
+        "Generando informe de misión..."
+    ];
+    let currentStatusIndex = 0;
+    briefingStatusElement.textContent = statusMessages[0];
+
+    // Iniciamos el nuevo ciclo de mensajes
+    briefingStatusInterval = setInterval(() => {
+        currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
+        briefingStatusElement.textContent = statusMessages[currentStatusIndex];
+    }, 2000); // Cambia el mensaje cada 2 segundos
+
+    // --- FIN LÓGICA DEL LOADER ---
 
     const prompt = `
         Genera un "Informe de Misión" breve (2 párrafos) para un análisis geoespacial.
@@ -1114,8 +1145,6 @@ async function updateIntelligenceBriefing() {
         Explica qué es el análisis en una frase. Luego, ofrece contexto sobre qué esperar en esa región y fechas (ej: temporada de secas, época de lluvias, alto riesgo de incendios). Finalmente, menciona el satélite que se usará (NDVI/LST/NDWI usan Sentinel-2; Incendios usa VIIRS; Calidad del Aire usa Sentinel-5P).
         Usa formato HTML con un título <h4> y párrafos <p>.
     `;
-
-// UBICACIÓN: platform-main.js, dentro de updateIntelligenceBriefing
 
     try {
         const response = await fetch('/api/generate-text', {
@@ -1128,17 +1157,19 @@ async function updateIntelligenceBriefing() {
 
         const data = await response.json();
         
-        // ▼▼▼ LÍNEAS DE CORRECCIÓN ▼▼▼
-        // Limpiamos la respuesta de la IA para quitarle el formato de código Markdown.
         let cleanHtml = data.text.replace(/^```html\s*/, '').replace(/```$/, '');
-        
-        briefingResult.innerHTML = cleanHtml; // Usamos el HTML ya limpio.
+        briefingResult.innerHTML = cleanHtml;
 
     } catch (error) {
         if (error.name === 'AbortError') {
             console.log('Briefing request cancelled.');
-            return;
+            return; // No hacemos nada más si fue cancelada
         }
         briefingResult.innerHTML = `<p class="text-red-400">Error al generar el informe: ${error.message}</p>`;
+    } finally {
+        // Al terminar (con éxito o error), detenemos el loader y mostramos el resultado
+        clearInterval(briefingStatusInterval);
+        briefingLoader.classList.add('hidden');
+        briefingResult.classList.remove('hidden');
     }
 }
