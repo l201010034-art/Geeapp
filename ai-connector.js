@@ -208,39 +208,40 @@ async function handleLabExecution() {
 // UBICACIÓN: ai-connector.js
 // REEMPLAZA la función applyLabResultToMap completa.
 function applyLabResultToMap(requestBody) {
+    // --- ▼▼▼ DEBUG CHECKPOINT 2 (NAVEGADOR) ▼▼▼ ---
+    console.log('[DEBUG-BROWSER 2/4] Ingresando a applyLabResultToMap con:', { requestBody, lastLabResult });
+
     if (lastLabResult) {
         if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
+        
+        // --- ▼▼▼ DEBUG CHECKPOINT 3 (NAVEGADOR) ▼▼▼ ---
+        console.log('[DEBUG-BROWSER 3/4] Intentando actualizar la leyenda con visParams:', lastLabResult.visParams);
         if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
         
         let hasValidData = false;
 
         if (lastLabResult.stats && !lastLabResult.stats.includes("No se pudieron calcular")) {
-            window.updateStatsPanel(lastLabResult.stats);
+            hasValidData = true;
+        }
+        if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
             hasValidData = true;
         }
 
-        // --- ▼▼▼ LÓGICA MEJORADA PARA EL GRÁFICO ▼▼▼ ---
-        if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
-            window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
-            hasValidData = true;
-        } else {
-            // Si no hay datos para el gráfico, lo limpiamos y lo ocultamos.
-            window.clearChartAndAi(); 
-        }
-        // --- ▲▲▲ FIN DE LA LÓGICA MEJORADA ▲▲▲ ---
+        // --- ▼▼▼ DEBUG CHECKPOINT 4 (NAVEGADOR) ▼▼▼ ---
+        console.log('[DEBUG-BROWSER 4/4] El resultado de hasValidData es:', hasValidData);
 
         if (hasValidData) {
+            window.updateStatsPanel(lastLabResult.stats);
+            if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
+                window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
+            }
             const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
             const prompt = buildLabAnalysisPrompt(lastLabResult, analysisName, requestBody.roi, requestBody.startDate, requestBody.endDate);
             callAndDisplayAnalysis(prompt);
         } else {
-            if (!lastLabResult.stats || !lastLabResult.stats.includes("No se pudieron calcular")) {
-                window.reportErrorToGeo("No se encontraron datos suficientes para el análisis en el período seleccionado.", "¡Vaya! ");
-            }
+            window.clearChartAndAi();
         }
     }
-    document.getElementById('lab-execute-button').classList.remove('hidden');
-    document.getElementById('lab-apply-button').classList.add('hidden');
 }
 
 async function fetchHurricaneList() {
