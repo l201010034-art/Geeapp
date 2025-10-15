@@ -210,6 +210,8 @@ function initMap() {
         `;
     };
     legendControl.addTo(map);
+    window.legendControl = legendControl;
+
 }
 
 function populateSelectors() {
@@ -1059,7 +1061,6 @@ window.copyAiAnalysis = copyAiAnalysis;
 window.downloadAiAnalysis = downloadAiAnalysis;
 window.handleLabAnalysisChange = handleLabAnalysisChange;
 window.showLoading = showLoading;
-window.legendControl = legendControl;
 window.reportErrorToGeo = reportErrorToGeo; // <-- AÑADE ESTA LÍNEA
 
 
