@@ -114,55 +114,52 @@ commandForm.addEventListener('submit', async (event) => {
 });
 
 
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA la función handleLabExecution completa con esta versión.
 async function handleLabExecution() {
-    const labOverlay = document.getElementById('lab-overlay'); // <-- AÑADE ESTA LÍNEA
+    const labOverlay = document.getElementById('lab-overlay');
     const executeButton = document.getElementById('lab-execute-button');
-    //const applyButton = document.getElementById('lab-apply-button');
-    //const resultDisplay = document.getElementById('lab-result-display');
 
     const analysisType = document.getElementById('lab-analysis-type').value;
     let requestBody;
 
-    if (analysisType === 'HURRICANE') {
-        const hurricaneSelector = document.getElementById('lab-hurricane-selector');
-        if (!hurricaneSelector.value || hurricaneSelector.options[hurricaneSelector.selectedIndex].text === 'No se encontraron huracanes') {
-            alert("Por favor, busca y selecciona un huracán válido.");
-            return;
+    try { // --- Se mueve el try/catch para envolver toda la lógica ---
+        if (analysisType === 'HURRICANE') {
+            const hurricaneSelector = document.getElementById('lab-hurricane-selector');
+            if (!hurricaneSelector.value || hurricaneSelector.options[hurricaneSelector.selectedIndex].text === 'No se encontraron huracanes') {
+                // Usamos el sistema de errores de Geo para notificaciones amigables.
+                window.reportErrorToGeo("Por favor, busca y selecciona un huracán válido.", "Aviso: ");
+                return; // Detenemos la ejecución
+            }
+            requestBody = {
+                analysisType: 'HURRICANE',
+                hurricaneSid: hurricaneSelector.value,
+                hurricaneName: hurricaneSelector.options[hurricaneSelector.selectedIndex].text,
+                year: document.getElementById('lab-hurricane-year').value
+            };
+        } else {
+            const regionSelector = document.getElementById('lab-region-selector-municipalities');
+            const marineRegionSelector = document.getElementById('lab-region-selector-marine');
+            const regionName = !regionSelector.classList.contains('hidden') ? regionSelector.value : marineRegionSelector.value;
+            
+            requestBody = {
+                analysisType: analysisType,
+                roi: regionName,
+                startDate: document.getElementById('lab-start-date').value,
+                endDate: document.getElementById('lab-end-date').value
+            };
         }
-        requestBody = {
-            analysisType: 'HURRICANE',
-            hurricaneSid: hurricaneSelector.value,
-            hurricaneName: hurricaneSelector.options[hurricaneSelector.selectedIndex].text,
-            year: document.getElementById('lab-hurricane-year').value
-        };
-    } else {
-        const regionSelector = document.getElementById('lab-region-selector-municipalities');
-        const marineRegionSelector = document.getElementById('lab-region-selector-marine');
-        const regionName = !regionSelector.classList.contains('hidden') ? regionSelector.value : marineRegionSelector.value;
+
+        executeButton.disabled = true;
+        Loader.show([
+            "Accediendo al Laboratorio de IA...",
+            "Configurando el entorno de análisis en el servidor...",
+            "Ejecutando el módulo de análisis especializado...",
+            "Compilando resultados para la previsualización...",
+            "Refinando contenido con IA avanzada...",
+            "¡Análisis completado!"
+        ]);
         
-        requestBody = {
-            analysisType: analysisType,
-            roi: regionName,
-            startDate: document.getElementById('lab-start-date').value,
-            endDate: document.getElementById('lab-end-date').value
-        };
-    }
-
-    executeButton.disabled = true;
-    //executeButton.textContent = "Ejecutando...";
-    //resultDisplay.textContent = `// Solicitando análisis '${analysisType}' al servidor...`;
-
-    // Usamos el loader inteligente global
-    Loader.show([ // <--- CAMBIO CLAVE
-        "Accediendo al Laboratorio de IA...",
-        "Configurando el entorno de análisis en el servidor...",
-        "Ejecutando el módulo de análisis especializado...",
-        "Compilando resultados para la previsualización...",
-        "Refinando contenido con IA avanzada...",
-        "¡Análisis completado!"
-]);
-
-    try {
         const response = await fetch('/api/gee-lab', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -171,24 +168,24 @@ async function handleLabExecution() {
 
         if (!response.ok) {
             const errorData = await response.json();
+            // Si la respuesta del servidor no es OK, lanzamos un error para ser atrapado por el CATCH.
             throw new Error(errorData.details || "Error al ejecutar el análisis.");
         }
 
-        lastLabResult = await response.json(); // Guardamos el resultado
+        lastLabResult = await response.json(); 
 
-        // ---- ¡CAMBIO CLAVE! ----
-        // Si todo salió bien, cerramos el modal y aplicamos el resultado inmediatamente.
         labOverlay.classList.add('hidden');
         applyLabResultToMap(requestBody); 
-        // El loader se ocultará automáticamente por la función addGeeLayer
-        // ---- FIN DEL CAMBIO CLAVE ----
+    
     } catch (error) {
-        // Llama al nuevo sistema de errores de GeoBot
+        // --- ESTE ES EL BLOQUE CORREGIDO ---
+        // 1. Reportamos el error a GeoBot PRIMERO.
         window.reportErrorToGeo(error.message, "¡Ups! El análisis del laboratorio no pudo completarse. ");
-        // Oculta el loader después de reportar el error
+        // 2. DESPUÉS, ocultamos el loader.
         Loader.hide();
 
     } finally {
+        // Esto se ejecuta siempre, asegurando que el botón se reactive.
         executeButton.disabled = false;
         executeButton.textContent = "🚀 Ejecutar Análisis";
     }

@@ -28,25 +28,31 @@ module.exports.handleAnalysis= async function ({ hurricaneSid, hurricaneName, ye
 
     const intensityPoints = pointsStyled.style({styleProperty: 'styleArgs'});
     
-    // Devolvemos las variables finales
+// UBICACIÓN: /api/lab/hurricane.js
+// REEMPLAZA el objeto 'return' al final de la función con este.
     return {
         laImagenResultante: sstImage.blend(trajectoryLine).blend(intensityPoints),
         collectionForChart: null,
         bandNameForChart: null,
+        // Devolvemos los parámetros base para que la IA los entienda
         visParams: {
-            description: `
-                <div class="legend-title">Huracán: ${hurricaneName} (${year})</div>
-                <div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
-                <div class="legend-scale-bar" style="background: linear-gradient(to right, #000080, #00FFFF, #FFFF00, #FF0000);"></div>
-                <div class="legend-labels" style="font-size: 11px;"><span>20</span><span>32</span></div>
-                <div style="font-size: 11px; margin-top: 4px;"><strong>Intensidad (Saffir-Simpson)</strong></div>
-                <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF00FF; border-radius: 50%; margin-right: 5px;"></div> Cat. 5</div>
-                <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF0000; border-radius: 50%; margin-right: 5px;"></div> Cat. 4</div>
-                <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FF8C00; border-radius: 50%; margin-right: 5px;"></div> Cat. 3</div>
-                <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #FFFF00; border-radius: 50%; margin-right: 5px;"></div> Cat. 2</div>
-                <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #00FF00; border-radius: 50%; margin-right: 5px;"></div> Cat. 1</div>
-                <div style="display: flex; align-items: center; font-size: 11px;"><div style="width: 10px; height: 10px; background-color: #00FFFF; border-radius: 50%; margin-right: 5px;"></div> Torm./Dep. Tropical</div>
-            `
+            bandName: `Huracán: ${hurricaneName} (${year})`,
+            unit: 'SST',
+            min: 20,
+            max: 32,
+            palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000'],
+            // Y añadimos una sección especial para la leyenda personalizada
+            customLegend: {
+                type: 'hurricane',
+                items: [
+                    { label: 'Cat. 5', color: '#FF00FF' },
+                    { label: 'Cat. 4', color: '#FF0000' },
+                    { label: 'Cat. 3', color: '#FF8C00' },
+                    { label: 'Cat. 2', color: '#FFFF00' },
+                    { label: 'Cat. 1', color: '#00FF00' },
+                    { label: 'Torm./Dep. Tropical', color: '#00FFFF' }
+                ]
+            }
         }
     };
 }

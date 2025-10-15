@@ -156,27 +156,41 @@ function initMap() {
 
 
 // ▼▼▼ BLOQUE CORREGIDO Y ROBUSTO ▼▼▼
+// UBICACIÓN: platform-main.js
+// REEMPLAZA la función legendControl.update completa.
     legendControl.update = function (varInfo) {
-        // Si no hay información de ningún tipo, limpia la leyenda y termina.
+        // Si no hay información, limpia la leyenda.
         if (!varInfo) {
             this._div.innerHTML = '';
             return;
         }
 
-        // --- PRIORIDAD 1: Usar el HTML pre-generado del Laboratorio de IA ---
-        // Si el backend nos envía una 'description', la usamos directamente.
-        // Este es el método preferido para leyendas complejas (NDVI, Sargazo, etc.).
-        if (varInfo.description && typeof varInfo.description === 'string' && varInfo.description.trim() !== '') {
-            this._div.innerHTML = varInfo.description;
-            return; // ¡Importante! Si usamos la descripción, no hacemos nada más.
+        // --- CASO 1: LEYENDA PERSONALIZADA (EJ. HURACÁN) ---
+        if (varInfo.customLegend) {
+            let html = `<div class="legend-title">${varInfo.bandName || 'Leyenda'}</div>`;
+            
+            // Construye la leyenda de temperatura del mar
+            html += `<div style="font-size: 11px; margin-top: 4px;"><strong>Temperatura del Mar (°C)</strong></div>
+                    <div class="legend-scale-bar" style="background: linear-gradient(to right, ${varInfo.palette.join(', ')});"></div>
+                    <div class="legend-labels" style="font-size: 11px;"><span>${varInfo.min}</span><span>${varInfo.max}</span></div>`;
+            
+            // Construye la leyenda de categorías
+            html += `<div style="font-size: 11px; margin-top: 4px;"><strong>Intensidad (Saffir-Simpson)</strong></div>`;
+            varInfo.customLegend.items.forEach(item => {
+                html += `<div style="display: flex; align-items: center; font-size: 11px;">
+                            <div style="width: 10px; height: 10px; background-color: ${item.color}; border-radius: 50%; margin-right: 5px;"></div>
+                            ${item.label}
+                        </div>`;
+            });
+            
+            this._div.innerHTML = html;
+            return; // Termina la ejecución aquí.
         }
 
-        // --- PRIORIDAD 2 (Respaldo): Construir la leyenda manualmente ---
-        // Si no hay 'description', construimos la leyenda a partir de sus partes.
-        // Esto asegura que los análisis predefinidos del panel principal sigan funcionando.
+        // --- CASO 2: LEYENDA ESTÁNDAR (PARA TODO LO DEMÁS) ---
         const title = varInfo.bandName || 'Leyenda';
         const unit = varInfo.unit ? `(${varInfo.unit})` : '';
-        const min = varInfo.min ?? ''; // Usamos '??' para manejar el valor 0 correctamente
+        const min = varInfo.min ?? '';
         const max = varInfo.max ?? '';
         const hasPalette = Array.isArray(varInfo.palette) && varInfo.palette.length > 0;
         
@@ -184,7 +198,6 @@ function initMap() {
             ? `linear-gradient(to right, ${varInfo.palette.join(', ')})`
             : `linear-gradient(to right, #FFFFFF, #000000)`;
 
-        // Construimos el HTML final para el caso manual.
         this._div.innerHTML = `
             <div class="legend-title">${title} ${unit}</div>
             <div class="legend-scale-bar" style="background: ${gradient};"></div>
