@@ -1,16 +1,39 @@
 // tour-guide.js
 
-// Usamos 'export' para que esta función pueda ser llamada desde otro archivo (platform-main.js)
+/**
+ * La función principal que se exporta.
+ * Inicia un verificador que espera a que window.driverjs esté disponible.
+ */
 export function initTourGuide() {
+    checkForDriver();
+}
+
+/**
+ * Esta función revisa si la librería Driver.js ya cargó.
+ * Si ya cargó, ejecuta la configuración del tour.
+ * Si no, espera 50ms y se vuelve a llamar a sí misma.
+ */
+function checkForDriver() {
+    if (window.driverjs) {
+        // ¡La librería está lista! Procedemos a configurar el tour.
+        setupTour();
+    } else {
+        // La librería aún no está lista, esperamos un poco y volvemos a revisar.
+        setTimeout(checkForDriver, 50);
+    }
+}
+
+/**
+ * Contiene toda la lógica original para configurar y activar el tour.
+ * Esta función solo se llamará cuando estemos seguros de que Driver.js existe.
+ */
+function setupTour() {
     const startTourBtn = document.getElementById('start-tour-btn');
-    // Si el botón no existe, no hacemos nada.
     if (!startTourBtn) return;
 
-    // Ruta a la imagen de GeoBot. Asegúrate de que la ruta sea correcta.
-    const geoBotImageSrc = 'assets/GeoBot_Icon.png'; 
+    const geoBotImageSrc = 'GeoBot Icon.png';
 
-    // ----> LA CORRECCIÓN ESTÁ AQUÍ <----
-    // Accedemos a la librería a través del objeto global 'window'
+    // Ahora esta línea se ejecutará sin errores, porque ya verificamos que 'window.driverjs' existe.
     const driver = window.driverjs.driver({
         showProgress: true,
         nextBtnText: 'Siguiente →',
@@ -18,8 +41,6 @@ export function initTourGuide() {
         doneBtnText: 'Finalizar',
     });
 
-    // Define los pasos del recorrido. 
-    // Usamos la estructura HTML que definimos en los estilos.
     const tourSteps = [
         { 
             element: '#ai-command-form',
@@ -66,7 +87,6 @@ export function initTourGuide() {
         }
     ];
     
-    // Asigna el evento al botón para iniciar el tour.
     startTourBtn.addEventListener('click', () => {
         driver.setSteps(tourSteps);
         driver.drive();
@@ -74,10 +94,7 @@ export function initTourGuide() {
 }
 
 /**
- * Función auxiliar para crear el contenido HTML del popover de forma consistente.
- * @param {string} imgSrc - La ruta de la imagen de GeoBot.
- * @param {string} text - El texto descriptivo del paso.
- * @returns {string} - El string HTML para la descripción.
+ * Función auxiliar para crear el contenido HTML del popover.
  */
 function createPopoverContent(imgSrc, text) {
     return `<div class="geobot-tour-step">
