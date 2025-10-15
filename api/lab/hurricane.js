@@ -13,7 +13,7 @@ module.exports.handleAnalysis= async function ({ hurricaneSid, hurricaneName, ye
         .filterDate(lastPointDate.advance(-2, 'day'), lastPointDate.advance(2, 'day'))
         .select(['sst']).mean().multiply(0.01);
     
-    const sstImage = sst.visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
+    const sstImage = sst.select('sst').visualize({min: 20, max: 32, palette: ['#000080', '#00FFFF', '#FFFF00', '#FF0000']});
     
     const line = ee.Geometry.LineString(points.sort('ISO_TIME').geometry().coordinates());
     const trajectoryLine = ee.FeatureCollection(line).style({color: 'FFFFFF', width: 1.5});

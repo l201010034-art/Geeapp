@@ -1,6 +1,7 @@
 
 import { Loader } from './intelligent-loader.js'; // <-- AÑADE ESTA LÍNEA
 
+
 // --- 1. CONEXIÓN CON LA IA PARA ANÁLISIS (PANELES DERECHOS) ---
 
 const AI_API_URL = '/api/analyze';
@@ -10,6 +11,13 @@ const aiActionsContainer = document.getElementById('ai-actions-container');
 const commandForm = document.getElementById('ai-command-form');
 const commandBar = document.getElementById('ai-command-bar');
 let lastLabResult = null;
+
+// AÑADE esta nueva función.
+function resetAiPanel() {
+    aiPanel.classList.remove('hidden');
+    aiSummaryDiv.innerHTML = '<p class="text-gray-400 animate-pulse">Analizando datos...</p>';
+    aiActionsContainer.classList.add('hidden');
+}
 
 // --- CORRECCIÓN CLAVE: Se elimina 'window.' de las declaraciones de función ---
 async function generateAiAnalysis(data) {
@@ -197,53 +205,38 @@ async function handleLabExecution() {
     }
 }
 
+// UBICACIÓN: ai-connector.js
+// REEMPLAZA la función applyLabResultToMap completa.
 function applyLabResultToMap(requestBody) {
-    console.log('[DEBUG 2/4] Ingresando a applyLabResultToMap. El request original fue:', requestBody);
-
     if (lastLabResult) {
-        
-        // Renderiza el mapa y la leyenda como siempre
         if (lastLabResult.mapId) window.addGeeLayer(lastLabResult.mapId.urlFormat, 'Resultado del Laboratorio');
-        console.log('[DEBUG 3/4] Intentando actualizar la leyenda con visParams:', lastLabResult.visParams);
-
-
-    
         if (window.legendControl && lastLabResult.visParams) window.legendControl.update(lastLabResult.visParams);
         
         let hasValidData = false;
 
-        // Comprueba si las estadísticas son válidas y las muestra
         if (lastLabResult.stats && !lastLabResult.stats.includes("No se pudieron calcular")) {
             window.updateStatsPanel(lastLabResult.stats);
             hasValidData = true;
         }
 
-        // Comprueba si hay datos de gráfico válidos y los muestra
+        // --- ▼▼▼ LÓGICA MEJORADA PARA EL GRÁFICO ▼▼▼ ---
         if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
             window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
             hasValidData = true;
+        } else {
+            // Si no hay datos para el gráfico, lo limpiamos y lo ocultamos.
+            window.clearChartAndAi(); 
         }
+        // --- ▲▲▲ FIN DE LA LÓGICA MEJORADA ▲▲▲ ---
 
-        // Si encontramos datos válidos (gráfico o estadísticas), generamos el análisis de IA.
         if (hasValidData) {
-            console.log('[DEBUG 4/4] Condición hasValidData CUMPLIDA. Se procederá a generar el análisis de IA.');
-
             const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
-            const prompt = buildLabAnalysisPrompt(
-                lastLabResult,
-                analysisName,
-                requestBody.roi,
-                requestBody.startDate,
-                requestBody.endDate
-            );
+            const prompt = buildLabAnalysisPrompt(lastLabResult, analysisName, requestBody.roi, requestBody.startDate, requestBody.endDate);
             callAndDisplayAnalysis(prompt);
         } else {
-            // --- ▼▼▼ LÓGICA DE ERROR CORREGIDA Y SIMPLIFICADA ▼▼▼ ---
-            // Si después de todas las revisiones no hay datos válidos, limpiamos los paneles
-            // y reportamos un error genérico, ya que el backend debería haber enviado el error específico.
-            window.clearChartAndAi();
-            window.reportErrorToGeo("No se encontraron datos suficientes para el análisis en el período seleccionado.", "¡Vaya! ");
-            
+            if (!lastLabResult.stats || !lastLabResult.stats.includes("No se pudieron calcular")) {
+                window.reportErrorToGeo("No se encontraron datos suficientes para el análisis en el período seleccionado.", "¡Vaya! ");
+            }
         }
     }
     document.getElementById('lab-execute-button').classList.remove('hidden');
@@ -347,7 +340,9 @@ export {
     generateFireRiskAnalysis,
     handleLabExecution,
     applyLabResultToMap,
-    fetchHurricaneList
+    fetchHurricaneList,
+    resetAiPanel // <-- AÑADE ESTA LÍNEA
+
 };
 
 // UBICACIÓN: ai-connector.js

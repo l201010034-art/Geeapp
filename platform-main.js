@@ -7,7 +7,8 @@ import {
     applyLabResultToMap,
     generateAiAnalysis,    // <-- Función que faltaba importar
     generatePrediction,      // <-- Función que faltaba importar
-    generateFireRiskAnalysis // <-- Función que faltaba importar
+    generateFireRiskAnalysis, // <-- Función que faltaba importar
+    resetAiPanel
 } from './ai-connector.js';
 
 let hasWelcomed = false;
@@ -367,69 +368,69 @@ async function handleAnalysis(type, overrideRoi = null) {
     }
     if (type === 'compare' && activeROIs.length < 2) {
         reportErrorToGeo('Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
-        //updateStatsPanel('Error: Para comparar, selecciona al menos dos zonas o dibuja dos áreas.');
         return;
     }
+    
     clearMapAndAi();
-    showLoading(true,type);
-    let action, params;
-    const selectedVar = document.getElementById('variableSelector').value;
-    const varInfo = varParams[selectedVar];
-    const baseParams = { startDate, endDate, varInfo };
-    switch(type) {
-        case 'general': action = 'getGeneralData'; params = { ...baseParams, roi: activeROIs[0] }; break;
-        case 'compare': action = 'getCompareData'; params = { ...baseParams, rois: activeROIs }; break;
-        case 'precipitation': action = 'getPrecipitationData'; params = { ...baseParams, roi: activeROIs[0], analysisType: document.getElementById('precipAnalysisSelector').value, aggregation: document.getElementById('precipAggregationSelector').value }; break;
-        case 'temperature': action = 'getTemperatureData'; params = { ...baseParams, roi: activeROIs[0], analysisType: document.getElementById('tempAnalysisSelector').value }; break;
-        case 'spi': action = 'getSpiData'; params = { ...baseParams, roi: activeROIs[0], timescale: parseInt(document.getElementById('spiTimescaleSelector').value) }; break;
-        case 'fireRisk': action = 'getFireRiskData'; params = { ...baseParams, roi: activeROIs[0] }; break;
-    }
+    
+    // --- ▼▼▼ MEJORA 1: REACTIVAR ANIMACIÓN DE IA ▼▼▼ ---
+    resetAiPanel(); 
+    // --- ▲▲▲ FIN DE LA MEJORA 1 ▲▲▲ ---
+
+    showLoading(true, type);
+
     try {
+        let action, params;
+        const selectedVar = document.getElementById('variableSelector').value;
+        const varInfo = varParams[selectedVar];
+        const baseParams = { startDate, endDate, varInfo };
+
+        switch(type) {
+            // ... (el código del switch se mantiene igual)
+            case 'general': action = 'getGeneralData'; params = { ...baseParams, roi: activeROIs[0] }; break;
+            case 'compare': action = 'getCompareData'; params = { ...baseParams, rois: activeROIs }; break;
+            case 'precipitation': action = 'getPrecipitationData'; params = { ...baseParams, roi: activeROIs[0], analysisType: document.getElementById('precipAnalysisSelector').value, aggregation: document.getElementById('precipAggregationSelector').value }; break;
+            case 'temperature': action = 'getTemperatureData'; params = { ...baseParams, roi: activeROIs[0], analysisType: document.getElementById('tempAnalysisSelector').value }; break;
+            case 'spi': action = 'getSpiData'; params = { ...baseParams, roi: activeROIs[0], timescale: parseInt(document.getElementById('spiTimescaleSelector').value) }; break;
+            case 'fireRisk': action = 'getFireRiskData'; params = { ...baseParams, roi: activeROIs[0] }; break;
+        }
+
         const response = await callGeeApi(action, params);
         legendControl.update(response.visParams || varInfo); 
+        
         if (response.mapId) {
-            // ...le pasamos el trabajo a addGeeLayer, que se encargará de la Etapa 2
-            // y de ocultar el loader cuando el mapa esté listo.
             addGeeLayer(response.mapId.urlFormat, varInfo?.bandName || 'Análisis');
         } else {
-            // Si NO hay mapa (ej. en una comparación de solo gráfico),
-            // ocultamos el loader nosotros mismos.
             showLoading(false);
         }
-        // UBICACIÓN: platform-main.js, dentro de handleAnalysis
 
-// ▼▼▼ BLOQUE CORREGIDO ▼▼▼
         if (response.stats) {
-            // Comprobamos si el mensaje de estadísticas es en realidad un aviso de error.
             if (response.stats.includes("No se pudieron calcular estadísticas")) {
-                // Si lo es, lo reportamos a Geo en lugar de mostrarlo en el panel.
                 reportErrorToGeo(response.stats, "¡Atención! ");
             } else {
-                // Si son estadísticas válidas, las mostramos como siempre.
                 updateStatsPanel(response.stats);
             }
         }
+
+        // --- ▼▼▼ MEJORA 2: OCULTAR GRÁFICO SI NO HAY DATOS ▼▼▼ ---
         if (response.chartData && response.chartData.length >= 2) {
             updateChartAndData(response.chartData, response.chartOptions);
         } else {
-            clearChartAndAi();
-            drawChart(null);
+            clearChartAndAi(); // <-- Oculta el panel del gráfico
         }
+        // --- ▲▲▲ FIN DE LA MEJORA 2 ▲▲▲ ---
+
         const aiData = { stats: response.stats, chartData: response.chartData, chartOptions: response.chartOptions, variable: selectedVar, roi: activeROIs[0]?.name || "área seleccionada", startDate, endDate };
         
         if (type === 'fireRisk') {
-    generateFireRiskAnalysis(aiData); // Se elimina 'window.'
-} else {
-    generateAiAnalysis(aiData); // Se elimina 'window.'
-}
-
-// UBICACIÓN: platform-main.js, dentro de handleAnalysis
+            generateFireRiskAnalysis(aiData);
+        } else {
+            generateAiAnalysis(aiData);
+        }
 
     } catch (error) {
-        // Llama al nuevo sistema de errores de GeoBot
-        reportErrorToGeo(error.message, "¡Oh, no! No pude completar el análisis. Prueba de nuevo o ajusta los parámetros, por lo general la fecha es uno de los principales problemas, prueba con un periodo mas largo. Detalles técnicos: ");
+        reportErrorToGeo(error.message, "¡Oh, no! No pude completar el análisis. Prueba de nuevo o ajusta los parámetros. Detalles técnicos: ");
         legendControl.update(null);
-        // Oculta el loader después de reportar el error
         showLoading(false);
     }
 }
