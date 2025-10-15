@@ -163,6 +163,14 @@ async function executeAnalysis(params) {
         stats = await getStats(imageForStats, eeRoi, bandNameForChart, visParams.unit || '', params.roi);
     }
 
+    const noHayDatosGrafico = !chartData || chartData.length <= 1;
+    const noHayEstadisticas = stats && stats.includes("No se pudieron calcular estadísticas");
+
+    // Si no hay ni gráfico ni estadísticas, lanzamos un error con un mensaje claro.
+    // El 'catch' de la API se encargará de enviarlo al frontend como un error real.
+    if (noHayDatosGrafico && noHayEstadisticas) {
+        throw new Error("No se encontraron datos satelitales para el período y región seleccionados. Intenta con un rango de fechas más amplio.");
+    }
     return { mapId, visParams, stats, chartData, chartOptions: { title: `Serie Temporal para ${bandNameForChart}` } };
 }
 

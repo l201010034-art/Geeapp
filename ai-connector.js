@@ -191,8 +191,6 @@ async function handleLabExecution() {
     }
 }
 
-// UBICACIÓN: ai-connector.js
-// REEMPLAZA la función applyLabResultToMap completa con esta versión.
 function applyLabResultToMap(requestBody) {
     if (lastLabResult) {
         // Renderiza el mapa y la leyenda como siempre
@@ -201,37 +199,35 @@ function applyLabResultToMap(requestBody) {
         
         let hasValidData = false;
 
-        if (lastLabResult.stats && !lastLabResult.stats.includes("No se pudieron calcular estadísticas")) {
+        // Comprueba si las estadísticas son válidas y las muestra
+        if (lastLabResult.stats && !lastLabResult.stats.includes("No se pudieron calcular")) {
             window.updateStatsPanel(lastLabResult.stats);
             hasValidData = true;
         }
 
+        // Comprueba si hay datos de gráfico válidos y los muestra
         if (lastLabResult.chartData && lastLabResult.chartData.length > 1) {
             window.updateChartAndData(lastLabResult.chartData, lastLabResult.chartOptions);
             hasValidData = true;
         }
 
-        // --- ▼▼▼ LÓGICA AÑADIDA PARA ACTIVAR LA IA ▼▼▼ ---
-        // Si el análisis fue exitoso, construimos el prompt y llamamos a la IA.
-        const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
-        const prompt = buildLabAnalysisPrompt(
-            lastLabResult,
-            analysisName,
-            requestBody.roi,
-            requestBody.startDate,
-            requestBody.endDate
-        );
-        // Usamos la función existente que ya se encarga de mostrar el panel,
-        // el estado de carga y el resultado final.
-        callAndDisplayAnalysis(prompt);
-        // --- ▲▲▲ FIN DE LA LÓGICA AÑADIDA ▲▲▲ ---
-
-        // Lógica de manejo de errores de datos (sin cambios)
-        if (!hasValidData) {
-            window.clearChartAndAi(); 
-            if (!lastLabResult.stats || !lastLabResult.stats.includes("No se pudieron calcular")) {
-                window.reportErrorToGeo("No se encontraron datos suficientes para generar un gráfico en el período seleccionado.", "¡Vaya! ");
-            }
+        // Si encontramos datos válidos (gráfico o estadísticas), generamos el análisis de IA.
+        if (hasValidData) {
+            const analysisName = document.getElementById('lab-analysis-type').selectedOptions[0].text;
+            const prompt = buildLabAnalysisPrompt(
+                lastLabResult,
+                analysisName,
+                requestBody.roi,
+                requestBody.startDate,
+                requestBody.endDate
+            );
+            callAndDisplayAnalysis(prompt);
+        } else {
+            // --- ▼▼▼ LÓGICA DE ERROR CORREGIDA Y SIMPLIFICADA ▼▼▼ ---
+            // Si después de todas las revisiones no hay datos válidos, limpiamos los paneles
+            // y reportamos un error genérico, ya que el backend debería haber enviado el error específico.
+            window.clearChartAndAi();
+            window.reportErrorToGeo("No se encontraron datos suficientes para el análisis en el período seleccionado.", "¡Vaya! ");
         }
     }
     document.getElementById('lab-execute-button').classList.remove('hidden');
