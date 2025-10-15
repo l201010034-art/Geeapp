@@ -399,17 +399,11 @@
         <script type="module">
             // Importa las funciones necesarias de tus archivos modulares
             import { initPlatform } from './platform-main.js';
-            import { initTourGuide } from './tour-guide.js';
 
             // Este evento espera a que todo el documento HTML esté completamente cargado y listo
             document.addEventListener('DOMContentLoaded', () => {
                 console.log("DOM completamente cargado. Inicializando la aplicación...");
 
-                // 1. Inicializa las funciones principales de la plataforma
-                initPlatform();
-
-                // 2. Inicializa el recorrido guiado
-                initTourGuide();
 
                 // 3. Lógica para el menú lateral (hamburguesa)
                 const menuToggle = document.getElementById('menu-toggle');
@@ -450,6 +444,8 @@
                     });
                 }
             });
+                initPlatform();
+
         </script>
 
     </body>
