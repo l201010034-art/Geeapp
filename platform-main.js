@@ -761,8 +761,7 @@ function setupGeoBot() {
 }
 
 // UBICACIÓN: platform-main.js
-
-// ▼▼▼ REEMPLAZA LA FUNCIÓN toggleChat COMPLETA ▼▼▼
+// REEMPLAZA la función toggleChat completa con esta nueva versión.
 function toggleChat() {
     const chatWindow = document.getElementById('chat-window');
     const fabTextContainer = document.getElementById('fab-text-container');
@@ -772,8 +771,20 @@ function toggleChat() {
     chatWindow.style.display = isOpening ? 'flex' : 'none';
 
     if (isOpening) {
-        // --- AL ABRIR EL CHAT ---
-        // Ocultamos los adornos
+        // --- ▼▼▼ LÓGICA DINÁMICA AÑADIDA (LA SOLUCIÓN DEFINITIVA) ▼▼▼ ---
+        // Aplicamos este ajuste solo en pantallas móviles.
+        if (window.innerWidth < 768) {
+            const navBar = document.querySelector('nav');
+            if (navBar) {
+                // Medimos la altura real de la barra de navegación en ese momento.
+                const navHeight = navBar.offsetHeight; 
+                // Aplicamos esa altura como la posición 'top' de la ventana del chat.
+                chatWindow.style.top = `${navHeight}px`;
+            }
+        }
+        // --- ▲▲▲ FIN DE LA LÓGICA AÑADIDA ▲▲▲ ---
+
+        // Ocultamos los adornos del FAB
         fabTextContainer.classList.add('hidden');
         fabTipContainer.classList.add('hidden');
         // Detenemos las animaciones para no consumir recursos
@@ -785,11 +796,11 @@ function toggleChat() {
             hasBeenWelcomed = true;
         }
     } else {
-        // --- AL CERRAR EL CHAT ---
-        // Mostramos los adornos de nuevo
+        // Al cerrar, mostramos los adornos de nuevo y reiniciamos las animaciones
         fabTextContainer.classList.remove('hidden');
-        // Reiniciamos las animaciones
         startFabAnimations();
+        // Adicionalmente, quitamos el 'top' por si el usuario cambia el tamaño de la ventana
+        chatWindow.style.top = ''; 
     }
 }
 
