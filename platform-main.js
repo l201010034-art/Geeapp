@@ -285,6 +285,9 @@ function setupEventListeners() {
     document.getElementById('variableSelector').addEventListener('change', toggleAnalysisPanels);
     document.getElementById('copy-ai-button').addEventListener('click', copyAiAnalysis);
     document.getElementById('download-ai-button').addEventListener('click', downloadAiAnalysis);
+    document.getElementById('copy-lab-briefing-button').addEventListener('click', copyLabBriefing);
+    document.getElementById('download-lab-briefing-button').addEventListener('click', downloadLabBriefing);
+
 
     document.getElementById('openLabButton').addEventListener('click', () => labOverlay.classList.remove('hidden'));
     document.getElementById('lab-close-button').addEventListener('click', () => labOverlay.classList.add('hidden'));
@@ -579,6 +582,28 @@ function downloadAiAnalysis() {
     link.href = URL.createObjectURL(blob);
     link.download = 'analisis_ia.txt';
     link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+
+function copyLabBriefing() {
+    const textToCopy = document.getElementById('lab-briefing-result').innerText;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        alert('Informe de misión copiado al portapapeles.');
+    }, () => {
+        alert('Error al copiar el informe.');
+    });
+}
+
+function downloadLabBriefing() {
+    const text = document.getElementById('lab-briefing-result').innerText;
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'informe_mision_ia.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
 }
 
@@ -1111,16 +1136,16 @@ function addWelcomeMessageToChat() {
     chatMessages.scrollTop = chatMessages.scrollHeight; // Asegura que el mensaje sea visible
 }
 
-
 // UBICACIÓN: platform-main.js
-// REEMPLAZA la función updateIntelligenceBriefing completa con esta nueva versión.
+// REEMPLAZA la función updateIntelligenceBriefing completa
+
 async function updateIntelligenceBriefing() {
     const briefingResult = document.getElementById('lab-briefing-result');
     const placeholder = document.getElementById('lab-briefing-placeholder');
-    const briefingLoader = document.getElementById('lab-briefing-loader'); // <-- Nuevo loader
-    const briefingStatusElement = document.getElementById('briefing-loader-status'); // <-- Elemento de texto del loader
+    const briefingLoader = document.getElementById('lab-briefing-loader');
+    const briefingStatusElement = document.getElementById('briefing-loader-status');
+    const actionsContainer = document.getElementById('lab-briefing-actions'); // <-- Obtenemos el contenedor de botones
 
-    // Cancelar cualquier solicitud de briefing anterior
     briefingController.abort();
     briefingController = new AbortController();
     const signal = briefingController.signal;
@@ -1130,76 +1155,46 @@ async function updateIntelligenceBriefing() {
     const marineRegionSelect = document.getElementById('lab-region-selector-marine');
     const startDate = document.getElementById('lab-start-date').value;
     const endDate = document.getElementById('lab-end-date').value;
-
     const regionName = !regionSelect.classList.contains('hidden') ? regionSelect.value : marineRegionSelect.value;
     const analysisName = analysisTypeSelect.selectedOptions[0].text;
 
-    // Si falta algún campo, volvemos al placeholder inicial y no hacemos nada más.
+    // Ocultamos los botones y el resultado al iniciar
+    actionsContainer.classList.add('hidden');
+    briefingResult.classList.add('hidden');
+
     if (!analysisTypeSelect.value || !regionName || !startDate || !endDate) {
         placeholder.classList.remove('hidden');
-        briefingResult.classList.add('hidden');
         briefingLoader.classList.add('hidden');
         return;
     }
 
-    // --- LÓGICA DEL NUEVO LOADER ---
     placeholder.classList.add('hidden');
-    briefingResult.classList.add('hidden');
     briefingLoader.classList.remove('hidden');
-
-    // Detenemos cualquier ciclo de mensajes anterior
     clearInterval(briefingStatusInterval);
 
-    // Mensajes específicos para la generación del informe de misión
-    const statusMessages = [
-        "Interpretando selección de análisis...",
-        "Consultando contexto geoespacial para la región...",
-        "Compilando datos históricos relevantes...",
-        "Contactando a la IA de Gemini para la redacción...",
-        "Generando informe de misión..."
-    ];
+    const statusMessages = ["Interpretando selección...", "Consultando contexto geoespacial...", "Compilando datos históricos...", "Contactando a la IA de Gemini...", "Generando informe de misión..."];
     let currentStatusIndex = 0;
     briefingStatusElement.textContent = statusMessages[0];
-
-    // Iniciamos el nuevo ciclo de mensajes
     briefingStatusInterval = setInterval(() => {
         currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
         briefingStatusElement.textContent = statusMessages[currentStatusIndex];
-    }, 2000); // Cambia el mensaje cada 2 segundos
+    }, 2000);
 
-    // --- FIN LÓGICA DEL LOADER ---
-
-    const prompt = `
-        Genera un "Informe de Misión" breve (2 párrafos) para un análisis geoespacial.
-        - Análisis: ${analysisName}
-        - Región: ${regionName}
-        - Fechas: de ${startDate} a ${endDate}
-        Explica qué es el análisis en una frase. Luego, ofrece contexto sobre qué esperar en esa región y fechas (ej: temporada de secas, época de lluvias, alto riesgo de incendios). Finalmente, menciona el satélite que se usará (NDVI/LST/NDWI usan Sentinel-2; Incendios usa VIIRS; Calidad del Aire usa Sentinel-5P).
-        Usa formato HTML con un título <h4> y párrafos <p>.
-    `;
+    const prompt = `Genera un "Informe de Misión" breve (2 párrafos) para un análisis geoespacial. - Análisis: ${analysisName} - Región: ${regionName} - Fechas: de ${startDate} a ${endDate}. Explica qué es el análisis en una frase. Luego, ofrece contexto sobre qué esperar en esa región y fechas (ej: temporada de secas, época de lluvias). Finalmente, menciona el satélite que se usará (NDVI/LST/NDWI usan Sentinel-2; Incendios usa VIIRS; Calidad del Aire usa Sentinel-5P). Usa formato HTML con un título <h4> y párrafos <p>.`;
 
     try {
-        const response = await fetch('/api/generate-text', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt }),
-            signal 
-        });
+        const response = await fetch('/api/generate-text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), signal });
         if (!response.ok) throw new Error('No se pudo generar el briefing.');
-
         const data = await response.json();
-        
         let cleanHtml = data.text.replace(/^```html\s*/, '').replace(/```$/, '');
         briefingResult.innerHTML = cleanHtml;
+        actionsContainer.classList.remove('hidden'); // <-- Mostramos los botones en caso de éxito
 
     } catch (error) {
-        if (error.name === 'AbortError') {
-            console.log('Briefing request cancelled.');
-            return; // No hacemos nada más si fue cancelada
-        }
+        if (error.name === 'AbortError') { console.log('Briefing request cancelled.'); return; }
         briefingResult.innerHTML = `<p class="text-red-400">Error al generar el informe: ${error.message}</p>`;
+        
     } finally {
-        // Al terminar (con éxito o error), detenemos el loader y mostramos el resultado
         clearInterval(briefingStatusInterval);
         briefingLoader.classList.add('hidden');
         briefingResult.classList.remove('hidden');
