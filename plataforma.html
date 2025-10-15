@@ -56,12 +56,12 @@
             --accent-color: #f0ad4e;
         }
         html, body {
-            height: 100%; /* <-- Cambio clave para la compatibilidad móvil */
-            overflow: hidden; /* <-- Esto es correcto, lo mantenemos */
+            height: 100%;
+            overflow: hidden;
             font-family: 'Inter', sans-serif;
         }
 
-        /* Slider de opacidad y leyenda (sin cambios) */
+        /* Slider de opacidad y leyenda */
         #opacity-slider-container {
             position: absolute; bottom: 10px; left: 10px; z-index: 1000;
             background-color: rgba(0, 0, 0, 0.7); padding: 8px; border-radius: 5px; color: white;
@@ -79,7 +79,7 @@
         summary { cursor: pointer; font-weight: 600; padding: 0.75rem; background-color: rgba(0,0,0,0.1); border-radius: 5px; }
         details > div { padding: 0.75rem; background-color: rgba(0,0,0,0.2); border-radius: 0 0 5px 5px; }
 
-        /* Estilos del Laboratorio de IA y Geo-Chat Bot (sin cambios) */
+        /* Estilos del Laboratorio de IA y Geo-Chat Bot */
         #lab-modal pre { margin: 0; }
         #lab-modal code { display: block; white-space: pre-wrap; padding: 1rem; color: #c5c8c6; }
         :root {
@@ -146,44 +146,25 @@
         #fab-tip-container { position: absolute; bottom: 110%; right: 0; background-color: transparent; box-shadow: none; color: var(--chat-primary-color); font-weight: bold; padding: 6px 12px; font-size: 0.8rem; white-space: nowrap; opacity: 0; transition: opacity 0.5s ease-in-out; text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.5); }
         #fab-tip-container.visible { opacity: 1; }
         #chat-fab-container:hover {
-            opacity: 1; /* Se vuelve opaco al interactuar */
+            opacity: 1;
         }
- /* ====================================================== */
-/* INICIO: Estilos adaptables para el chat en móviles   */
-/* ====================================================== */
-
-    @media (max-width: 767px) {
-        #chat-window {
-            /* Mantenemos estas reglas para que se ancle a los lados y abajo */
-            bottom: 0;
-            right: 0;
-            left: 0;
-            
-            /* 2. La altura ahora será automática para llenar el espacio restante. */
-            height: auto;
-            /* ===================================== */
-            
-            width: 100%;
-            max-width: 100%;
-            
-            /* Damos una apariencia de panel con esquinas redondeadas solo arriba */
-            border-radius: 20px 20px 0 0;
-            border: 1px solid #444;
-
-            /* Reemplazamos la animación por una que deslice desde abajo */
-            animation: slideUpFromBottom 0.4s ease-out;
-        }
-
-        /* Nueva animación para el panel móvil */
-        @keyframes slideUpFromBottom {
-            from {
-                transform: translateY(100%);
+        @media (max-width: 767px) {
+            #chat-window {
+                bottom: 0;
+                right: 0;
+                left: 0;
+                height: auto;
+                width: 100%;
+                max-width: 100%;
+                border-radius: 20px 20px 0 0;
+                border: 1px solid #444;
+                animation: slideUpFromBottom 0.4s ease-out;
             }
-            to {
-                transform: translateY(0);
+            @keyframes slideUpFromBottom {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
             }
         }
-    }
     </style>
 </head>
 <body class="bg-gray-800 text-white flex flex-col h-screen">
@@ -226,7 +207,7 @@
         <a href="index.html" class="bg-transparent border border-white hover:bg-white hover:text-black py-2 px-4 rounded transition text-sm">Página Principal</a>
     </nav>
 
-        <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-60 z-[1049] hidden md:hidden"></div>
+    <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-60 z-[1049] hidden md:hidden"></div>
     
     <div class="flex flex-1 relative overflow-hidden">
         <aside id="control-panel" class="absolute md:relative z-[1050] top-0 left-0 h-full w-80 md:w-96 bg-[var(--maroon-color)] p-4 overflow-y-auto flex-col space-y-4 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out pb-24 md:pb-4" role="navigation" aria-label="Panel de controles">
@@ -317,8 +298,10 @@
                 <h2 class="text-2xl font-bold text-[var(--accent-color)]">Laboratorio de IA 🧪</h2>
                 <button id="lab-close-button" class="text-3xl font-bold hover:text-white" aria-label="Cerrar laboratorio">&times;</button>
             </div>
+            
             <div class="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden">
-                <div class="w-full md:w-1/3 flex flex-col space-y-4 overflow-y-auto">
+                
+                <div class="w-full md:w-1/3 flex flex-col space-y-4 overflow-y-auto pr-2">
                     <h3 class="text-lg font-semibold">1. Construye tu Análisis</h3>
                     <div>
                         <label for="lab-analysis-type" class="block mb-1 text-sm font-medium text-gray-300">Tipo de Análisis</label>
@@ -330,13 +313,12 @@
                             <option value="FAI">Índice de Algas Flotantes (Sargazo)</option>
                             <option value="AIR_QUALITY">Calidad del Aire (NO2)</option>
                             <option value="HURRICANE">Visualizador de Huracanes (GOES & IBTrACS)</option>
-                        </select>                    
-                        </div>
-                    <div id="lab-step-region" class="hidden">
+                        </select>
+                    </div>
+                    <div id="lab-step-region">
                         <label for="lab-region-selector-municipalities" class="block mb-1 text-sm font-medium text-gray-300">Región de Interés</label>
                         <select id="lab-region-selector-municipalities" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white"></select>
                         <div id="lab-hurricane-options" class="hidden w-full space-y-3">
-                            <div></div>
                             <div>
                                 <label for="lab-hurricane-year" class="block mb-1 text-sm font-medium text-gray-300">Año del Huracán</label>
                                 <input type="number" id="lab-hurricane-year" placeholder="Ej: 2023" value="2023" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white">
@@ -352,17 +334,16 @@
                             <option value="Golfo de México (Zona Campeche)">Golfo de México (Zona Campeche)</option>
                         </select>
                     </div>
-                    <div id="lab-step-dates" class="hidden">
+                    <div id="lab-step-dates">
                         <label class="block mb-1 text-sm font-medium text-gray-300">Rango de Fechas</label>
                         <input type="date" id="lab-start-date" class="w-full p-2 rounded bg-gray-900 border border-gray-600 text-white" aria-label="Fecha de inicio para laboratorio">
                         <input type="date" id="lab-end-date" class="w-full mt-2 p-2 rounded bg-gray-900 border border-gray-600 text-white" aria-label="Fecha de fin para laboratorio">
                     </div>
-                    <div id="lab-step-actions" class="hidden">
+                    <div id="lab-step-actions">
                         <button id="lab-execute-button" class="w-full mt-4 p-2 font-bold bg-blue-600 text-white rounded">🚀 Ejecutar Análisis</button>
                         <button id="lab-apply-button" class="hidden w-full mt-2 p-2 font-bold bg-green-600 text-white rounded">Cerrar y Aplicar al Mapa</button>
                     </div>
-                </div>
-</div> <div class="w-full md:w-2/3 flex flex-col min-h-0">
+                </div> <div class="w-full md:w-2/3 flex flex-col min-h-0">
                     <div class="flex justify-between items-center flex-shrink-0">
                         <h3 class="text-lg font-semibold">2. Informe de Misión IA</h3>
                         <div id="lab-briefing-actions" class="hidden space-x-2">
@@ -384,14 +365,13 @@
                         </div>
                         <div id="lab-briefing-loader" class="hidden flex-1 flex flex-col items-center justify-center text-center">
                             <div class="w-20 h-20 mb-4 text-[#f0ad4e] animate-pulse">
-                                <svg xmlns="http://www.w.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 21v-1.5M15.75 3v1.5M12 4.5v-1.5m0 18v-1.5M5.636 5.636l-1.06-1.06M5.636 18.364l-1.06 1.06M18.364 5.636l1.06-1.06M18.364 18.364l1.06 1.06M12 12.75a4.5 4.5 0 01-4.5-4.5H3a9 9 0 009 9v-1.5c-2.485 0-4.5-2.015-4.5-4.5zm0-4.5a4.5 4.5 0 00-4.5 4.5H3a9 9 0 019-9v1.5c-2.485 0-4.5 2.015-4.5 4.5zm4.5 4.5a4.5 4.5 0 01-4.5 4.5v1.5a9 9 0 009-9h-1.5a4.5 4.5 0 01-4.5 4.5zm0-9a4.5 4.5 0 00-4.5-4.5v1.5a9 9 0 019 9h-1.5a4.5 4.5 0 00-4.5-4.5z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 21v-1.5M15.75 3v1.5M12 4.5v-1.5m0 18v-1.5M5.636 5.636l-1.06-1.06M5.636 18.364l-1.06 1.06M18.364 5.636l1.06-1.06M18.364 18.364l1.06 1.06M12 12.75a4.5 4.5 0 01-4.5-4.5H3a9 9 0 009 9v-1.5c-2.485 0-4.5-2.015-4.5-4.5zm0-4.5a4.5 4.5 0 00-4.5 4.5H3a9 9 0 019-9v1.5c-2.485 0-4.5 2.015-4.5 4.5zm4.5 4.5a4.5 4.5 0 01-4.5 4.5v1.5a9 9 0 009-9h-1.5a4.5 4.5 0 01-4.5 4.5zm0-9a4.5 4.5 0 00-4.5-4.5v1.5a9 9 0 019 9h-1.5a4.5 4.5 0 00-4.5-4.5z" /></svg>
                             </div>
                             <p id="briefing-loader-status" class="text-lg font-semibold text-white transition-opacity duration-500">Generando informe...</p>
                         </div>
                         <div id="lab-briefing-result" class="hidden text-sm prose prose-invert max-w-none"></div>
                     </div>
-                </div>
-            </div>
+                </div> </div>
         </div>
     </div>
 
@@ -416,57 +396,50 @@
         </div>
     </div>
 
-       <script type="module">
-    // Importa las funciones necesarias de tus archivos modulares
-    import { initPlatform } from './platform-main.js';
+    <script type="module">
+        import { initPlatform } from './platform-main.js';
 
-    // Este evento espera a que todo el documento HTML esté completamente cargado y listo
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOM completamente cargado. Inicializando la aplicación...");
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuToggle = document.getElementById('menu-toggle');
+            const controlPanel = document.getElementById('control-panel');
+            const menuOverlay = document.getElementById('menu-overlay');
+            const actionButtons = document.querySelectorAll('.action-button, #openLabButton');
 
-        // Lógica para el menú lateral (hamburguesa)
-        const menuToggle = document.getElementById('menu-toggle');
-        const controlPanel = document.getElementById('control-panel');
-        const menuOverlay = document.getElementById('menu-overlay');
-        const actionButtons = document.querySelectorAll('.action-button, #openLabButton');
+            const openMenu = () => {
+                if (controlPanel) controlPanel.classList.remove('-translate-x-full');
+                if (controlPanel) controlPanel.classList.add('translate-x-0');
+                if (menuOverlay) menuOverlay.classList.remove('hidden');
+            };
 
-        const openMenu = () => {
-            if (controlPanel) controlPanel.classList.remove('-translate-x-full');
-            if (controlPanel) controlPanel.classList.add('translate-x-0');
-            if (menuOverlay) menuOverlay.classList.remove('hidden');
-        };
+            const closeMenu = () => {
+                if (controlPanel) controlPanel.classList.add('-translate-x-full');
+                if (controlPanel) controlPanel.classList.remove('translate-x-0');
+                if (menuOverlay) menuOverlay.classList.add('hidden');
+            };
 
-        const closeMenu = () => {
-            if (controlPanel) controlPanel.classList.add('-translate-x-full');
-            if (controlPanel) controlPanel.classList.remove('translate-x-0');
-            if (menuOverlay) menuOverlay.classList.add('hidden');
-        };
-
-        if (menuToggle && controlPanel && menuOverlay) {
-            menuToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (controlPanel.classList.contains('-translate-x-full')) {
-                    openMenu();
-                } else {
-                    closeMenu();
-                }
-            });
-
-            menuOverlay.addEventListener('click', closeMenu);
-
-            actionButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    if (window.innerWidth < 768) {
+            if (menuToggle && controlPanel && menuOverlay) {
+                menuToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (controlPanel.classList.contains('-translate-x-full')) {
+                        openMenu();
+                    } else {
                         closeMenu();
                     }
                 });
-            });
-        }
-        
-        // ¡Mueve la inicialización aquí dentro!
-        initPlatform(); 
-    });
-</script>
 
-    </body>
-    </html>
+                menuOverlay.addEventListener('click', closeMenu);
+
+                actionButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        if (window.innerWidth < 768) {
+                            closeMenu();
+                        }
+                    });
+                });
+            }
+            
+            initPlatform(); 
+        });
+    </script>
+</body>
+</html>
