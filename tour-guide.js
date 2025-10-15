@@ -1,4 +1,4 @@
-// tour-guide.js (Versión Final y Funcional)
+// tour-guide.js (Versión con todos los pasos)
 
 import { driver } from 'https://cdn.jsdelivr.net/npm/driver.js@1.0.1/+esm';
 
@@ -12,7 +12,6 @@ export function initTourGuide() {
 
     const geoBotImageSrc = 'assets/GeoBot_Icon.png';
     
-    // ▼▼▼ 1. DEFINIMOS LOS PASOS ANTES DE CREAR EL DRIVER ▼▼▼
     const tourSteps = [
         { 
             element: '#ai-command-form',
@@ -21,11 +20,21 @@ export function initTourGuide() {
                 description: createPopoverContent(geoBotImageSrc, '¡Hola! Soy GeoBot. Usa esta barra para hacer preguntas directas, como "Muéstrame la temperatura máxima en Campeche la semana pasada".')
             } 
         },
+        // ▼▼▼ PASO AÑADIDO ▼▼▼
+        { 
+            element: 'details:nth-of-type(1)',
+            popover: { 
+                title: 'Rango de Fechas', 
+                description: createPopoverContent(geoBotImageSrc, 'Aquí defines el periodo de tiempo para tu análisis. Es el primer y más importante paso para cualquier consulta manual.'),
+            },
+            side: 'right'
+        },
+        // ▲▲▲ FIN DEL PASO AÑADIDO ▲▲▲
         { 
             element: 'details:nth-of-type(2)',
             popover: { 
                 title: 'Zona de Interés', 
-                description: createPopoverContent(geoBotImageSrc, 'Aquí puedes seleccionar o dibujar en el mapa las áreas específicas que deseas analizar.'),
+                description: createPopoverContent(geoBotImageSrc, 'Luego, selecciona o dibuja en el mapa las áreas específicas que deseas analizar.'),
             },
             side: 'right'
         },
@@ -59,18 +68,16 @@ export function initTourGuide() {
         }
     ];
 
-    // ▼▼▼ 2. PASAMOS LOS PASOS DIRECTAMENTE EN LA CONFIGURACIÓN ▼▼▼
     const driverObj = driver({
         showProgress: true,
         nextBtnText: 'Siguiente →',
         prevBtnText: '← Anterior',
         doneBtnText: 'Finalizar',
-        steps: tourSteps // <--- ¡AQUÍ ESTÁ LA MAGIA!
+        steps: tourSteps 
     });
     
-    // ▼▼▼ 3. EL BOTÓN AHORA SOLO NECESITA INICIAR EL TOUR ▼▼▼
     startTourBtn.addEventListener('click', () => {
-        driverObj.drive(); // Ya no se usa setSteps, solo se inicia.
+        driverObj.drive();
     });
 }
 
