@@ -396,57 +396,57 @@
         </div>
     </div>
 
-        <script type="module">
-            // Importa las funciones necesarias de tus archivos modulares
-            import { initPlatform } from './platform-main.js';
+       <script type="module">
+    // Importa las funciones necesarias de tus archivos modulares
+    import { initPlatform } from './platform-main.js';
 
-            // Este evento espera a que todo el documento HTML esté completamente cargado y listo
-            document.addEventListener('DOMContentLoaded', () => {
-                console.log("DOM completamente cargado. Inicializando la aplicación...");
+    // Este evento espera a que todo el documento HTML esté completamente cargado y listo
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("DOM completamente cargado. Inicializando la aplicación...");
 
+        // Lógica para el menú lateral (hamburguesa)
+        const menuToggle = document.getElementById('menu-toggle');
+        const controlPanel = document.getElementById('control-panel');
+        const menuOverlay = document.getElementById('menu-overlay');
+        const actionButtons = document.querySelectorAll('.action-button, #openLabButton');
 
-                // 3. Lógica para el menú lateral (hamburguesa)
-                const menuToggle = document.getElementById('menu-toggle');
-                const controlPanel = document.getElementById('control-panel');
-                const menuOverlay = document.getElementById('menu-overlay');
-                const actionButtons = document.querySelectorAll('.action-button, #openLabButton');
+        const openMenu = () => {
+            if (controlPanel) controlPanel.classList.remove('-translate-x-full');
+            if (controlPanel) controlPanel.classList.add('translate-x-0');
+            if (menuOverlay) menuOverlay.classList.remove('hidden');
+        };
 
-                const openMenu = () => {
-                    if (controlPanel) controlPanel.classList.remove('-translate-x-full');
-                    if (controlPanel) controlPanel.classList.add('translate-x-0');
-                    if (menuOverlay) menuOverlay.classList.remove('hidden');
-                };
+        const closeMenu = () => {
+            if (controlPanel) controlPanel.classList.add('-translate-x-full');
+            if (controlPanel) controlPanel.classList.remove('translate-x-0');
+            if (menuOverlay) menuOverlay.classList.add('hidden');
+        };
 
-                const closeMenu = () => {
-                    if (controlPanel) controlPanel.classList.add('-translate-x-full');
-                    if (controlPanel) controlPanel.classList.remove('translate-x-0');
-                    if (menuOverlay) menuOverlay.classList.add('hidden');
-                };
-
-                if (menuToggle && controlPanel && menuOverlay) {
-                    menuToggle.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (controlPanel.classList.contains('-translate-x-full')) {
-                            openMenu();
-                        } else {
-                            closeMenu();
-                        }
-                    });
-
-                    menuOverlay.addEventListener('click', closeMenu);
-
-                    actionButtons.forEach(button => {
-                        button.addEventListener('click', () => {
-                            if (window.innerWidth < 768) {
-                                closeMenu();
-                            }
-                        });
-                    });
+        if (menuToggle && controlPanel && menuOverlay) {
+            menuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (controlPanel.classList.contains('-translate-x-full')) {
+                    openMenu();
+                } else {
+                    closeMenu();
                 }
             });
-                initPlatform();
 
-        </script>
+            menuOverlay.addEventListener('click', closeMenu);
+
+            actionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    if (window.innerWidth < 768) {
+                        closeMenu();
+                    }
+                });
+            });
+        }
+        
+        // ¡Mueve la inicialización aquí dentro!
+        initPlatform(); 
+    });
+</script>
 
     </body>
     </html>
