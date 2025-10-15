@@ -1,18 +1,20 @@
-// tour-guide.js (Versión Final y Limpia)
+// tour-guide.js (Versión Final con Módulos)
+
+// ▼▼▼ 1. IMPORTAMOS LA FUNCIÓN 'driver' DESDE LA VERSIÓN MODULAR DE LA LIBRERÍA ▼▼▼
+import { driver } from 'https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.esm.js';
 
 export function initTourGuide() {
     const startTourBtn = document.getElementById('start-tour-btn');
     
-    // Si el botón no existe en el HTML, la función termina para evitar errores.
     if (!startTourBtn) {
-        console.error("No se encontró el botón del tour. Revisa que el ID 'start-tour-btn' sea correcto en plataforma.html.");
+        console.error("No se encontró el botón del tour.");
         return;
     }
 
     const geoBotImageSrc = 'assets/GeoBot_Icon.png';
 
-    // Ahora que el orden de carga es correcto, window.driverjs existirá.
-    const driver = window.driverjs.driver({
+    // ▼▼▼ 2. USAMOS LA FUNCIÓN 'driver' IMPORTADA DIRECTAMENTE, SIN 'window' ▼▼▼
+    const driverObj = driver({
         showProgress: true,
         nextBtnText: 'Siguiente →',
         prevBtnText: '← Anterior',
@@ -65,10 +67,10 @@ export function initTourGuide() {
         }
     ];
     
-    // Se añade el evento de clic al botón para iniciar el tour.
     startTourBtn.addEventListener('click', () => {
-        driver.setSteps(tourSteps);
-        driver.drive();
+        // Usamos el objeto que creamos
+        driverObj.setSteps(tourSteps);
+        driverObj.drive();
     });
 }
 
