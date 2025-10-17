@@ -290,7 +290,7 @@ async function handleGeneralData({ roi, varInfo, startDate, endDate, eeRoi }) {
         collection = await getOptimizedHighFrequencyCollection('ECMWF/ERA5_LAND/HOURLY', eeRoi, startDate, endDate);
     } else {
         if (varInfo.dataset === 'MODIS') collection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(startDate, endDate).filterBounds(eeRoi).map(processModis);
-        else if (varInfo.dataset === 'MODIS_ET') collection = ee.ImageCollection("MODIS/006/MOD16A2").filterDate(startDate, endDate).filterBounds(eeRoi).map(processET);
+        else if (varInfo.dataset === 'MODIS_ET') collection = ee.ImageCollection("MODIS/061/MOD16A2").filterDate(startDate, endDate).filterBounds(eeRoi).map(processET);
         else if (varInfo.dataset === 'ERA5_DAILY') collection = ee.ImageCollection("ECMWF/ERA5/DAILY").filterDate(startDate, endDate).filterBounds(eeRoi).map(processGDD);
         else if (varInfo.dataset === 'CHIRPS') collection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(startDate,endDate).filterBounds(eeRoi).map(processChirps);
     }
@@ -312,7 +312,7 @@ async function handleCompareData({ rois, varInfo, startDate, endDate, eeRoi }) {
         collection = await getOptimizedHighFrequencyCollection('ECMWF/ERA5_LAND/HOURLY', eeRoi, startDate, endDate);
     } else {
         if (varInfo.dataset === 'MODIS') collection = ee.ImageCollection('MODIS/061/MOD11A1').filterDate(startDate, endDate).filterBounds(eeRoi).map(processModis);
-        else if (varInfo.dataset === 'MODIS_ET') collection = ee.ImageCollection("MODIS/006/MOD16A2").filterDate(startDate, endDate).filterBounds(eeRoi).map(processET);
+        else if (varInfo.dataset === 'MODIS_ET') collection = ee.ImageCollection("MODIS/061/MOD16A2").filterDate(startDate, endDate).filterBounds(eeRoi).map(processET);
         else if (varInfo.dataset === 'ERA5_DAILY') collection = ee.ImageCollection("ECMWF/ERA5/DAILY").filterDate(startDate, endDate).filterBounds(eeRoi).map(processGDD);
         else if (varInfo.dataset === 'CHIRPS') collection = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY').filterDate(startDate,endDate).filterBounds(eeRoi).map(processChirps);
     }
