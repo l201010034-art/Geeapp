@@ -50,7 +50,7 @@ module.exports = async (req, res) => {
             PREGUNTA DEL USUARIO: "${question}"
         `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const result = await model.generateContent(promptForGeo);
         const response = await result.response;
         const answer = response.text();
